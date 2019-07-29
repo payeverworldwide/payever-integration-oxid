@@ -1,0 +1,27 @@
+{
+  "name": "payever/payever-integration-oxid",
+  "description": "payever payment module",
+  "type": "oxideshop-module",
+  "keywords": [
+    "oxid",
+    "modules",
+    "eShop",
+    "payever",
+    "payment",
+    "Santander",
+    "installments"
+  ],
+  "homepage": "https://www.payever.de",
+  "license": [
+    "MIT"
+  ],
+  "extra": {
+    "oxideshop": {
+      "target-directory": "payever"
+    }
+  },
+  "require": {
+    "php": ">=5.4.0",
+    "payever/sdk-php": "^1.4"
+  }
+}

@@ -1,0 +1,66 @@
+.cntRow { color:#000; }
+.cntRow dl { border:none; margin:0; padding:10px 10px 0 10px; color:#000; }
+.cntRow dl dd { margin:2px 0 0; color:#000; font-weight: normal;}
+.cntRow dl dt { font-weight: normal;}
+.cntLft label{ display:block; }
+.cntRgt span { font-size:11px; color:#777; background: url(../img/note_bg.png) no-repeat scroll 1px 7px transparent; margin: 0;  padding: 2px 0 2px 13px; }
+.cntRow2 {  margin-top:25px; }
+.cntExLft { margin:10px 0 0 20px; }
+.cntClear { clear:both; }
+.cntRow input { margin:2px 0 0 0; }
+.cntRow input[type="text"] { width:320px; }
+.pe_payment_title {
+    background: none repeat scroll 0 0 rgba(0, 0, 0, 0);
+    border: 1px solid #CFC6C6;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px 0 #B9ACAC;
+    float: left;
+    margin: 10px 15px 25px 10px;
+    padding: 12px;
+}
+.pe_payment_title b{
+    margin:5px;
+}
+.pe_map_header {
+	background-color:#0080c9;
+	color:#fff;
+	font-size:13.5px;
+	font-family: calibri;
+	font-weight:bold;
+	padding:5px;
+	text-align:center;
+}
+label.pe_map_header:hover {
+  background-color: #878787;
+}
+.payever-config-header {
+    overflow: hidden;
+}
+.payever-config-logo,
+.payever-config-versions {
+    display: inline-block;
+    float: left;
+}
+.payever-config-logo {
+    padding-top: 5px;
+}
+.payever-config-versions {
+    margin-left: 50px;
+}
+
+.payever-config-section {
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px dashed #e4e4e4;
+}
+.payever-config-section:first-of-type {
+    margin-top: 0;
+}
+.payever-config-section-title {
+    font-size: 13px;
+}
+.payever-config-btn {
+    margin: 1em 3em 0;
+    width: 235px;
+    height: 30px;
+}

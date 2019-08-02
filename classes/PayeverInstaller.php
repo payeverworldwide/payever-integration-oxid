@@ -67,25 +67,21 @@ class PayeverInstaller
                 $oDb->execute($sSql);
             }
 
-            $sSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' AND TABLE_NAME = 'oxv_oxpayments' AND COLUMN_NAME = '" . $cval . "'";
-            $aResult = $oDb->getAll($sSql);
-            if (empty($aResult)) {
-                $sSql = "ALTER VIEW `oxv_oxpayments` AS SELECT * FROM `oxpayments`";
-                $oDb->execute($sSql);
-            }
+            $updateViews = array('oxv_oxpayments', 'oxv_oxpayments_de', 'oxv_oxpayments_en');
 
-            $sSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' AND TABLE_NAME = 'oxv_oxpayments_de' AND COLUMN_NAME = '" . $cval . "'";
-            $aResult = $oDb->getAll($sSql);
-            if (empty($aResult)) {
-                $sSql = "ALTER VIEW `oxv_oxpayments_de` AS SELECT * FROM `oxpayments`";
-                $oDb->execute($sSql);
-            }
+            foreach ($updateViews as $viewName) {
+                $viewExistsSql = "SELECT * FROM INFORMATION_SCHEMA.TABLES 
+                                  WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' 
+                                        AND TABLE_NAME = '{$viewName}'";
+                $columnExistsSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                         WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' 
+                               AND TABLE_NAME = '{$viewName}' AND COLUMN_NAME = '{$cval}'";
+                $columnResult = $oDb->getAll($columnExistsSql);
 
-            $sSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' AND TABLE_NAME = 'oxv_oxpayments_en' AND COLUMN_NAME = '" . $cval . "'";
-            $aResult = $oDb->getAll($sSql);
-            if (empty($aResult)) {
-                $sSql = "ALTER VIEW `oxv_oxpayments_en` AS SELECT * FROM `oxpayments`";
-                $oDb->execute($sSql);
+                if ($oDb->getOne($viewExistsSql) && empty($columnResult)) {
+                    $sSql = "ALTER VIEW `{$viewName}` AS SELECT * FROM `oxpayments`";
+                    $oDb->execute($sSql);
+                }
             }
         }
     }

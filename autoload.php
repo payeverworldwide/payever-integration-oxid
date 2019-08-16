@@ -10,6 +10,10 @@
 
 define('DS', DIRECTORY_SEPARATOR);
 
-require_once __DIR__ . DS . 'lib' . DS . 'Payever' . DS . 'ExternalIntegration' . DS . 'Core' . DS . 'Engine.php';
+$internalLibFile = __DIR__ . DS . 'lib' . DS . 'Payever' . DS . 'ExternalIntegration' . DS . 'Core' . DS . 'Engine.php';
 
-\Payever\ExternalIntegration\Core\Engine::getLoader();
+if (file_exists($internalLibFile)) {
+    require_once __DIR__ . DS . 'lib' . DS . 'Payever' . DS . 'ExternalIntegration' . DS . 'Core' . DS . 'Engine.php';
+
+    \Payever\ExternalIntegration\Core\Engine::getLoader();
+}

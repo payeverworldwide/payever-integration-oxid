@@ -495,6 +495,7 @@ class payeverStandardDispatcher extends oxUBase
         }
 
         // get basket contents
+        /** @var oxBasket $oBasket */
         $oBasket = oxNew('oxbasket');
         $oBasket->setBasketUser($oUser);
         $oBasket->setPayment($payment['paymentMethod']);

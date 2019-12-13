@@ -8,9 +8,10 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Authorization\TokenList as CoreTokenList;
+use Payever\ExternalIntegration\Core\Authorization\OauthToken;
+use Payever\ExternalIntegration\Core\Authorization\OauthTokenList;
 
-class PayeverApiTokenList extends CoreTokenList
+class PayeverApiOauthTokenList extends OauthTokenList
 {
     const CONFIG_STORAGE_VAR = 'payever_oauth_token_storage';
 
@@ -24,6 +25,8 @@ class PayeverApiTokenList extends CoreTokenList
 
     /**
      * @inheritdoc
+     *
+     * @throws Exception
      */
     public function load()
     {
@@ -31,7 +34,7 @@ class PayeverApiTokenList extends CoreTokenList
 
         if (is_array($tokens)) {
             foreach ($tokens as $hash => $tokenData) {
-                $this->add($hash, new PayeverApiToken($tokenData));
+                $this->add($hash, $this->create()->load($tokenData));
             }
         }
 
@@ -46,7 +49,7 @@ class PayeverApiTokenList extends CoreTokenList
         $data = [];
 
         foreach ($this->getAll() as $token) {
-            /** @var PayeverApiToken $token */
+            /** @var OauthToken $token */
             $data[$token->getHash()] = $token->getParams();
         }
 
@@ -56,10 +59,12 @@ class PayeverApiTokenList extends CoreTokenList
     }
 
     /**
-     * @return PayeverApiToken
+     * @return OauthToken
+     *
+     * @throws Exception
      */
     public function create()
     {
-        return new PayeverApiToken();
+        return new OauthToken();
     }
 }

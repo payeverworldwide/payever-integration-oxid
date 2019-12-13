@@ -10,10 +10,8 @@
 
 define('DS', DIRECTORY_SEPARATOR);
 
-$internalLibFile = __DIR__ . DS . 'lib' . DS . 'Payever' . DS . 'ExternalIntegration' . DS . 'Core' . DS . 'Engine.php';
+$internalVendorAutoloadFile = __DIR__ . DS . 'vendor' . DS . 'autoload.php';
 
-if (file_exists($internalLibFile)) {
-    require_once __DIR__ . DS . 'lib' . DS . 'Payever' . DS . 'ExternalIntegration' . DS . 'Core' . DS . 'Engine.php';
-
-    \Payever\ExternalIntegration\Core\Engine::getLoader();
+if (file_exists($internalVendorAutoloadFile)) {
+    require_once $internalVendorAutoloadFile;
 }

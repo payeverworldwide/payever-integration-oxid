@@ -8,39 +8,15 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-/**
- * Payever utilites and helper functions
- */
-class PayeverUtil
+use Payever\ExternalIntegration\Payments\Enum\PaymentMethod;
+
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
+
+class PayeverMethodHider
 {
     const FAILED_METHODS_COOKIE_NAME  = 'payever_hidden_methods';
 
     protected static $instance;
-
-    /**
-     * Payment options which will be hidden from customer after first unsuccessful attempt
-     *
-     * @todo Remove from here once it moved inside SDK
-     *
-     * @var array
-     */
-    protected $hideOnFailureMethods = [
-        'santander_invoice_de',
-        'santander_factoring_de',
-    ];
-
-    /**
-     * Methods we should hide if shipping and billing addresses is different
-     *
-     * @todo Remove from here once it moved inside SDK
-     *
-     * @var array
-     */
-    protected $hideOnDifferentAddressMethods = [
-        'santander_invoice_de',
-        'payex_faktura',
-        'santander_factoring_de',
-    ];
 
     /**
      * Payment methods which are hidden for the current user session
@@ -73,34 +49,48 @@ class PayeverUtil
     }
 
     /**
-     * @return array
+     * @param string $paymentMethod
      */
-    public function getHideOnFailureMethods()
+    public function processFailedMethod($paymentMethod)
     {
-        return $this->hideOnFailureMethods;
+        $paymentMethod = $this->removeMethodPrefix($paymentMethod);
+
+        if (PaymentMethod::shouldHideOnReject($paymentMethod)) {
+            $this->addFailedPaymentMethod($paymentMethod);
+        }
+    }
+
+    /**
+     * Check if user have already failed to process with payment method
+     *
+     * @param string $paymentMethod
+     * @return bool
+     */
+    public function isHiddenPaymentMethod($paymentMethod)
+    {
+        return in_array($this->removeMethodPrefix($paymentMethod), $this->getHiddenMethods());
     }
 
     /**
      * @return array
      */
-    public function getHideOnDifferentAddressMethods()
-    {
-        return array_map(
-            function ($method) {
-                return PayeverConfig::PLUGIN_PREFIX . $method;
-            },
-            $this->hideOnDifferentAddressMethods
-        );
-    }
-
-    /**
-     * @return array
-     */
-    public function getHiddenMethods()
+    private function getHiddenMethods()
     {
         return $this->isCurrentAddressesDifferent()
-            ? array_merge($this->hiddenMethods, $this->getHideOnDifferentAddressMethods())
+            ? array_merge($this->hiddenMethods, PaymentMethod::getShouldHideOnDifferentAddressMethods())
             : $this->hiddenMethods;
+    }
+
+    /**
+     * @param string $paymentMethod
+     * @return string
+     */
+    private function removeMethodPrefix($paymentMethod)
+    {
+        return strpos($paymentMethod, PayeverConfig::PLUGIN_PREFIX) !== false
+            ? substr($paymentMethod, strlen(PayeverConfig::PLUGIN_PREFIX))
+            : $paymentMethod
+        ;
     }
 
     /**
@@ -109,21 +99,10 @@ class PayeverUtil
      * @param string $paymentMethod
      * @return void
      */
-    public function addFailedPaymentMethod($paymentMethod)
+    private function addFailedPaymentMethod($paymentMethod)
     {
-        $this->hiddenMethods[] = PayeverConfig::PLUGIN_PREFIX . $paymentMethod;
+        $this->hiddenMethods[] = $paymentMethod;
         \oxRegistry::get('oxUtilsServer')->setOxCookie(self::FAILED_METHODS_COOKIE_NAME, implode('|', array_unique($this->hiddenMethods)));
-    }
-
-    /**
-     * Check payment method if user already failed to process with
-     *
-     * @param string $paymentMethod
-     * @return bool
-     */
-    public function isHiddenPaymentMethod($paymentMethod)
-    {
-        return in_array($paymentMethod, $this->getHiddenMethods());
     }
 
     /**

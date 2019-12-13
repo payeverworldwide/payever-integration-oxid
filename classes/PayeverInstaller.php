@@ -14,6 +14,8 @@ class PayeverInstaller
      * Execute action on activate event
      *
      * @return void
+     *
+     * @throws oxException
      */
     public static function onActivate()
     {
@@ -31,6 +33,8 @@ class PayeverInstaller
      * Execute action on deactivate event
      *
      * @return void
+     *
+     * @throws oxException
      */
     public static function onDeactivate()
     {
@@ -58,7 +62,14 @@ class PayeverInstaller
             }
         }
 
-        $columns = array('oxacceptfee' => 'tinyint', 'oxpercentfee' => 'TEXT', 'oxfixedfee' => 'TEXT');
+        $columns = array('oxacceptfee' => 'tinyint', 'oxpercentfee' => 'TEXT', 'oxfixedfee' => 'TEXT', 'oxvariants' => 'TEXT');
+        self::createColumsForPaymentsTable($columns);
+    }
+
+    private static function createColumsForPaymentsTable($columns)
+    {
+        $oConfig = oxRegistry::getConfig();
+        $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
         foreach ($columns as $cval => $type) {
             $sSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' AND TABLE_NAME = 'oxpayments' AND COLUMN_NAME = '" . $cval . "'";
             $aResult = $oDb->getAll($sSql);
@@ -84,6 +95,12 @@ class PayeverInstaller
                 }
             }
         }
+    }
+
+    public static function migrateDB()
+    {
+        $columns = array('oxvariants' => 'TEXT');
+        self::createColumsForPaymentsTable($columns);
     }
 
     /**

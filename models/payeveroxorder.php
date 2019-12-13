@@ -14,13 +14,16 @@ class payeverOxOrder extends payeverOxOrder_parent
      * Overrides standard oxid finalizeOrder method
      *
      * @param oxBasket $oBasket Shopping basket object
-     * @param object $oUser Current user object
+     * @param oxUser $oUser Current user object
      * @param bool $blRecalculatingOrder Order recalculation
+     * @param string $oxidOrderStatus
      *
      * For OXID < 6
      *
      * @return integer
      * @extend finalizeOrder
+     *
+     * @throws \Exception
      */
     public function finalizeOrder(oxBasket $oBasket, $oUser, $blRecalculatingOrder = false, $oxidOrderStatus = 'OK')
     {

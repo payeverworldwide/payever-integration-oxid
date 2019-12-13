@@ -8,13 +8,13 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
+$isOxidV6 = @class_exists('OxidEsales\EshopCommunity\Application\Model\Order');
+
 /**
  * Metadata version
  */
-
-$isOxidV6 = @class_exists('OxidEsales\EshopCommunity\Application\Model\Order');
-
 $sMetadataVersion = '1.2';
+
 /**
  * Module information
  */
@@ -28,7 +28,7 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '2.5.2',
+    'version' => '2.6.0',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
@@ -38,25 +38,17 @@ $aModule = [
         'oxorder'        => $isOxidV6 ? 'payever/models/payeveroxordercompatible' : 'payever/models/payeveroxorder',
         'oxpayment'      => 'payever/models/payeveroxpayment',
         'oxpaymentlist'  => 'payever/models/payeveroxpaymentlist',
-        'oxuser'         => 'payever/models/payeveroxuser',
         'oxviewconfig'   => 'payever/core/payeveroxviewconfig',
     ],
     'files' => [
         // classes map (OXID < 6.0 doesn't support composer autoloading)
-        'payever_config' => 'payever/controllers/admin/payever_config.php',
+        'payever_config'            => 'payever/controllers/admin/payever_config.php',
         'payeverStandardDispatcher' => 'payever/controllers/payeverstandarddispatcher.php',
-        'PayeverInstaller' => 'payever/classes/PayeverInstaller.php',
-        'payevercheckorder' => 'payever/controllers/payevercheckorder.php',
-        'PayeverUtil' => 'payever/classes/PayeverUtil.php',
-        'PayeverLock' => 'payever/classes/PayeverLock.php',
-        'PayeverConfig' => 'payever/classes/PayeverConfig.php',
-        'PayeverLogger' => 'payever/classes/PayeverLogger.php',
-        'PayeverApi' => 'payever/classes/Api/PayeverApi.php',
-        'PayeverApiToken' => 'payever/classes/Api/PayeverApiToken.php',
-        'PayeverApiTokenList' => 'payever/classes/Api/PayeverApiTokenList.php',
-        'PayeverApiConfiguration' => 'payever/classes/Api/PayeverApiConfiguration.php',
-        'PayeverApiClientThrowerDecorator' => 'payever/classes/Api/PayeverApiClientThrowerDecorator.php',
-        'PayeverApiClientLoggerDecorator' => 'payever/classes/Api/PayeverApiClientLoggerDecorator.php',
+        'PayeverInstaller'          => 'payever/classes/PayeverInstaller.php',
+        'PayeverMethodHider'        => 'payever/classes/PayeverMethodHider.php',
+        'PayeverConfig'             => 'payever/classes/PayeverConfig.php',
+        'PayeverApiOauthTokenList'  => 'payever/classes/Api/PayeverApiOauthTokenList.php',
+        'PayeverApiClientProvider'  => 'payever/classes/Api/PayeverApiClientProvider.php',
     ],
     'events' => [
         /**

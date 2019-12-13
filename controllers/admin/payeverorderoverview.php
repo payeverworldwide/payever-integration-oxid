@@ -10,30 +10,40 @@
 
 use Payever\ExternalIntegration\Payments\Action\ActionDecider;
 use Payever\ExternalIntegration\Payments\Action\ActionDeciderInterface;
+use Payever\ExternalIntegration\Payments\Http\RequestEntity\ShippingGoodsPaymentRequest;
 
 class payeverOrderOverview extends payeverOrderOverview_parent
 {
     /**
-     * Sends order.
+     * Trigger Santander payments shipping_goods action (if possible) when order is being shipped
+     *
+     * @throws \Exception
      */
     public function sendorder()
     {
+        /** @var oxOrder $oOrder */
         $oOrder = oxNew("oxorder");
 
-        if ($oOrder->load($this->getEditObjectId())) {
+        if (!$oOrder->load($this->getEditObjectId())) {
+            return parent::sendorder();
+        }
+
+        $paymentMethod = $oOrder->oxorder__oxpaymenttype->rawValue;
+
+        if (PayeverConfig::isPayeverPaymentMethod($paymentMethod)) {
             $paymentId = $oOrder->oxorder__oxtransid->rawValue;
-            $api = PayeverApi::getInstance();
-            $actionDecider = new ActionDecider($api);
+            $paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient();
+            $actionDecider = new ActionDecider($paymentsApiClient);
 
             try {
                 if ($actionDecider->isActionAllowed($paymentId, ActionDeciderInterface::ACTION_SHIPPING_GOODS, false)) {
-                    $shipmentData = [
-                        'customer_id' => $oOrder->oxorder__oxuserid->rawValue,
-                        'invoice_id' => $oOrder->oxorder__oxinvoicenr->rawValue,
-                        'invoice_date' => ''
-                    ];
+                    $requestEntity = new ShippingGoodsPaymentRequest();
+                    $requestEntity
+                        ->setCustomerId($oOrder->oxorder__oxuserid->rawValue)
+                        ->setInvoiceId($oOrder->oxorder__oxinvoicenr->rawValue)
+                    ;
 
-                    $api->shippingGoodsPaymentRequest($paymentId, $shipmentData);
+                    $paymentsApiClient->shippingGoodsPaymentRequest($paymentId, $requestEntity);
                 }
             } catch (Exception $exception) {
                 PayeverConfig::getLogger()->error(

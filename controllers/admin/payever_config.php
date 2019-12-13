@@ -8,8 +8,10 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Http\Response;
+use Payever\ExternalIntegration\Payments\Http\MessageEntity\ConvertedPaymentOptionEntity;
 use Payever\ExternalIntegration\Payments\Http\MessageEntity\ListPaymentOptionsResultEntity;
+use Payever\ExternalIntegration\Payments\Http\ResponseEntity\ListPaymentOptionsResponse;
+use Payever\ExternalIntegration\Payments\Converter\PaymentOptionConverter;
 
 /**
  * Configure Payever interface
@@ -36,6 +38,7 @@ class payever_config extends Shop_Config
     {
         $this->_aViewData['payever_config'] = PayeverConfig::get(PayeverConfig::VAR_CONFIG);
         $this->_aViewData['isset_live'] = PayeverConfig::getIsLiveKeys();
+        $this->_aViewData['log_file_exists'] = file_exists(PayeverConfig::getLogFilename());
         $this->_aViewData['payever_error'] = $this->getMerchantConfigErrorId();
         $this->_aViewData['payever_error_message'] = $this->errorMessage;
         $this->_aViewData['payever_version_info'] = $this->getVersionsList();
@@ -129,6 +132,7 @@ class payever_config extends Shop_Config
         $prefix = PayeverConfig::PLUGIN_PREFIX;
         oxDb::getDb()->execute(sprintf("DELETE FROM `oxobject2payment` where `oxpaymentid` LIKE '%%%s%%'", $prefix));
         oxDb::getDb()->execute(sprintf("DELETE FROM `oxpayments` where `oxid` LIKE '%%%s%%'", $prefix));
+        PayeverInstaller::migrateDB();
 
         $locales = $this->getLangList();
         $oPayment = oxNew('oxPayment');
@@ -142,8 +146,7 @@ class payever_config extends Shop_Config
             return;
         }
 
-        foreach ($methods as $method) {
-            $methodCode = $prefix . $method->getPaymentMethod();
+        foreach ($methods as $methodCode => $method) {
             $methodData = $method->toArray();
 
             $oPayment->load($methodCode);
@@ -170,11 +173,18 @@ class payever_config extends Shop_Config
             $oPayment->oxpayments__oxacceptfee = new oxField(($method->getAcceptFee()) ? 1 : 0, oxField::T_RAW);
             $oPayment->oxpayments__oxpercentfee = new oxField($method->getVariableFee(), oxField::T_RAW);
             $oPayment->oxpayments__oxfixedfee = new oxField($method->getFixedFee(), oxField::T_RAW);
+
+            $variants = json_encode(array(
+                'variantId' => $method->getVariantId(),
+                'variantName' => $method->getVariantName(),
+                'paymentMethod' => $method->getPaymentMethod()
+            ));
+
+            $oPayment->oxpayments__oxvariants = new oxField($variants, oxField::T_RAW);
             $oPayment->save();
 
             $sOxId = $oPayment->oxpayments__oxid->value;
             $countryModel = oxNew('oxCountry');
-
             foreach ($method->getOptions()->getCountries() as $country) {
                 $countryId = $countryModel->getIdByCode($country);
                 if ($countryId) {
@@ -191,23 +201,40 @@ class payever_config extends Shop_Config
         $this->save();
     }
 
+    public function downlaodLogFile()
+    {
+        $filePath = PayeverConfig::getLogFilename();
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename='.basename($filePath));
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+        ob_clean();
+        flush();
+        readfile($filePath);
+        exit;
+    }
+
     /**
      * Retrieve active methods from payever account
      *
      * @return ListPaymentOptionsResultEntity[]
      *
-     * @throws \UnexpectedValueException
+     * @throws \Exception
      */
     private function retrieveActiveMethods()
     {
         $currency = $this->getConfig()->getActShopCurrencyObject();
         $locales = $this->getLangList();
-
+        $paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient();
         $payeverMethods = [];
 
         foreach ($locales as $locale => $langName) {
-            /** @var Response $optionsResponse */
-            $optionsResponse = PayeverApi::getInstance()->listPaymentOptionsRequest(['_locale' => $locale, '_currency' => $currency->name]);
+            $optionsResponse = $paymentsApiClient->listPaymentOptionsWithVariantsRequest(['_locale' => $locale, '_currency' => $currency->name]);
+            /** @var ListPaymentOptionsResponse $responseEntity */
             $responseEntity = $optionsResponse->getResponseEntity();
 
             if ($optionsResponse->isFailed()) {
@@ -216,22 +243,25 @@ class payever_config extends Shop_Config
                 );
             }
 
-            /** @var ListPaymentOptionsResultEntity[] $response */
             $result = $responseEntity->getResult();
 
             if (!count($result)) {
                 throw new \UnexpectedValueException("Empty payment options list result");
             }
 
-            foreach ($result as $method) {
+            $convertedOptions = $this->convertPaymentOptionVariants($result);
+            foreach ($convertedOptions as $methodCode => $method) {
                 /** @var ListPaymentOptionsResultEntity $method */
-                $key = $method->getPaymentMethod();
+                $originPaymentMethod = $method->getPaymentMethod();
+                $key = $method->getVariantName() ?
+                    PayeverConfig::PLUGIN_PREFIX . $methodCode :
+                    PayeverConfig::PLUGIN_PREFIX . $originPaymentMethod;
 
                 if (!isset($payeverMethods[$key])) {
                     $payeverMethods[$key] = $method;
                 }
 
-                $payeverMethods[$key]->offsetSet("name_{$locale}", $method->getName());
+                $payeverMethods[$key]->offsetSet("name_{$locale}", sprintf('%s %s', $method->getName(), $method->getVariantName()));
                 $payeverMethods[$key]->offsetSet("description_offer_{$locale}", $method->getDescriptionOffer());
                 $payeverMethods[$key]->offsetSet("description_fee_{$locale}", $method->getDescriptionFee());
             }
@@ -292,5 +322,36 @@ class payever_config extends Shop_Config
         }
 
         return 1;
+    }
+
+    private function convertPaymentOptionVariants(array $poWithVariants)
+    {
+        $result = array();
+
+        foreach ($poWithVariants as $poWithVariant) {
+            $convertedPaymentOption = array();
+            $baseData = $poWithVariant->toArray();
+
+            $i = 1;
+            foreach ($poWithVariant->getVariants() as $variant) {
+                $variantName = $variant->getName();
+                $convertedOption = new ConvertedPaymentOptionEntity($baseData);
+                $convertedOption->setVariantId($variant->getId());
+                $convertedOption->setAcceptFee($variant->getAcceptFee());
+                $convertedOption->setVariantName($variantName);
+
+                if (empty($variantName)) {
+                    /** default variant */
+                    $convertedPaymentOption[$poWithVariant->getPaymentMethod()] = $convertedOption;
+                } else {
+                    $key = $i ? $poWithVariant->getPaymentMethod().'-'.$i : $poWithVariant->getPaymentMethod();
+                    $convertedPaymentOption[$key] = $convertedOption;
+                    $i++;
+                }
+            }
+            $result = array_merge($result, $convertedPaymentOption);
+        }
+
+        return $result;
     }
 }

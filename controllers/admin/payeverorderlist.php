@@ -14,20 +14,29 @@ use Payever\ExternalIntegration\Payments\Action\ActionDeciderInterface;
 class payeverOrderList extends payeverOrderList_parent
 {
     /**
-     * Cancels order and its order articles
+     * Cancel payever transaction (if possible) when order is being canceled
+     *
+     * @throws \Exception
      */
     public function storno()
     {
+        /** @var oxOrder $oOrder */
         $oOrder = oxNew("oxorder");
 
-        if ($oOrder->load($this->getEditObjectId())) {
+        if (!$oOrder->load($this->getEditObjectId())) {
+            return parent::storno();
+        }
+
+        $paymentMethod = $oOrder->oxorder__oxpaymenttype->rawValue;
+
+        if (PayeverConfig::isPayeverPaymentMethod($paymentMethod)) {
             $paymentId = $oOrder->oxorder__oxtransid->rawValue;
-            $api = PayeverApi::getInstance();
-            $actionDecider = new ActionDecider($api);
+            $paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient();
+            $actionDecider = new ActionDecider($paymentsApiClient);
 
             try {
                 if ($actionDecider->isActionAllowed($paymentId, ActionDeciderInterface::ACTION_CANCEL, true)) {
-                    $api->cancelPaymentRequest($paymentId);
+                    $paymentsApiClient->cancelPaymentRequest($paymentId);
                 }
             } catch (Exception $exception) {
                 PayeverConfig::getLogger()->error(

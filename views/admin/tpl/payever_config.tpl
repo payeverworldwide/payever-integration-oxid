@@ -157,9 +157,9 @@
                                 <dt>
                                     [{ oxmultilang ident="PAYEVER_DEBUG_MODE" }] &nbsp;
                                     <select name="payever_config[debugMode]">
-                                        <option value="400" [{if $payever_config.debugMode == 400}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_ERRORS" }]</option>
-                                        <option value="200" [{if $payever_config.debugMode == 200}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_INFO" }]</option>
-                                        <option value="100" [{if $payever_config.debugMode == 100}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_DEBUG" }]</option>
+                                        <option value="error" [{if $payever_config.debugMode == "error"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_ERRORS" }]</option>
+                                        <option value="info" [{if $payever_config.debugMode == "info"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_INFO" }]</option>
+                                        <option value="debug" [{if $payever_config.debugMode == "debug"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_DEBUG" }]</option>
                                     </select>
                                     [{if $log_filename}]
                                         <br>
@@ -190,6 +190,11 @@
             <input type="submit" class="payever-config-btn" name="setApiKeys" value="[{ oxmultilang ident="PAYEVER_SET_SANDBOX" }]" onclick="document.myedit.fnc.value='setSandbox'; setSandbox();" />
         </div>
     [{/if}]
+    [{if $log_file_exists eq 1}]
+        <div class="cntExLft">
+            <input type="submit" class="payever-config-btn" name="downloadLogFile" value="[{ oxmultilang ident="PAYEVER_DOWNLOAD_LOG" }]" onclick="document.myedit.fnc.value='downlaodLogFile'; downlaodLogFile();" />
+        </div>
+    [{/if}]
 </div>
 <script type="text/javascript">
     function synchronize() {
@@ -210,5 +215,8 @@
             }
         }
     [{/if}]
+    function downlaodLogFile() {
+        document.myedit.submit();
+    }
 </script>
 [{include file="bottomitem.tpl"}]

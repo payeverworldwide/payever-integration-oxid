@@ -58,6 +58,7 @@ $aLang = [
     'PAYEVER_SET_SANDBOX_CONFIRM' => '"Willst du wirklich die Sandbox einstellungen mit deinem payever Konto synchronisieren? Dabei werden die Zahlarten in den Versandarten gelöscht."',
     'PAYEVER_SET_SANDBOX' => 'Richten Sie Sandbox-API-Schlüssel',
     'PAYEVER_SET_LIVE' => 'Setzen Sie die Live-API-Tasten zurück',
+    'PAYEVER_DOWNLOAD_LOG' => 'Protokolldatei herunterladen',
     'PAYEVER_ADMIN_SUCCESS_SET_SANDBOX' => 'Sandbox API Schlüssel wurde erfolgreich eingerichtet',
     'PAYEVER_ADMIN_SUCCESS_SET_LIVE' => 'Live-API-Schlüssel wurden erfolgreich wiederhergestellt',
     'PAYEVER_PAYMENT_ACCEPT_FEE' => 'Akzeptieren Gebühr',

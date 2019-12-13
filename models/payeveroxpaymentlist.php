@@ -17,11 +17,12 @@ class payeverOxPaymentList extends payeverOxPaymentList_parent
     {
         $paymentList = parent::getPaymentList($sShipSetId, $dPrice, $oUser);
 
-        /** @var PayeverUtil $payeverUtil */
-        $payeverUtil = PayeverUtil::getInstance();
+        /** @var PayeverMethodHider $payeverUtil */
+        $payeverUtil = PayeverMethodHider::getInstance();
 
         foreach ($paymentList as $key => $value) {
-            if ($payeverUtil->isHiddenPaymentMethod($key)) {
+            $payeverMethod = strpos($key, '-') ? strstr($key, '-', true) : $key;
+            if ($payeverUtil->isHiddenPaymentMethod($payeverMethod)) {
                 unset($paymentList[$key]);
             }
         }

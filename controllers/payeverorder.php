@@ -27,7 +27,9 @@ class payeverOrder extends payeverOrder_parent
             $oSession->setVariable('oxidpayever_delivery_md5', $deliveryMd5);
         }
 
-        if (!$this->getConfig()->getRequestParameter('ord_agb') && $this->getConfig()->getConfigParam('blConfirmAGB')) {
+        if (!$this->getConfig()->getRequestParameter('ord_agb')
+            && $this->getConfig()->getConfigParam('blConfirmAGB')
+        ) {
             oxRegistry::get("oxUtilsView")->addErrorToDisplay('READ_AND_CONFIRM_TERMS', false, true);
 
             return;

@@ -9,7 +9,7 @@
             <input style="vertical-align: middle;" id="payment_[{$sPaymentID}]" type="radio" name="paymentid" value="[{$sPaymentID}]" [{if $oView->getCheckedPaymentId() == $paymentmethod->oxpayments__oxid->value}]checked[{/if}]>
             [{if $payment_desc.payever.display_logo eq 1}]
                 <span class="payever-payment-icon">
-                    <img src="[{$oViewConf->getModuleUrl('payever','out/src/img/')}][{$sPaymentID}].png" alt="[{ $paymentmethod->oxpayments__oxdesc->value }]"[{$dt_payever_logo}]/>
+                    <img src="[{$oViewConf->getModuleUrl('payever','out/src/img/')}][{if $sPaymentID|strpos:"-"}][{$sPaymentID|strstr:"-":true}][{else}][{$sPaymentID}][{/if}].png" alt="[{ $paymentmethod->oxpayments__oxdesc->value }]"[{$dt_payever_logo}]/>
                 </span>
             [{/if}]
             <label for="payment_[{$sPaymentID}]"><b>[{ $paymentmethod->oxpayments__oxdesc->value }] [{if $payment_mode eq 0}]SANDBOX Mode[{/if}]</b>

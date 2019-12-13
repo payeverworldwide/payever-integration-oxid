@@ -56,6 +56,7 @@ $aLang = [
     'PAYEVER_SET_LIVE_CONFIRM' => '"Do you really want to reset the live payever settings? This will delete associated payment methods in your shipping methods."',
     'PAYEVER_SET_SANDBOX_CONFIRM' => '"Do you really want to set sandbox payever settings? This will delete associated payment methods in your shipping methods."',
     'PAYEVER_SET_SANDBOX' => 'Set up sandbox API keys',
+    'PAYEVER_DOWNLOAD_LOG' => 'Download log file',
     'PAYEVER_SET_LIVE' => 'Reset live API keys',
     'PAYEVER_ADMIN_SUCCESS_SET_SANDBOX' => 'Sandbox API keys was set up successfully',
     'PAYEVER_ADMIN_SUCCESS_SET_LIVE' => 'Live API keys was restored successfully',

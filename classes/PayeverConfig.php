@@ -8,6 +8,10 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
+use Payever\ExternalIntegration\Core\Logger\FileLogger;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
+
 class PayeverConfig
 {
     const LOG_FILENAME = 'payever.log';
@@ -45,7 +49,7 @@ class PayeverConfig
     /** @var oxConfig */
     private static $config;
 
-    /** @var PayeverLogger */
+    /** @var LoggerInterface */
     private static $logger;
 
     private function __construct()
@@ -192,18 +196,34 @@ class PayeverConfig
 
     public static function getLoggingLevel()
     {
-        return static::get(static::VAR_CONFIG, static::KEY_LOG_LEVEL);
+        $level = static::get(static::VAR_CONFIG, static::KEY_LOG_LEVEL);
+
+        if (!$level || intval($level).'' === (string) $level) {
+            // legacy format check
+            $level = LogLevel::INFO;
+        }
+
+        return $level;
     }
 
     /**
-     * @return PayeverLogger
+     * @return LoggerInterface
      */
     public static function getLogger()
     {
         if (!static::$logger) {
-            static::$logger = new PayeverLogger(static::getLogFilename(), static::getLoggingLevel());
+            static::$logger = new FileLogger(static::getLogFilename(), static::getLoggingLevel());
         }
 
         return static::$logger;
+    }
+
+    /**
+     * @param string $paymentMethod
+     * @return bool
+     */
+    public static function isPayeverPaymentMethod($paymentMethod)
+    {
+        return strpos($paymentMethod, static::PLUGIN_PREFIX) !== false;
     }
 }

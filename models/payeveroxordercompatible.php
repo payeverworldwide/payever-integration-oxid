@@ -11,12 +11,16 @@
 class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
 {
     /**
+     * @var string
+     */
+    private $oxidOrderStatus = 'OK';
+
+    /**
      * Overrides standard oxid finalizeOrder method
      *
      * @param OxidEsales\EshopCommunity\Application\Model\Basket $oBasket Shopping basket object
      * @param oxUser $oUser Current user object
      * @param bool $blRecalculatingOrder Order recalculation
-     * @param string $oxidOrderStatus
      *
      * For OXID >= 6
      *
@@ -25,7 +29,7 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
      *
      * @throws \Exception
      */
-    public function finalizeOrder(OxidEsales\EshopCommunity\Application\Model\Basket $oBasket, $oUser, $blRecalculatingOrder = false, $oxidOrderStatus = 'OK')
+    public function finalizeOrder(OxidEsales\Eshop\Application\Model\Basket $oBasket, $oUser, $blRecalculatingOrder = false)
     {
         $sPaymentId = $oBasket->getPaymentId();
 
@@ -112,6 +116,7 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         }
 
         // updating order trans status (success status)
+        $oxidOrderStatus = $this->getOrderStatus();
         $this->_setOrderStatus($oxidOrderStatus);
         $up = oxNew('oxUserPayment');
         $up->load((string)$this->oxorder__oxpaymentid);
@@ -139,5 +144,20 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         }
 
         return self::ORDER_STATE_OK;
+    }
+
+    public function setOrderStatus($oxidOrderStatus)
+    {
+        $this->oxidOrderStatus = $oxidOrderStatus;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    private function getOrderStatus()
+    {
+        return $this->oxidOrderStatus;
     }
 }

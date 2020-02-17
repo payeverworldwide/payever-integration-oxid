@@ -552,7 +552,12 @@ class payeverStandardDispatcher extends oxUBase
         /** @var payeverOxOrder $oOrder */
         $oOrder = oxNew('oxorder');
         //finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
-        $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, false, $oxidOrderStatus);
+        if ($oOrder instanceof payeverOxOrderCompatible) {
+            $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, false);
+        } else {
+            $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, false, $oxidOrderStatus);
+        }
+
         // performing special actions after user finishes order (assignment to special user groups)
         $oUser->onOrderExecute($oBasket, $orderStateId);
 

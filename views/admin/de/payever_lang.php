@@ -80,5 +80,11 @@ $aLang = [
     'PAYEVER_NO_TEXT' => 'Norsk',
     'PAYEVER_DA_TEXT' => 'Dansk',
     'PAYEVER_SV_TEXT' => 'Svenska',
-    'SUBMIT_ORDER' => 'PAYEVER ORDER'
+    'SUBMIT_ORDER' => 'PAYEVER ORDER',
+    'PAYEVER_VERSION_MESSAGE' => 'Eine neue Version des payever Plugins ist jetzt verfügbar.',
+    'PAYEVER_VERSION_DOWNLOAD' => 'Bitte laden Sie',
+    'PAYEVER_VERSION_AND_UPDATE' => 'herunter und aktualisieren Sie Ihr Plugin.',
+    'PAYEVER_CHAT_TITLE' => 'Hilfe benötigt? Kontaktiere uns!',
+    'PAYEVER_LOADING_CHAT' => 'Chat wird geladen...',
+    'PAYEVER_CHAT_DESCRIPTION' => 'Unser kostenloser deutsch- und englisch-sprachiger Tech Support ist Montags bis Freitags zwischen 8 und 19 Uhr für dich da. Wenn du ein bestimmtes technisches Problem melden möchtest, erwähne in deiner Nachricht an uns bitte deine OXID eShop Version und die Version deines payever Plugins. Füge deiner Nachricht bitte auch die Plugin-Logs bei (die Log-Datei kannst du durch Klick auf den "Download Logs" Button auf dieser Seite herunterladen).'
 ];

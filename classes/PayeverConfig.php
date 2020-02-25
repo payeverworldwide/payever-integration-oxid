@@ -26,6 +26,9 @@ class PayeverConfig
     const VAR_SANDBOX = 'payever_sandbox_url';
     const KEY_SANDBOX_URL = 'payeverSandboxUrl';
 
+    const VAR_LIVE = 'payever_live_url';
+    const KEY_LIVE_URL = 'payeverLiveUrl';
+
     const VAR_CONFIG = 'payever_config';
 
     const KEY_DEBUG = 'debugMode';
@@ -45,6 +48,9 @@ class PayeverConfig
     const KEY_API_SLUG = 'slug';
     const KEY_API_CLIENT_ID = 'clientId';
     const KEY_API_CLIENT_SECRET = 'clientSecrect';
+
+    const VAR_PLUGIN_COMMANDS = 'payever_commands';
+    const KEY_PLUGIN_COMMAND_TIMESTAMP = 'payever_command_timestamp';
 
     /** @var oxConfig */
     private static $config;
@@ -162,9 +168,19 @@ class PayeverConfig
         return static::get(static::VAR_SANDBOX, static::KEY_SANDBOX_URL);
     }
 
+    public static function getCustomLiveUrl()
+    {
+        return static::get(static::VAR_LIVE, static::KEY_LIVE_URL);
+    }
+
     public static function getIsLiveKeys()
     {
         return static::get(static::VAR_LIVE_KEYS, static::KEY_IS_LIVE);
+    }
+
+    public static function getPluginCommandTimestamt()
+    {
+        return static::get(static::VAR_PLUGIN_COMMANDS, static::KEY_PLUGIN_COMMAND_TIMESTAMP);
     }
 
     public static function getPluginVersion()

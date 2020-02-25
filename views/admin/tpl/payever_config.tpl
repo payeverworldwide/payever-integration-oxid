@@ -10,9 +10,20 @@
     <div class="payever-config-versions">
         [{if $payever_version_info}]
             <b>OXID:</b> v[{$payever_version_info.oxid}] <br>
-            <b>Payever:</b> v[{$payever_version_info.payever}] <br>
+            <b>Payever:</b> v[{$payever_version_info.payever}]
+            [{if $payever_new_version}]
+                <span style="color:red;"> - [{ oxmultilang ident="PAYEVER_VERSION_MESSAGE" }]
+                    [{if $payever_new_version.filename}]
+                        [{ oxmultilang ident="PAYEVER_VERSION_DOWNLOAD" }] <a href="[{$payever_new_version.filename}]">v.[{$payever_new_version.version}]</a> [{ oxmultilang ident="PAYEVER_VERSION_AND_UPDATE" }]
+                    [{/if}]
+                </span>
+            [{/if}]<br>
             <b>PHP:</b> v[{$payever_version_info.php}] <br>
         [{/if}]
+    </div>
+    <div class="payever-embedded-support">
+        <b><a href="javascript:void(0);" onclick="return pe_chat_btn(event);">[{ oxmultilang ident="PAYEVER_CHAT_TITLE" }]</a></b>
+        <p>[{ oxmultilang ident="PAYEVER_CHAT_DESCRIPTION" }]</p>
     </div>
 </div>
 [{if $payever_error_message}]
@@ -217,6 +228,24 @@
     [{/if}]
     function downlaodLogFile() {
         document.myedit.submit();
+    }
+
+    function pe_chat_btn(e) {
+        window.zESettings = { analytics: false };
+
+        var s = document.createElement('script');
+        s.src = 'https://static.zdassets.com/ekr/snippet.js?key=775ae07f-08ee-400e-b421-c190d7836142';
+        s.id = 'ze-snippet';
+        s.onload = function () {
+            window['zE'] && window['zE']('webWidget', 'open');
+            window['zE'] && window['zE']('webWidget:on', 'open', function() { e.target.innerText = '[{ oxmultilang ident="PAYEVER_CHAT_TITLE" }]'; });
+        };
+        document.head.appendChild(s);
+
+        e.target.innerText = '[{ oxmultilang ident="PAYEVER_LOADING_CHAT" }]';
+        e.preventDefault();
+
+        return false;
     }
 </script>
 [{include file="bottomitem.tpl"}]

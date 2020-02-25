@@ -16,7 +16,6 @@
  */
 class payeverOrder extends payeverOrder_parent
 {
-
     public function execute()
     {
         $oSession = $this->getSession();

@@ -42,6 +42,7 @@ class payever_config extends Shop_Config
         $this->_aViewData['payever_error'] = $this->getMerchantConfigErrorId();
         $this->_aViewData['payever_error_message'] = $this->errorMessage;
         $this->_aViewData['payever_version_info'] = $this->getVersionsList();
+        $this->_aViewData['payever_new_version'] = $this->checkLatestVersion();
 
         if (file_exists(PayeverConfig::getLogFilename())) {
             $this->_aViewData['log_filename'] = substr(PayeverConfig::getLogFilename(), strlen($_SERVER['DOCUMENT_ROOT']));
@@ -322,6 +323,22 @@ class payever_config extends Shop_Config
         }
 
         return 1;
+    }
+
+    private function checkLatestVersion()
+    {
+        try {
+            $pluginsApiClient = PayeverApiClientProvider::getPluginsApiClient();
+            /** @var PluginVersionResponseEntity $latestVersion */
+            $latestVersion = $pluginsApiClient->getLatestPluginVersion()->getResponseEntity();
+            if (version_compare($latestVersion->getVersion(), PayeverConfig::getPluginVersion(), '>')) {
+                return $latestVersion->toArray();
+            }
+        } catch (\Exception $exception) {
+            PayeverConfig::getLogger()->warning(sprintf('Plugin version checking failed: %s', $exception->getMessage()));
+        }
+
+        return false;
     }
 
     private function convertPaymentOptionVariants(array $poWithVariants)

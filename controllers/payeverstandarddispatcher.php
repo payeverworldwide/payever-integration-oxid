@@ -74,7 +74,7 @@ class payeverStandardDispatcher extends oxUBase
 
             $this->logger->info("Payment successfully created", $paymentResponseEntity->toArray());
 
-            return $paymentResponseEntity->getRedirectUrl().'?_locale='.$language;
+            return $paymentResponseEntity->getRedirectUrl() . '?_locale=' . $language;
         } catch (Exception $exception) {
             $this->logger->error(sprintf("Error while creating payment: %s", $exception->getMessage()));
 
@@ -158,6 +158,7 @@ class payeverStandardDispatcher extends oxUBase
         }
 
         $createPaymentRequestEntity = new CreatePaymentRequest();
+
         if (strpos($apiMethod, '-')) {
             $oPayment = oxNew('oxpayment');
             $oPayment->load($oBasket->getPaymentId());
@@ -175,7 +176,6 @@ class payeverStandardDispatcher extends oxUBase
             ->setFee($deliveryCost)
             ->setOrderId($oUser->getBasket('savedbasket')->getId())
             ->setCurrency($oBasket->getBasketCurrency()->name)
-
             ->setFirstName($deliveryAddress->oxaddress__oxfname->value)
             ->setLastName($deliveryAddress->oxaddress__oxlname->value)
             ->setPhone($deliveryAddress->oxaddress__oxfon->value)
@@ -184,17 +184,13 @@ class payeverStandardDispatcher extends oxUBase
             ->setCity($deliveryAddress->oxaddress__oxcity->value)
             ->setCountry($deliveryAddress->oxaddress__oxcountryid->value)
             ->setZip($deliveryAddress->oxaddress__oxzip->value)
-
             ->setSuccessUrl($this->generateCallbackUrl('success'))
             ->setPendingUrl($this->generateCallbackUrl('success', ['is_pending' => true]))
             ->setCancelUrl($this->generateCallbackUrl('cancel'))
             ->setFailureUrl($this->generateCallbackUrl('failure'))
             ->setNoticeUrl($this->generateCallbackUrl('notice'))
-
             ->setPluginVersion(PayeverConfig::getPluginVersion())
-
-            ->setCart($basketItems)
-        ;
+            ->setCart($basketItems);
 
         $birthdate = $deliveryAddress->getUser()->oxuser__oxbirthdate->value;
 
@@ -476,7 +472,7 @@ class payeverStandardDispatcher extends oxUBase
     protected function getOrderByPaymentId($paymentId)
     {
         $oDb = oxDb::getDb();
-        $sQuery = "SELECT oxid FROM oxorder WHERE oxtransid = '".$paymentId."' AND oxordernr > 0 LIMIT 1";
+        $sQuery = "SELECT oxid FROM oxorder WHERE oxtransid = '" . $paymentId . "' AND oxordernr > 0 LIMIT 1";
         $iOrderId = $oDb->GetOne($sQuery);
 
         if ($iOrderId) {
@@ -515,9 +511,9 @@ class payeverStandardDispatcher extends oxUBase
      * @param array $payment
      * @param string $oxidOrderStatus
      * @param bool $isPending
-     * @throws oxException
-     *
      * @return int - order state
+     *
+     * @throws oxException
      *
      * @throws \Exception
      */
@@ -543,6 +539,13 @@ class payeverStandardDispatcher extends oxUBase
         $oBasket->setPayment($payment['paymentMethod']);
         $oBasket->load();
         $oBasket->calculateBasket(true);
+
+        if (!$oBasket->getProductsCount()) {
+            // fallback to session data, which does not work for notice callbacks
+            $oSession = $this->getSession();
+            $oBasket = $oSession->getBasket();
+            $oUser = $oBasket->getBasketUser();
+        }
 
         if (!$oBasket->getProductsCount()) {
             $this->logger->alert(sprintf('Got empty basket basketId "%s"', $payment['basketId']));
@@ -674,6 +677,27 @@ class payeverStandardDispatcher extends oxUBase
      */
     private function shouldRejectNotification($order, $notificationTimestamp)
     {
-        return ((int) $order->oxorder__payever_notification_timestamp->rawValue >= $notificationTimestamp);
+        return ((int)$order->oxorder__payever_notification_timestamp->rawValue >= $notificationTimestamp);
+    }
+
+    /**
+     * Executing plugin commands
+     *
+     * @throws Exception
+     */
+    public function executePluginCommands()
+    {
+        try {
+            PayeverApiClientProvider::getPluginsApiClient()->registerPlugin();
+            PayeverApiClientProvider::getPluginCommandManager()->executePluginCommands(PayeverConfig::getPluginCommandTimestamt());
+            $this->getConfig()->saveShopConfVar('arr', PayeverConfig::VAR_PLUGIN_COMMANDS, array(PayeverConfig::KEY_PLUGIN_COMMAND_TIMESTAMP => time()));
+            echo json_encode(['result' => 'success', 'message' => 'Plugin commands have been executed']);
+        } catch (\oxException $exception) {
+            $message = sprintf('Plugin command execution failed: %s', $exception->getMessage());
+            echo json_encode(['result' => 'failed', 'message' => $message]);
+            $this->logger->warning($message);
+        }
+
+        exit();
     }
 }

@@ -28,7 +28,7 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '2.6.1',
+    'version' => '2.7.0',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
@@ -42,13 +42,15 @@ $aModule = [
     ],
     'files' => [
         // classes map (OXID < 6.0 doesn't support composer autoloading)
-        'payever_config'            => 'payever/controllers/admin/payever_config.php',
-        'payeverStandardDispatcher' => 'payever/controllers/payeverstandarddispatcher.php',
-        'PayeverInstaller'          => 'payever/classes/PayeverInstaller.php',
-        'PayeverMethodHider'        => 'payever/classes/PayeverMethodHider.php',
-        'PayeverConfig'             => 'payever/classes/PayeverConfig.php',
-        'PayeverApiOauthTokenList'  => 'payever/classes/Api/PayeverApiOauthTokenList.php',
-        'PayeverApiClientProvider'  => 'payever/classes/Api/PayeverApiClientProvider.php',
+        'payever_config'                     => 'payever/controllers/admin/payever_config.php',
+        'payeverStandardDispatcher'          => 'payever/controllers/payeverstandarddispatcher.php',
+        'PayeverInstaller'                   => 'payever/classes/PayeverInstaller.php',
+        'PayeverMethodHider'                 => 'payever/classes/PayeverMethodHider.php',
+        'PayeverConfig'                      => 'payever/classes/PayeverConfig.php',
+        'PayeverApiOauthTokenList'           => 'payever/classes/Api/PayeverApiOauthTokenList.php',
+        'PayeverApiClientProvider'           => 'payever/classes/Api/PayeverApiClientProvider.php',
+        'PayeverPluginCommandExecutor'       => 'payever/classes/Api/PayeverPluginCommandExecutor.php',
+        'PayeverPluginRegistryInfoProvider'  => 'payever/classes/Api/PayeverPluginRegistryInfoProvider.php',
     ],
     'events' => [
         /**

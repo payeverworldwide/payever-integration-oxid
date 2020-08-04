@@ -24,6 +24,13 @@ class payeverStandardDispatcher extends oxUBase
 
     const LOCK_WAIT_SECONDS = 30;
 
+    const MR_SALUATATION = 'mr';
+    const MRS_SALUATATION = 'mrs';
+    const MS_SALUATATION = 'ms';
+
+    const HEADER_SIGNATURE = 'X-PAYEVER-SIGNATURE';
+
+
     /** @var PaymentsApiClient */
     private $api;
 
@@ -198,10 +205,28 @@ class payeverStandardDispatcher extends oxUBase
             $createPaymentRequestEntity->setBirthdate($birthdate);
         }
 
+        $salutation = $this->getSalutation($oUser->oxuser__oxsal->value);
+        if ($salutation) {
+            $createPaymentRequestEntity->setSalutation($salutation);
+        }
+
         $this->logger->info("Finished collecting order data for create payment call", $createPaymentRequestEntity->toArray());
 
         return $createPaymentRequestEntity;
     }
+
+    /**
+     * @param string $salutation
+     * @return string
+     */
+    private function getSalutation($salutation)
+    {
+        $salutation = strtolower($salutation);
+        return ($salutation == self::MR_SALUATATION
+            || $salutation == self::MRS_SALUATATION
+            || $salutation == self::MS_SALUATATION) ? $salutation : false;
+    }
+
 
     public function redirectToThankYou()
     {
@@ -307,11 +332,7 @@ class payeverStandardDispatcher extends oxUBase
         $this->logger->info("Locked", $payment);
 
         try {
-            $retrievePaymentResponse = $this->api->retrievePaymentRequest($paymentId);
-            /** @var RetrievePaymentResponse $retrievePaymentEntity */
-            $retrievePaymentEntity = $retrievePaymentResponse->getResponseEntity();
-            /** @var RetrievePaymentResultEntity $retrievePaymentResult */
-            $retrievePaymentResult = $retrievePaymentEntity->getResult();
+            $retrievePaymentResult = $this->getRetrievePaymentResultEntity($payment);
             $paymentDetails = $retrievePaymentResult->getPaymentDetails();
 
             $payment['basketId'] = $retrievePaymentResult->getReference();
@@ -326,11 +347,11 @@ class payeverStandardDispatcher extends oxUBase
 
             if ($order) {
                 $notificationTimestamp = 0;
-                $rawData = file_get_contents('php://input');
+                $rawData = $this->getRawData();
                 if ($rawData) {
-                    $rawArr = json_decode($rawData, true);
-                    $notificationTimestamp = strtotime($rawArr['created_at']);
-
+                    $notificationTimestamp = !empty($rawData['created_at'])
+                        ? strtotime($rawData['created_at'])
+                        : $notificationTimestamp;
                     if ($payment['paymentSts'] == 'notice' && $this->shouldRejectNotification($order, $notificationTimestamp)) {
                         $payment['errorMessage'] = 'Notification rejected: newer notification already processed';
                         return $this->rejectPayment($payment, false);
@@ -699,5 +720,77 @@ class payeverStandardDispatcher extends oxUBase
         }
 
         exit();
+    }
+
+    /**
+     * @param array $payment
+     * @return RetrievePaymentResultEntity
+     * @throws Exception
+     */
+    private function getRetrievePaymentResultEntity($payment)
+    {
+        $paymentId = $payment['paymentId'];
+        $signature = null;
+        $headers = $this->getRequestHeaders();
+        foreach ($headers as $headerName => $headerValue) {
+            if (strtolower(self::HEADER_SIGNATURE) === strtolower($headerName)) {
+                $signature = $headerValue;
+                break;
+            }
+        }
+        if (null === $signature) {
+            $retrievePaymentResponse = $this->api->retrievePaymentRequest($paymentId);
+            /** @var RetrievePaymentResponse $retrievePaymentEntity */
+            $retrievePaymentEntity = $retrievePaymentResponse->getResponseEntity();
+            /** @var RetrievePaymentResultEntity $retrievePaymentResult */
+            $retrievePaymentResult = $retrievePaymentEntity->getResult();
+        } else {
+            $expectedSignature = hash_hmac(
+                'sha256',
+                PayeverConfig::getApiClientId() . $paymentId,
+                PayeverConfig::getApiClientSecret()
+            );
+            if ($expectedSignature === $signature) {
+                $data = $this->getRawData();
+                $retrievePaymentResult = new RetrievePaymentResultEntity(
+                    !empty($data['data']['payment']) ? $data['data']['payment'] : []
+                );
+            } else {
+                $payment['errorMessage'] = 'Notification rejected: invalid signature';
+                $this->rejectPayment($payment);
+            }
+        }
+
+        return $retrievePaymentResult;
+    }
+
+    /**
+     * @return array
+     */
+    private function getRawData()
+    {
+        $data = [];
+        $rawContent = file_get_contents('php://input');
+        if ($rawContent) {
+            $rawData = json_decode($rawContent, true);
+            $data = $rawData ?: [];
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return array
+     */
+    private function getRequestHeaders()
+    {
+        $headers = [];
+        foreach ($_SERVER as $key => $value) {
+            if (strpos($key, 'HTTP_') === 0) {
+                $headers[str_replace('_', '-', substr($key, 5))] = $value;
+            }
+        }
+
+        return $headers;
     }
 }

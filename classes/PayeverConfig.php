@@ -12,6 +12,8 @@ use Payever\ExternalIntegration\Core\Logger\FileLogger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
+
 class PayeverConfig
 {
     const LOG_FILENAME = 'payever.log';
@@ -213,10 +215,13 @@ class PayeverConfig
     public static function getLoggingLevel()
     {
         $level = static::get(static::VAR_CONFIG, static::KEY_LOG_LEVEL);
-
-        if (!$level || intval($level).'' === (string) $level) {
-            // legacy format check
-            $level = LogLevel::INFO;
+        $allowedLevels = [
+            LogLevel::ERROR,
+            LogLevel::INFO,
+            LogLevel::DEBUG,
+        ];
+        if (!in_array($level, $allowedLevels, true)) {
+            $level = LogLevel::ERROR;
         }
 
         return $level;

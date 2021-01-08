@@ -11,6 +11,31 @@
 class payeverOxOrder extends payeverOxOrder_parent
 {
     /**
+     * {@inheritDoc}
+     */
+    public function save()
+    {
+        $isSendDateChanged = false;
+        $emptyDateTimeValues = ['0000-00-00 00:00:00', '-'];
+        $sendDateTimeValue = $this->oxorder__oxsenddate->value;
+        if (!in_array($sendDateTimeValue, $emptyDateTimeValues, true)) {
+            $oDb = \oxDb::getDb(\oxDb::FETCH_MODE_ASSOC);
+            if ($oDb) {
+                $order = $oDb->getRow("SELECT `OXSENDDATE` FROM `oxorder` WHERE `OXID` = ?;", [$this->getId()]);
+                if (isset($order['OXSENDDATE']) && $order['OXSENDDATE'] !== $sendDateTimeValue) {
+                    $isSendDateChanged = true;
+                }
+            }
+        }
+        $result = parent::save();
+        if ($result && $isSendDateChanged) {
+            (new PayeverShippingGoodsHandler())->triggerShippingGoodsPaymentRequest($this);
+        }
+
+        return $result;
+    }
+
+    /**
      * Overrides standard oxid finalizeOrder method
      *
      * @param oxBasket $oBasket Shopping basket object

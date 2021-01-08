@@ -167,10 +167,10 @@
                                 <dd class="cntExLft"></dd>
                                 <dt>
                                     [{ oxmultilang ident="PAYEVER_DEBUG_MODE" }] &nbsp;
-                                    <select name="payever_config[debugMode]">
-                                        <option value="error" [{if $payever_config.debugMode == "error"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_ERRORS" }]</option>
-                                        <option value="info" [{if $payever_config.debugMode == "info"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_INFO" }]</option>
-                                        <option value="debug" [{if $payever_config.debugMode == "debug"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_DEBUG" }]</option>
+                                    <select name="payever_config[logLevel]">
+                                        <option value="error" [{if $payever_config.logLevel == "error"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_ERRORS" }]</option>
+                                        <option value="info" [{if $payever_config.logLevel == "info"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_INFO" }]</option>
+                                        <option value="debug" [{if $payever_config.logLevel == "debug"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_DEBUG" }]</option>
                                     </select>
                                     [{if $log_filename}]
                                         <br>

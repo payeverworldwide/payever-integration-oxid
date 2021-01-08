@@ -28,12 +28,11 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '2.9.0',
+    'version' => '2.10.1',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
         'payment'        => 'payever/controllers/payeverpayment',
-        'order_overview' => 'payever/controllers/admin/payeverorderoverview',
         'order_list'     => 'payever/controllers/admin/payeverorderlist',
         'oxorder'        => $isOxidV6 ? 'payever/models/payeveroxordercompatible' : 'payever/models/payeveroxorder',
         'oxpayment'      => 'payever/models/payeveroxpayment',
@@ -51,6 +50,7 @@ $aModule = [
         'PayeverApiClientProvider'           => 'payever/classes/Api/PayeverApiClientProvider.php',
         'PayeverPluginCommandExecutor'       => 'payever/classes/Api/PayeverPluginCommandExecutor.php',
         'PayeverPluginRegistryInfoProvider'  => 'payever/classes/Api/PayeverPluginRegistryInfoProvider.php',
+        'PayeverShippingGoodsHandler'        => 'payever/classes/Api/PayeverShippingGoodsHandler.php',
     ],
     'events' => [
         /**

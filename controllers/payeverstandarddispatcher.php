@@ -102,6 +102,9 @@ class payeverStandardDispatcher extends oxUBase
 
         $oSession = $this->getSession();
         $oBasket = $oSession->getBasket();
+        // to be compatible with oxid v4.7.5, let's check if method exists
+        method_exists($oBasket, 'enableSaveToDataBase') && $oBasket->enableSaveToDataBase();
+        $oBasket->calculateBasket(true);
         $oUser = $oBasket->getBasketUser();
         $basketItems = [];
 

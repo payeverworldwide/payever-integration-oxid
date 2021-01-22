@@ -11,15 +11,23 @@
 use Payever\ExternalIntegration\Payments\Http\MessageEntity\ConvertedPaymentOptionEntity;
 use Payever\ExternalIntegration\Payments\Http\MessageEntity\ListPaymentOptionsResultEntity;
 use Payever\ExternalIntegration\Payments\Http\ResponseEntity\ListPaymentOptionsResponse;
-use Payever\ExternalIntegration\Payments\Converter\PaymentOptionConverter;
+use Payever\ExternalIntegration\Plugins\Http\ResponseEntity\PluginVersionResponseEntity;
 
 /**
  * Configure Payever interface
  */
 class payever_config extends Shop_Config
 {
+    const THUMBNAILS_PATH = 'out/pictures/%s.png';
+
     /** @var string|null  */
     private $errorMessage = null;
+
+    /** @var array  */
+    private $flashMessages = [];
+
+    /** @var PayeverSubscriptionManager */
+    protected $subscriptionManager;
 
     /**
      * class template.
@@ -27,7 +35,30 @@ class payever_config extends Shop_Config
      */
     protected $_sThisTemplate = 'payever_config.tpl';
 
+    /**
+     * @var array
+     */
     protected $_parameters = [];
+
+    /**
+     * {@inheritDoc}
+     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->subscriptionManager = new PayeverSubscriptionManager();
+    }
+
+    /**
+     * @param array $parameters
+     * @return $this
+     */
+    public function setParameters(array $parameters)
+    {
+        $this->_parameters = $parameters;
+
+        return $this;
+    }
 
     /**
      * Passes shop configuration parameters
@@ -41,6 +72,7 @@ class payever_config extends Shop_Config
         $this->_aViewData['log_file_exists'] = file_exists(PayeverConfig::getLogFilename());
         $this->_aViewData['payever_error'] = $this->getMerchantConfigErrorId();
         $this->_aViewData['payever_error_message'] = $this->errorMessage;
+        $this->_aViewData['payever_flash_messages'] = $this->flashMessages;
         $this->_aViewData['payever_version_info'] = $this->getVersionsList();
         $this->_aViewData['payever_new_version'] = $this->checkLatestVersion();
 
@@ -55,16 +87,31 @@ class payever_config extends Shop_Config
      * Saves shop configuration parameters.
      *
      * @return void
+     * @throws ReflectionException
      */
     public function save()
     {
+        /** @var oxConfig $oxConfig */
         $oxConfig = $this->getConfig();
         if (empty($this->_parameters)) {
             $this->_parameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_CONFIG);
         }
+        $wasActive = PayeverConfig::isProductsSyncEnabled();
+        $isActive = !empty($this->_parameters[PayeverConfig::PRODUCTS_SYNC_ENABLED])
+            ? (bool) $this->_parameters[PayeverConfig::PRODUCTS_SYNC_ENABLED]
+            : false;
+        if ($wasActive !== $isActive) {
+            $this->_parameters[PayeverConfig::PRODUCTS_SYNC_ENABLED] = $this->subscriptionManager
+                ->toggleSubscription($isActive);
+        }
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_CONFIG, $this->_parameters);
     }
 
+    /**
+     * @throws ReflectionException
+     * @throws oxConnectionException
+     * @throws oxSystemComponentException
+     */
     public function setLive()
     {
         $oxConfig = $this->getConfig();
@@ -85,6 +132,11 @@ class payever_config extends Shop_Config
         $this->synchronize();
     }
 
+    /**
+     * @throws ReflectionException
+     * @throws oxConnectionException
+     * @throws oxSystemComponentException
+     */
     public function setSandbox()
     {
         $oxConfig = $this->getConfig();
@@ -124,9 +176,30 @@ class payever_config extends Shop_Config
     }
 
     /**
+     * @param string $thumbnailUrl
+     * @param string $thumbnailName
+     * @return false|string
+     */
+    public function saveThumbnailInDirectory($thumbnailUrl, $thumbnailName)
+    {
+        $savePath = $this->getConfig()->getConfigParam('sShopDir') . sprintf(self::THUMBNAILS_PATH, $thumbnailName);
+        $curl = curl_init($thumbnailUrl);
+        $file = fopen($savePath, 'wb');
+        curl_setopt($curl, CURLOPT_FILE, $file);
+        curl_setopt($curl, CURLOPT_HEADER, 0);
+        if (!curl_exec($curl)) {
+            return false;
+        }
+        curl_close($curl);
+        fclose($file);
+
+        return $this->getConfig()->getShopUrl() . sprintf(self::THUMBNAILS_PATH, $thumbnailName);
+    }
+
+    /**
+     * @throws ReflectionException
      * @throws oxConnectionException
-     *
-     * @return void
+     * @throws oxSystemComponentException
      */
     public function synchronize()
     {
@@ -174,6 +247,14 @@ class payever_config extends Shop_Config
             $oPayment->oxpayments__oxacceptfee = new oxField(($method->getAcceptFee()) ? 1 : 0, oxField::T_RAW);
             $oPayment->oxpayments__oxpercentfee = new oxField($method->getVariableFee(), oxField::T_RAW);
             $oPayment->oxpayments__oxfixedfee = new oxField($method->getFixedFee(), oxField::T_RAW);
+            if ($method->isRedirectMethod()) {
+                $oPayment->oxpayments__oxisredirectmethod = new oxField(true, oxField::T_RAW);
+            }
+
+            $thumbnailPath = $this->saveThumbnailInDirectory($method->getThumbnail1(), $oPayment->oxpayments__oxid);
+            if ($thumbnailPath) {
+                $oPayment->oxpayments__oxthumbnail = new oxField($thumbnailPath, oxField::T_RAW);
+            }
 
             $variants = json_encode(array(
                 'variantId' => $method->getVariantId(),
@@ -202,21 +283,30 @@ class payever_config extends Shop_Config
         $this->save();
     }
 
-    public function downlaodLogFile()
+    /**
+     * Sends payever log file
+     */
+    public function downloadLogFile()
     {
         $filePath = PayeverConfig::getLogFilename();
-        header('Content-Description: File Transfer');
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename='.basename($filePath));
-        header('Content-Transfer-Encoding: binary');
-        header('Expires: 0');
-        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-        header('Pragma: public');
-        header('Content-Length: ' . filesize($filePath));
-        ob_clean();
-        flush();
-        readfile($filePath);
-        exit;
+        $this->sendFile($filePath);
+    }
+
+    /**
+     * Sends application log file
+     */
+    public function downloadAppLogFile()
+    {
+        $filePath = OX_LOG_FILE;
+        $this->sendFile($filePath);
+    }
+
+    /**
+     * Clears cache
+     */
+    public function clearCache()
+    {
+        PayeverInstaller::cleanTmp();
     }
 
     /**
@@ -325,6 +415,9 @@ class payever_config extends Shop_Config
         return 1;
     }
 
+    /**
+     * @return array|false
+     */
     private function checkLatestVersion()
     {
         try {
@@ -335,12 +428,16 @@ class payever_config extends Shop_Config
                 return $latestVersion->toArray();
             }
         } catch (\Exception $exception) {
-            PayeverConfig::getLogger()->warning(sprintf('Plugin version checking failed: %s', $exception->getMessage()));
+            PayeverConfig::getLogger()->notice(sprintf('Plugin version checking failed: %s', $exception->getMessage()));
         }
 
         return false;
     }
 
+    /**
+     * @param array $poWithVariants
+     * @return array
+     */
     private function convertPaymentOptionVariants(array $poWithVariants)
     {
         $result = array();
@@ -370,5 +467,25 @@ class payever_config extends Shop_Config
         }
 
         return $result;
+    }
+
+    /**
+     * @param string $filePath
+     */
+    protected function sendFile($filePath)
+    {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename=' . basename($filePath));
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+        ob_clean();
+        flush();
+        readfile($filePath);
+
+        exit;
     }
 }

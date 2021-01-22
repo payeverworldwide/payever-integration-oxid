@@ -77,7 +77,7 @@ class PayeverPluginRegistryInfoProvider implements PluginRegistryInfoProviderInt
     public function getBusinessIds()
     {
         return [
-            PayeverConfig::getApiSlug()
+            PayeverConfig::getBusinessUuid()
         ];
     }
 }

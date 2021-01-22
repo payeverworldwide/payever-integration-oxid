@@ -22,3 +22,16 @@
         [{oxscript}]
     </tr>
 [{/if}]
+[{if $edit and $edit->isRedirectMethod()}]
+    <tr>
+        <td class="edittext">
+            [{ oxmultilang ident="PAYEVER_PAYMENT_IS_REDIRECT_METHOD" }]
+        </td>
+        <td class="edittext">
+            <select name="editval[oxpayments__oxisredirectmethod]" class="editinput">
+                <option value="0" [{ if 0 == $edit->oxpayments__oxisredirectmethod->value}]SELECTED[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }]</option>
+                <option value="1" [{ if 1 == $edit->oxpayments__oxisredirectmethod->value}]SELECTED[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }]</option>
+            </select>
+        </td>
+    </tr>
+[{/if}]

@@ -51,34 +51,87 @@ class PayeverInstaller
     {
         $oConfig = oxRegistry::getConfig();
         $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
-        $Columns = array('basketid' => 'TEXT', 'panid' => 'TEXT', 'payever_notification_timestamp' => 'int');
+        $Columns = ['basketid' => 'TEXT', 'panid' => 'TEXT', 'payever_notification_timestamp' => 'int'];
 
         foreach ($Columns as $cval => $type) {
-            $sSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' AND TABLE_NAME = 'oxorder' AND COLUMN_NAME = '" . $cval . "'";
-            $aResult = $oDb->getAll($sSql);
+            $sSql = <<<SQL
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'oxorder' AND COLUMN_NAME = ?
+SQL;
+            $aResult = $oDb->getAll(
+                $sSql,
+                [
+                    $oConfig->getConfigParam('dbName'),
+                    $cval
+                ]
+            );
             if (empty($aResult)) {
                 $sSql = "ALTER TABLE  `oxorder` ADD `" . $cval . "` " . $type . " NOT NULL ";
                 $oDb->execute($sSql);
             }
         }
 
-        $columns = array('oxacceptfee' => 'tinyint', 'oxpercentfee' => 'TEXT', 'oxfixedfee' => 'TEXT', 'oxvariants' => 'TEXT');
+        $columns = [
+            'oxacceptfee' => [
+                'type' => 'tinyint',
+                'nullable' => false,
+            ],
+            'oxpercentfee' => [
+                'type' => 'TEXT',
+                'nullable' => false,
+            ],
+            'oxfixedfee' => [
+                'type' => 'TEXT',
+                'nullable' => false,
+            ],
+            'oxvariants' => [
+                'type' => 'TEXT',
+                'nullable' => false,
+            ],
+            'oxthumbnail' => [
+                'type' => 'TEXT',
+                'nullable' => false,
+            ],
+            'oxisredirectmethod' => [
+                'type' => 'tinyint',
+                'nullable' => true,
+            ],
+        ];
         self::createColumsForPaymentsTable($columns);
+        self::createDefaultPayeverCategory();
+        self::createSynchronizationQueueTable();
     }
 
+    /**
+     * @param array $columns
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
     private static function createColumsForPaymentsTable($columns)
     {
         $oConfig = oxRegistry::getConfig();
         $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
-        foreach ($columns as $cval => $type) {
-            $sSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' AND TABLE_NAME = 'oxpayments' AND COLUMN_NAME = '" . $cval . "'";
-            $aResult = $oDb->getAll($sSql);
+        foreach ($columns as $cval => $defenition) {
+            $sSql = <<<SQL
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'oxpayments' AND COLUMN_NAME = ?
+SQL;
+            $aResult = $oDb->getAll(
+                $sSql,
+                [
+                    $oConfig->getConfigParam('dbName'),
+                    $cval
+                ]
+            );
             if (empty($aResult)) {
-                $sSql = "ALTER TABLE  `oxpayments` ADD `" . $cval . "` " . $type . " NOT NULL ";
+                $sSql = sprintf(
+                    'ALTER TABLE `oxpayments` ADD `%s` %s %s',
+                    $cval,
+                    $defenition['type'],
+                    $defenition['nullable'] ? '' : 'NOT NULL'
+                );
                 $oDb->execute($sSql);
             }
 
-            $updateViews = array('oxv_oxpayments', 'oxv_oxpayments_de', 'oxv_oxpayments_en');
+            $updateViews = ['oxv_oxpayments', 'oxv_oxpayments_de', 'oxv_oxpayments_en'];
 
             foreach ($updateViews as $viewName) {
                 $viewExistsSql = "SELECT * FROM INFORMATION_SCHEMA.TABLES 
@@ -97,9 +150,57 @@ class PayeverInstaller
         }
     }
 
+    /**
+     * Create default payever category
+     *
+     * @throws Exception
+     */
+    public static function createDefaultPayeverCategory()
+    {
+        $defaultPayeverCategory = oxNew('oxcategory');
+        $data = [
+            'oxparentid' => 'oxrootid',
+            'oxtitle' => 'payever',
+        ];
+        $aLanguages = oxRegistry::getLang()->getLanguageArray();
+        foreach ($aLanguages as $aLanguage) {
+            if (property_exists($aLanguage, 'id')) {
+                $defaultPayeverCategory->assign($data);
+                $defaultPayeverCategory->setLanguage($aLanguage->id);
+                $defaultPayeverCategory->save();
+            }
+        }
+    }
+
+    /**
+     * Creates payeversynchronizationqueue table
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function createSynchronizationQueueTable()
+    {
+        $oDb = oxDb::getDb();
+        $oDb->execute(
+            "CREATE TABLE IF NOT EXISTS `payeversynchronizationqueue` (
+                `oxid` CHAR(32) NOT NULL COMMENT 'Queue Id id' PRIMARY KEY,
+                `direction` VARCHAR(64) NOT NULL COMMENT 'Record direction',
+                `action` VARCHAR(255) NOT NULL COMMENT 'Synchronization action',
+                `payload` BLOB COMMENT 'Synchronization action payload',
+                `inc` INT UNSIGNED AUTO_INCREMENT,
+                `attempt` SMALLINT NOT NULL DEFAULT 0 COMMENT 'How many times we have failed to process this record',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Created At',
+                key `PAYEVERSQ_INC_IDX` (`inc`)
+            ) COMMENT 'Payever Synchronization Queue'"
+        );
+    }
+
+    /**
+     * @retrun void
+     */
     public static function migrateDB()
     {
-        $columns = array('oxvariants' => 'TEXT');
+        $columns = ['oxvariants' => 'TEXT', 'oxthumbnail' => 'TEXT'];
         self::createColumsForPaymentsTable($columns);
     }
 
@@ -114,6 +215,8 @@ class PayeverInstaller
     {
         static::deleteTemplateBlocks();
         static::deletePaymentMethods();
+        static::deleteDefaultPayeverCategory();
+        static::dropSynchronizationQueueTable();
     }
 
     /**
@@ -145,11 +248,46 @@ class PayeverInstaller
     }
 
     /**
+     * Deletes default payever category
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     */
+    private static function deleteDefaultPayeverCategory()
+    {
+        $row = oxDb::getDb(oxDb::FETCH_MODE_ASSOC)
+            ->getRow(
+                'SELECT OXID as oxid FROM oxcategories WHERE OXTITLE = ?',
+                ['payever']
+            );
+        $categoryId = !empty($row['oxid']) ? $row['oxid'] : null;
+        if (!$categoryId && !empty($row[0])) {
+            $categoryId = $row[0];
+        }
+        if ($categoryId) {
+            $category = oxNew('oxcategory');
+            $category->load($categoryId);
+            $category->delete();
+        }
+    }
+
+    /**
+     * Drops synchronization_queue table
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function dropSynchronizationQueueTable()
+    {
+        $oDb = oxDb::getDb();
+        $oDb->execute("DROP TABLE IF EXISTS `payeversynchronizationqueue`");
+    }
+
+    /**
      * @param string $sClearFolderPath
      *
      * @return bool
      */
-    private static function cleanTmp($sClearFolderPath = '')
+    public static function cleanTmp($sClearFolderPath = '')
     {
         $sTempFolderPath = oxRegistry::getConfig()->getConfigParam('sCompileDir');
 

@@ -3,10 +3,18 @@
 use Payever\ExternalIntegration\Core\Base\ClientConfigurationInterface;
 use Payever\ExternalIntegration\Core\ClientConfiguration;
 use Payever\ExternalIntegration\Core\Enum\ChannelSet;
+use Payever\ExternalIntegration\Inventory\InventoryApiClient;
 use Payever\ExternalIntegration\Payments\PaymentsApiClient;
 use Payever\ExternalIntegration\Plugins\Command\PluginCommandExecutorInterface;
-use Payever\ExternalIntegration\Plugins\PluginsApiClient;
 use Payever\ExternalIntegration\Plugins\Command\PluginCommandManager;
+use Payever\ExternalIntegration\Plugins\PluginsApiClient;
+use Payever\ExternalIntegration\Products\ProductsApiClient;
+use Payever\ExternalIntegration\ThirdParty\Action\ActionHandlerPool;
+use Payever\ExternalIntegration\ThirdParty\Action\ActionResult;
+use Payever\ExternalIntegration\ThirdParty\Action\BidirectionalActionProcessor;
+use Payever\ExternalIntegration\ThirdParty\Action\InwardActionProcessor;
+use Payever\ExternalIntegration\ThirdParty\Action\OutwardActionProcessor;
+use Payever\ExternalIntegration\ThirdParty\ThirdPartyApiClient;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 
@@ -18,7 +26,7 @@ class PayeverApiClientProvider
     /** @var PayeverApiOauthTokenList */
     private static $oauthTokenList;
 
-    /** @var PluginRegistryInfoProviderInterface */
+    /** @var PayeverPluginRegistryInfoProvider */
     private static $registryInfoProvider;
 
     /** @var PaymentsApiClient */
@@ -32,6 +40,24 @@ class PayeverApiClientProvider
 
     /** @var PluginCommandExecutorInterface */
     private static $pluginCommandExecutor;
+
+    /** @var ThirdPartyApiClient */
+    private static $thirdPartyApiClient;
+
+    /** @var InventoryApiClient */
+    private static $inventoryApiClient;
+
+    /** @var ProductsApiClient */
+    private static $productsApiClient;
+
+    /** @var BidirectionalActionProcessor */
+    private static $bidirectionalActionProcessor;
+
+    /** @var InwardActionProcessor */
+    private static $inwardActionProcessor;
+
+    /** @var OutwardActionProcessor */
+    private static $outwardActionProcessor;
 
     /**
      * @return PluginsApiClient
@@ -85,6 +111,112 @@ class PayeverApiClientProvider
     }
 
     /**
+     * @param bool $forceReload
+     * @return ThirdPartyApiClient
+     * @throws Exception
+     */
+    public static function getThirdPartyApiClient($forceReload = false)
+    {
+        if (null === static::$thirdPartyApiClient || $forceReload) {
+            static::$thirdPartyApiClient = new ThirdPartyApiClient(
+                static::getClientConfiguration($forceReload),
+                static::getOauthTokenList()
+            );
+        }
+
+        return static::$thirdPartyApiClient;
+    }
+
+    /**
+     * @return ProductsApiClient
+     * @throws Exception
+     */
+    public static function getProductsApiClient()
+    {
+        if (null === static::$productsApiClient) {
+            static::$productsApiClient = new ProductsApiClient(
+                static::getClientConfiguration(),
+                static::getOauthTokenList()
+            );
+        }
+
+        return static::$productsApiClient;
+    }
+
+    /**
+     * @return InventoryApiClient
+     * @throws Exception
+     */
+    public static function getInventoryApiClient()
+    {
+        if (null === static::$inventoryApiClient) {
+            static::$inventoryApiClient = new InventoryApiClient(
+                static::getClientConfiguration(),
+                static::getOauthTokenList()
+            );
+        }
+
+        return static::$inventoryApiClient;
+    }
+
+    /**
+     * @return BidirectionalActionProcessor
+     * @throws Exception
+     */
+    public static function getBidirectionalSyncActionProcessor()
+    {
+        if (null === static::$bidirectionalActionProcessor) {
+            static::$bidirectionalActionProcessor = new BidirectionalActionProcessor(
+                static::getInwardSyncActionProcessor(),
+                static::getOutwardSyncActionProcessor()
+            );
+        }
+
+        return static::$bidirectionalActionProcessor;
+    }
+
+    /**
+     * @return InwardActionProcessor
+     */
+    public static function getInwardSyncActionProcessor()
+    {
+        if (null === static::$inwardActionProcessor) {
+            $actionHandlerPool = new ActionHandlerPool();
+            $actionHandlerPool
+                ->registerActionHandler(new PayeverAddInventoryActionHandler())
+                ->registerActionHandler(new PayeverCreateProductActionHandler())
+                ->registerActionHandler(new PayeverDeleteProductActionHandler())
+                ->registerActionHandler(new PayeverSetInventoryActionHandler())
+                ->registerActionHandler(new PayeverSubtractInventoryActionHandler())
+                ->registerActionHandler(new PayeverUpdateProductActionHandler());
+            static::$inwardActionProcessor = new InwardActionProcessor(
+                $actionHandlerPool,
+                new ActionResult(),
+                PayeverConfig::getLogger()
+            );
+        }
+
+        return static::$inwardActionProcessor;
+    }
+
+    /**
+     * @return OutwardActionProcessor
+     * @throws Exception
+     */
+    public static function getOutwardSyncActionProcessor()
+    {
+        if (null === static::$outwardActionProcessor) {
+            static::$outwardActionProcessor = new OutwardActionProcessor(
+                static::getProductsApiClient(),
+                static::getInventoryApiClient(),
+                PayeverConfig::getLogger()
+            );
+        }
+
+        return static::$outwardActionProcessor;
+    }
+
+    /**
      * @return PayeverApiOauthTokenList
      */
     private static function getOauthTokenList()
@@ -97,7 +229,7 @@ class PayeverApiClientProvider
     }
 
     /**
-     * @return PluginRegistryInfoProviderInterface
+     * @return PayeverPluginRegistryInfoProvider
      */
     private static function getPayeverPluginRegistryInfoProvider()
     {
@@ -149,7 +281,7 @@ class PayeverApiClientProvider
 
         $clientConfiguration->setApiMode($apiMode)
             ->setChannelSet(ChannelSet::CHANNEL_OXID)
-            ->setBusinessUuid(PayeverConfig::getApiSlug())
+            ->setBusinessUuid(PayeverConfig::getBusinessUuid())
             ->setClientId(PayeverConfig::getApiClientId())
             ->setClientSecret(PayeverConfig::getApiClientSecret())
             ->setLogger(PayeverConfig::getLogger());

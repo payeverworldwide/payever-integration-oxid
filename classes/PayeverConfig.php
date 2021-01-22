@@ -54,6 +54,18 @@ class PayeverConfig
     const VAR_PLUGIN_COMMANDS = 'payever_commands';
     const KEY_PLUGIN_COMMAND_TIMESTAMP = 'payever_command_timestamp';
 
+    const PRODUCTS_SYNC_ENABLED = 'payeverProductsSyncEnabled';
+    const PRODUCTS_OUTWARD_SYNC_ENABLED = 'payeverProductsOutwardSyncEnabled';
+    const PRODUCTS_SYNC_MODE = 'payeverProductsSyncMode';
+    const PRODUCTS_SYNC_EXTERNAL_ID = 'payeverProductsSyncExternalId';
+    const PRODUCTS_SYNC_CURRENCY_RATE_SOURCE = 'payeverProductsCurrencyRateSource';
+
+    const SYNC_MODE_INSTANT = 'instant';
+    const SYNC_MODE_CRON = 'cron';
+
+    const CURRENCY_RATE_SOURCE_OXID = 'oxid';
+    const CURRENCY_RATE_SOURCE_PAYEVER = 'payever';
+
     /** @var oxConfig */
     private static $config;
 
@@ -101,6 +113,14 @@ class PayeverConfig
     }
 
     /**
+     * Resets cached config
+     */
+    public static function reset()
+    {
+        static::$config = null;
+    }
+
+    /**
      * @param string $varName
      * @param string|null $keyName
      *
@@ -115,12 +135,44 @@ class PayeverConfig
         return $keyName ? (isset($data[$keyName]) ? $data[$keyName] : null) : $data;
     }
 
+    /**
+     * @param string $varName
+     * @param string $key
+     * @param mixed $value
+     */
+    public static function set($varName, $key, $value)
+    {
+        static::loadConfig();
+        $data = (array) static::$config->getShopConfVar($varName);
+        $data[$key] = $value;
+        static::$config->saveShopConfVar('arr', $varName, $data);
+    }
+
+    /**
+     * @return string|null
+     */
+    public static function getShopUrl()
+    {
+        static::loadConfig();
+
+        return self::$config->getShopUrl();
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     */
+    public static function setConfig($key, $value)
+    {
+        self::set(static::VAR_CONFIG, $key, $value);
+    }
+
     public static function getApiMode()
     {
         return static::get(static::VAR_CONFIG, static::KEY_API_MODE);
     }
 
-    public static function getApiSlug()
+    public static function getBusinessUuid()
     {
         return static::get(static::VAR_CONFIG, static::KEY_API_SLUG);
     }
@@ -212,6 +264,9 @@ class PayeverConfig
         return static::$config->getLogsDir() . static::LOG_FILENAME;
     }
 
+    /**
+     * @return string
+     */
     public static function getLoggingLevel()
     {
         $level = static::get(static::VAR_CONFIG, static::KEY_LOG_LEVEL);
@@ -225,6 +280,49 @@ class PayeverConfig
         }
 
         return $level;
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isProductsSyncEnabled()
+    {
+        return (bool) static::get(static::VAR_CONFIG, static::PRODUCTS_SYNC_ENABLED);
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isProductsOutwardSyncEnabled()
+    {
+        return (bool) static::get(
+            static::VAR_CONFIG,
+            static::PRODUCTS_OUTWARD_SYNC_ENABLED
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function getProductsSyncMode()
+    {
+        return static::get(static::VAR_CONFIG, static::PRODUCTS_SYNC_MODE);
+    }
+
+    /**
+     * @return string|null
+     */
+    public static function getProductsSyncExternalId()
+    {
+        return static::get(static::VAR_CONFIG, static::PRODUCTS_SYNC_EXTERNAL_ID);
+    }
+
+    /**
+     * @return string|null
+     */
+    public static function getProductsCurrencyRateSource()
+    {
+        return static::get(static::VAR_CONFIG, static::PRODUCTS_SYNC_CURRENCY_RATE_SOURCE);
     }
 
     /**

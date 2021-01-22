@@ -61,6 +61,10 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         if (!in_array($sPaymentId, PayeverConfig::getMethodsList())) {
             return parent::finalizeOrder($oBasket, $oUser, $blRecalculatingOrder);
         }
+        // fixes available payment method list for user on order validation during notification request
+        if (!self::$_oActUser && $oUser) {
+            $this->setUser($oUser);
+        }
 
         // check if this order is already stored
         $sGetChallenge = oxRegistry::getSession()->getVariable('sess_challenge');

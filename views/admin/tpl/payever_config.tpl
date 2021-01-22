@@ -1,4 +1,5 @@
 [{include file="headitem.tpl" title="Payever Configuration"}]
+[{oxscript include="js/libs/jquery.min.js"}]
 [{assign var="sPayeverCssPath" value=$oViewConf->getModuleUrl('payever', 'out/admin/src/css/payever_admin.css')}]
 <link rel="stylesheet" href="[{$sPayeverCssPath}]" type="text/css" />
 <div class="payever-config-header">
@@ -26,20 +27,27 @@
         <p>[{ oxmultilang ident="PAYEVER_CHAT_DESCRIPTION" }]</p>
     </div>
 </div>
-[{if $payever_error_message}]
-    <p style="color:red;">[{$payever_error_message}]</p>
-[{/if}]
-[{if $payever_error eq 4}]
-	<p style="color:red;">[{ oxmultilang ident="PAYEVER_ADMIN_ERROR_SYNC" }]</p>
-[{elseif $payever_error eq 2}]
-    <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS" }]</p>
-[{elseif $payever_error eq 3}]
-    <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS_SYNC" }]</p>
-[{elseif $payever_error eq 5}]
-    <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS_SET_LIVE" }]</p>
-[{elseif $payever_error eq 6}]
-    <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS_SET_SANDBOX" }]</p>
-[{/if}]
+<div class="payever-message-container">
+    [{if $payever_error_message}]
+        <p style="color:red;">[{$payever_error_message}]</p>
+    [{/if}]
+    [{if $payever_flash_messages}]
+        [{foreach from=$payever_flash_messages item=flashMessage}]
+            <p style="color:green;">[{$flashMessage}]</p><br/>
+        [{/foreach}]
+    [{/if}]
+    [{if $payever_error eq 4}]
+        <p style="color:red;">[{ oxmultilang ident="PAYEVER_ADMIN_ERROR_SYNC" }]</p>
+    [{elseif $payever_error eq 2}]
+        <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS" }]</p>
+    [{elseif $payever_error eq 3}]
+        <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS_SYNC" }]</p>
+    [{elseif $payever_error eq 5}]
+        <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS_SET_LIVE" }]</p>
+    [{elseif $payever_error eq 6}]
+        <p style="color:green;">[{ oxmultilang ident="PAYEVER_ADMIN_SUCCESS_SET_SANDBOX" }]</p>
+    [{/if}]
+</div>
 <hr/>
 <div id="payever_admin" style="display:none">
 <label class="pe_map_header">[{ oxmultilang ident="PAYEVER_ADMIN" }]</label>
@@ -161,12 +169,62 @@
                         </div>
 
                         <div class="payever-config-section">
+                            <div class="payever-config-section-title">[{ oxmultilang ident="PAYEVER_API_PRODUCT_AND_INVENTORY" }]</div>
+
+                            <dl>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverProductsSyncExternalId]"
+                                           value="[{$payever_config.payeverProductsSyncExternalId}]" />
+                                </dt>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverProductsSyncEnabled]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[payeverProductsSyncEnabled]" value="1"
+                                           [{if $payever_config.payeverProductsSyncEnabled}]checked="checked"[{/if}] />&nbsp;
+                                    [{ oxmultilang ident="PAYEVER_PRODUCTS_SYNC_ENABLED" }]<br />
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverProductsOutwardSyncEnabled]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[payeverProductsOutwardSyncEnabled]" value="1"
+                                           [{if $payever_config.payeverProductsOutwardSyncEnabled}]checked="checked"[{/if}] />&nbsp;
+                                    [{ oxmultilang ident="PAYEVER_PRODUCTS_OUTWARD_SYNC_ENABLED" }] &nbsp;
+                                </dt>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    [{ oxmultilang ident="PAYEVER_PRODUCTS_SYNC_MODE" }] &nbsp;
+                                    <select name="payever_config[payeverProductsSyncMode]">
+                                        <option value="instant" [{if $payever_config.payeverProductsSyncMode == "instant"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_PRODUCTS_SYNC_MODE_INSTANT" }]</option>
+                                        <option value="cron" [{if $payever_config.payeverProductsSyncMode == "cron"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_PRODUCTS_SYNC_MODE_CRON" }]</option>
+                                    </select>
+                                </dt>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    [{ oxmultilang ident="PRODUCTS_SYNC_CURRENCY_RATE_SOURCE" }] &nbsp;
+                                    <select name="payever_config[payeverProductsCurrencyRateSource]">
+                                        <option value="instant" [{if $payever_config.payeverProductsCurrencyRateSource == "oxid"}]selected[{/if}]>[{ oxmultilang ident="PRODUCTS_SYNC_CURRENCY_RATE_SOURCE_OXID" }]</option>
+                                        <option value="cron" [{if $payever_config.payeverProductsCurrencyRateSource == "payever"}]selected[{/if}]>[{ oxmultilang ident="PRODUCTS_SYNC_CURRENCY_RATE_SOURCE_PAYEVER" }]</option>
+                                    </select>
+                                </dt>
+                            </dl>
+                        </div>
+
+                        <div class="payever-config-section">
                             <div class="payever-config-section-title">[{ oxmultilang ident="PAYEVER_API_LOGGING" }]</div>
 
                             <dl>
                                 <dd class="cntExLft"></dd>
                                 <dt>
-                                    [{ oxmultilang ident="PAYEVER_DEBUG_MODE" }] &nbsp;
+                                    [{ oxmultilang ident="PAYEVER_LOG_LEVEL" }] &nbsp;
                                     <select name="payever_config[logLevel]">
                                         <option value="error" [{if $payever_config.logLevel == "error"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_ERRORS" }]</option>
                                         <option value="info" [{if $payever_config.logLevel == "info"}]selected[{/if}]>[{ oxmultilang ident="PAYEVER_LOG_INFO" }]</option>
@@ -201,11 +259,25 @@
             <input type="submit" class="payever-config-btn" name="setApiKeys" value="[{ oxmultilang ident="PAYEVER_SET_SANDBOX" }]" onclick="document.myedit.fnc.value='setSandbox'; setSandbox();" />
         </div>
     [{/if}]
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="exportProductsAndInventory"
+               value="[{ oxmultilang ident="PAYEVER_PRODUCTS_AND_INVENTORY_EXPORT" }]"
+        [{if not $payever_config.payeverProductsSyncEnabled or not $payever_config.payeverProductsOutwardSyncEnabled}]
+                disabled="disabled"
+        [{/if}]
+        onclick="document.myedit.fnc.value='exportProductsAndInventory'; payeverDoExport('[{$payever_config.payeverProductsSyncExternalId}]', null, this.data_page === undefined ? 0 : this.data_page, this.aggregate === undefined ? 0 : this.aggregate);" />
+    </div>
     [{if $log_file_exists eq 1}]
         <div class="cntExLft">
-            <input type="submit" class="payever-config-btn" name="downloadLogFile" value="[{ oxmultilang ident="PAYEVER_DOWNLOAD_LOG" }]" onclick="document.myedit.fnc.value='downlaodLogFile'; downlaodLogFile();" />
+            <input type="submit" class="payever-config-btn" name="downloadLogFile" value="[{ oxmultilang ident="PAYEVER_DOWNLOAD_LOG" }]" onclick="document.myedit.fnc.value='downloadLogFile'; downloadLogFile();" />
         </div>
     [{/if}]
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="downloadAppLogFile" value="Download App Log" onclick="document.myedit.fnc.value='downloadAppLogFile'; downloadAppLogFile();" />
+    </div>
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="clearCache" value="Clear Cache" onclick="document.myedit.fnc.value='clearCache'; document.myedit.submit();" />
+    </div>
 </div>
 <script type="text/javascript">
     function synchronize() {
@@ -226,10 +298,54 @@
             }
         }
     [{/if}]
-    function downlaodLogFile() {
+    function exportProductsAndInventory() {
+        if (confirm([{ oxmultilang ident="PAYEVER_SET_SANDBOX_CONFIRM"}])) {
+            document.myedit.submit();
+        }
+    }
+    function payeverDoExport(externalId, exportUrl, page, aggregate) {
+        if (!exportUrl) {
+            exportUrl = '/admin/index.php?cl=payeverproductsexport&fnc=export'
+        }
+        let messageContainerSelector = '.payever-message-container';
+        $(messageContainerSelector).empty();
+        $.ajax({
+            type: 'POST',
+            url: exportUrl + (page ? '&page=' + page + (aggregate ? '&aggregate=' + aggregate : '') : ''),
+            data : {
+                exportProductsAndInventories: true,
+                externalId: externalId,
+                cl: 'payeverproductsexport',
+                fnc: 'export',
+                stoken: $('#myedit input[name="stoken"]').val()
+            },
+            success: function (data) {
+                if (data.error && data.error.length > 0) {
+                    $(messageContainerSelector).html('<div class="alert alert-danger">' + data.error + '</div>');
+                } else {
+                    if (data.next_page) {
+                        $(messageContainerSelector).html('<div class="alert alert-success">' + 'Processed items: ' + data.aggregate + '</div>');
+
+                        return payeverDoExport(externalId, exportUrl, data.next_page, data.aggregate);
+                    } else {
+                        $(messageContainerSelector).html('<div class="alert alert-success">' + 'Total processed items: ' + data.aggregate + '</div>');
+                    }
+                }
+            },
+            error: function() {
+                $(messageContainerSelector).html('<div class="alert alert-danger">Unknown error</div>');
+            }
+        });
+    }
+    function downloadLogFile() {
         document.myedit.submit();
     }
-
+    function downloadAppLogFile() {
+        document.myedit.submit();
+    }
+    function clearCache() {
+        document.myedit.submit();
+    }
     function pe_chat_btn(e) {
         window.zESettings = { analytics: false };
 

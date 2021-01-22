@@ -41,4 +41,12 @@ class payeverOxPayment extends payeverOxPayment_parent
 
         return parent::getPaymentValue($dBasePrice);
     }
+
+    /**
+     * @return bool
+     */
+    public function isRedirectMethod()
+    {
+        return null !== $this->oxpayments__oxisredirectmethod->value;
+    }
 }

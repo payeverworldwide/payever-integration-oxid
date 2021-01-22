@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -9,10 +10,24 @@
  */
 
 use Payever\ExternalIntegration\Payments\Action\ActionDecider;
-use Payever\ExternalIntegration\Payments\Action\ActionDeciderInterface;
 
 class payeverOrderList extends payeverOrderList_parent
 {
+    use DryRunTrait;
+    use PayeverConfigHelperTrait;
+    use PayeverLoggerTrait;
+    use PayeverOrderFactoryTrait;
+    use PayeverPaymentsApiClientTrait;
+
+    /**
+     * {@inheritDoc}
+     */
+    public function __construct($dryRun = false)
+    {
+        $this->dryRun = $dryRun;
+        !$this->dryRun && parent::__construct();
+    }
+
     /**
      * Cancel payever transaction (if possible) when order is being canceled
      *
@@ -20,28 +35,30 @@ class payeverOrderList extends payeverOrderList_parent
      */
     public function storno()
     {
-        /** @var oxOrder $oOrder */
-        $oOrder = oxNew("oxorder");
-
-        if (!$oOrder->load($this->getEditObjectId())) {
+        $oOrder = $this->getOrderFactory()->create();
+        // @codeCoverageIgnoreStart
+        if (!$this->dryRun && !$oOrder->load($this->getEditObjectId())) {
             return parent::storno();
         }
-
-        $paymentMethod = $oOrder->oxorder__oxpaymenttype->rawValue;
-
-        if (PayeverConfig::isPayeverPaymentMethod($paymentMethod)) {
-            $paymentId = $oOrder->oxorder__oxtransid->rawValue;
-            $paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient();
-            $actionDecider = new ActionDecider($paymentsApiClient);
+        // @codeCoverageIgnoreEnd
+        $paymentMethod = $oOrder->getFieldData('oxpaymenttype');
+        if ($this->getConfigHelper()->isPayeverPaymentMethod($paymentMethod)) {
+            $paymentId = $oOrder->getFieldData('oxtransid');
+            $actionDecider = new ActionDecider($this->getPaymentsApiClient());
 
             try {
-                if ($actionDecider->isActionAllowed($paymentId, ActionDeciderInterface::ACTION_CANCEL, true)) {
-                    $paymentsApiClient->cancelPaymentRequest($paymentId);
+                if ($actionDecider->isRefundAllowed($paymentId, false)) {
+                    $this->getPaymentsApiClient()->refundPaymentRequest(
+                        $paymentId,
+                        $oOrder->getTotalOrderSum()
+                    );
+                } elseif ($actionDecider->isCancelAllowed($paymentId)) {
+                    $this->getPaymentsApiClient()->cancelPaymentRequest($paymentId);
                 }
             } catch (Exception $exception) {
-                PayeverConfig::getLogger()->error(
+                $this->getLogger()->error(
                     sprintf(
-                        "Cancel payment error: %s; paymentId %s",
+                        'Cancel payment error: %s; paymentId %s',
                         $exception->getMessage(),
                         $paymentId
                     )
@@ -49,6 +66,6 @@ class payeverOrderList extends payeverOrderList_parent
             }
         }
 
-        parent::storno();
+        !$this->dryRun && parent::storno();
     }
 }

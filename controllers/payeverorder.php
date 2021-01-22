@@ -89,8 +89,8 @@ class payeverOrder extends payeverOrder_parent
                 if (!$redirectUrl) {
                     return 'payment';
                 }
-
-                if (PayeverConfig::getIsRedirect()) {
+                $isRedirectMethod = $this->getSession()->getVariable('payever_is_redirect_method');
+                if ($isRedirectMethod || PayeverConfig::getIsRedirect()) {
                     $oSession->setVariable('paymentid', $sPaymentId);
                     $oSession->setVariable('oxidpayever_payment_view_redirect_url', $redirectUrl);
 
@@ -98,6 +98,7 @@ class payeverOrder extends payeverOrder_parent
                 } else {
                     $oSession->setVariable('oxidpayever_payment_view_type', 'iframe');
                     $oSession->setVariable('oxidpayever_payment_view_iframe_url', $redirectUrl);
+
                     return "order";
                 }
             }

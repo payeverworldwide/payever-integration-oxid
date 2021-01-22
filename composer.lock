@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a3f06893777499cef1d846b52ca0dca2",
+    "content-hash": "e9aeb28ec6e5dbd72b887848ea85c88c",
     "packages": [
         {
             "name": "payever/sdk-php",
-            "version": "2.5.7",
+            "version": "2.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/payeverworldwide/sdk-php.git",
-                "reference": "862cd36b8925dcc83892a1649bea499d980fcc5c"
+                "reference": "9fde68f127207aeec2fb7720928e7bea3d4f63ca"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/payeverworldwide/sdk-php/zipball/862cd36b8925dcc83892a1649bea499d980fcc5c",
-                "reference": "862cd36b8925dcc83892a1649bea499d980fcc5c",
+                "url": "https://api.github.com/repos/payeverworldwide/sdk-php/zipball/9fde68f127207aeec2fb7720928e7bea3d4f63ca",
+                "reference": "9fde68f127207aeec2fb7720928e7bea3d4f63ca",
                 "shasum": ""
             },
             "require": {
@@ -27,8 +27,8 @@
                 "psr/log": "^1.1"
             },
             "require-dev": {
-                "beberlei/assert": "^3.0",
                 "behat/behat": "^3.4",
+                "laminas/laminas-diactoros": "^1.8",
                 "phpunit/phpunit": "^6"
             },
             "type": "library",
@@ -64,7 +64,7 @@
                 "payments",
                 "products"
             ],
-            "time": "2020-04-21T17:11:03+00:00"
+            "time": "2021-01-08T07:25:42+00:00"
         },
         {
             "name": "psr/log",
@@ -122,7 +122,9 @@
     "prefer-lowest": false,
     "platform": {
         "php": ">=5.4.0",
-        "ext-json": "*"
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-fileinfo": "*"
     },
     "platform-dev": [],
     "plugin-api-version": "1.1.0"

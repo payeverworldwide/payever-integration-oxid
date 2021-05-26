@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -36,6 +37,8 @@ class PayeverGalleryManager
      * @param oxarticle $product
      * @param ProductRequestEntity $requestEntity
      * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function appendGallery($product, ProductRequestEntity $requestEntity)
     {
@@ -52,32 +55,33 @@ class PayeverGalleryManager
             $existingImagesNames[] = $name;
         }
         $filesToProcess = [];
-        $i = count($existingImages) + 1;
+        $imageIndex = count($existingImages) + 1;
         $fileDir = $this->getConfig()->getConfigParam('sCompileDir');
         foreach ($imagesUrl as $key => $url) {
-            if ($i > 7) {
+            if ($imageIndex > 7) {
                 break;
             }
             $filename = $imagesName[$key];
             if (strpos($filename, '.') === false) {
                 $filename .= '.png';
             }
-            if (!in_array($imagesUuid[$key], $existingImagesUuid, true)
+            if (
+                !in_array($imagesUuid[$key], $existingImagesUuid, true)
                 && !in_array($filename, $existingImagesNames, true)
             ) {
                 $filePath = rtrim($fileDir, '/') . DS . $filename;
                 if ($this->downloadImage($filePath, $url)) {
-                    $fieldName = sprintf('oxarticles__oxpic%s', $i);
+                    $fieldName = sprintf('oxarticles__oxpic%s', $imageIndex);
                     if (!isset($product->$fieldName) || false === $product->$fieldName) {
                         $product->assign([$fieldName => $fieldName]);
                     }
-                    $keyName = sprintf('M%s@%s', $i, $fieldName);
+                    $keyName = sprintf('M%s@%s', $imageIndex, $fieldName);
                     $filesToProcess['error'][$keyName] = 0;
                     $filesToProcess['name'][$keyName] = $filename;
                     $filesToProcess['size'][$keyName] = $this->skipFs ? 0 : filesize($filePath);
                     $filesToProcess['tmp_name'][$keyName] = $filePath;
                     $filesToProcess['type'][$keyName] = $this->skipFs ? 'image/jpg' : mime_content_type($filePath);
-                    $i++;
+                    $imageIndex++;
                 }
             }
         }
@@ -94,13 +98,13 @@ class PayeverGalleryManager
     {
         $result = true;
         if (!$this->skipFs) {
-            $fp = fopen($localPath, 'wb+');
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_FILE, $fp);
-            curl_setopt($ch, CURLOPT_HEADER, 0);
-            curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
-            curl_exec($ch);
-            $error = curl_error($ch);
+            $filePointer = fopen($localPath, 'wb+');
+            $curlHandle = curl_init($url);
+            curl_setopt($curlHandle, CURLOPT_FILE, $filePointer);
+            curl_setopt($curlHandle, CURLOPT_HEADER, 0);
+            curl_setopt($curlHandle, CURLOPT_BINARYTRANSFER, 1);
+            curl_exec($curlHandle);
+            $error = curl_error($curlHandle);
             if ($error) {
                 $this->getLogger()->warning(
                     'Unable to download product image',
@@ -110,8 +114,8 @@ class PayeverGalleryManager
                     ]
                 );
             }
-            curl_close($ch);
-            fclose($fp);
+            curl_close($curlHandle);
+            fclose($filePointer);
             $result = !$error;
         }
 
@@ -121,6 +125,8 @@ class PayeverGalleryManager
     /**
      * @param bool $flag
      * @return $this
+     * @internal
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     public function setSkipFs($flag = false)
     {
@@ -132,6 +138,7 @@ class PayeverGalleryManager
     /**
      * @param oxutilsfile $fileUtil
      * @return $this
+     * @internal
      */
     public function setFileUtil($fileUtil)
     {

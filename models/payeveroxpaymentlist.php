@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -20,7 +21,7 @@ class payeverOxPaymentList extends payeverOxPaymentList_parent
         /** @var PayeverMethodHider $payeverUtil */
         $payeverUtil = PayeverMethodHider::getInstance();
 
-        foreach ($paymentList as $key => $value) {
+        foreach (array_keys($paymentList) as $key) {
             $payeverMethod = strpos($key, '-') ? strstr($key, '-', true) : $key;
             if ($payeverUtil->isHiddenPaymentMethod($payeverMethod)) {
                 unset($paymentList[$key]);

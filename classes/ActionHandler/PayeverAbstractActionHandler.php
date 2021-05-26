@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -21,14 +22,14 @@ abstract class PayeverAbstractActionHandler implements ActionHandlerInterface, L
     use PayeverLoggerTrait;
 
     /** @var ActionResult|null */
-    protected $_actionResult;
+    protected $actionResult;
 
     /**
      * {@inheritDoc}
      */
     public function handle(ActionPayload $actionPayload, ActionResult $actionResult)
     {
-        $this->_actionResult = $actionResult;
+        $this->actionResult = $actionResult;
         /** @var ProductRequestEntity|ProductRemovedRequestEntity $productEntity */
         $productEntity = $actionPayload->getPayloadEntity();
         if (!$this->validate($productEntity)) {
@@ -38,8 +39,8 @@ abstract class PayeverAbstractActionHandler implements ActionHandlerInterface, L
             $this->process($productEntity);
             $this->incrementActionResult();
         } catch (\Exception $e) {
-            $this->_actionResult->incrementSkipped();
-            $this->_actionResult->addError($e->getMessage());
+            $this->actionResult->incrementSkipped();
+            $this->actionResult->addError($e->getMessage());
             $this->getLogger()->warning($e->getMessage());
         }
     }
@@ -52,8 +53,8 @@ abstract class PayeverAbstractActionHandler implements ActionHandlerInterface, L
     {
         $result = true;
         if (!$entity->getSku()) {
-            $this->_actionResult->incrementSkipped();
-            $this->_actionResult->addError(
+            $this->actionResult->incrementSkipped();
+            $this->actionResult->addError(
                 sprintf(
                     'Entity has empty SKU: "%s"',
                     $entity->toString()

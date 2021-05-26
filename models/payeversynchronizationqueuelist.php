@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -8,6 +9,7 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
+// phpcs:disable PSR2.Classes.PropertyDeclaration.Underscore
 class payeversynchronizationqueuelist extends oxlist
 {
     /**
@@ -17,3 +19,4 @@ class payeversynchronizationqueuelist extends oxlist
      */
     protected $_sObjectsInListName = 'payeversynchronizationqueue';
 }
+// phpcs:enable PSR2.Classes.PropertyDeclaration.Underscore

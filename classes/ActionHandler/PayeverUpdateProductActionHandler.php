@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -59,7 +60,7 @@ class PayeverUpdateProductActionHandler extends PayeverAbstractActionHandler
      */
     protected function incrementActionResult()
     {
-        $this->_actionResult->incrementUpdated();
+        $this->actionResult->incrementUpdated();
     }
 
     /**

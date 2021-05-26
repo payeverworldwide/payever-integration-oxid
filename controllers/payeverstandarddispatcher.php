@@ -21,6 +21,11 @@ use Payever\ExternalIntegration\Payments\Http\ResponseEntity\RetrievePaymentResp
 use Payever\ExternalIntegration\Plugins\Command\PluginCommandManager;
 use Payever\ExternalIntegration\Plugins\PluginsApiClient;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.ExcessiveClassLength)
+ */
 class payeverStandardDispatcher extends oxUBase
 {
     use PayeverAddressFactoryTrait;
@@ -46,7 +51,6 @@ class payeverStandardDispatcher extends oxUBase
 
     const HEADER_SIGNATURE = 'X-PAYEVER-SIGNATURE';
 
-    const SESS_PAYMENT_ID = 'payever_payment_id';
     const SESS_IS_REDIRECT_METHOD = 'payever_is_redirect_method';
 
     /** @var LockInterface */
@@ -91,6 +95,7 @@ class payeverStandardDispatcher extends oxUBase
      * Creates payever payment and returns redirect URL
      *
      * @return bool|string
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function getRedirectUrl()
     {
@@ -104,7 +109,13 @@ class payeverStandardDispatcher extends oxUBase
                 /** @var RetrievePaymentResultEntity $result */
                 $result = $responseEntity->getResult();
                 $redirectUrl = $result->getPaymentDetails()->getRedirectUrl();
-                $this->getSession()->setVariable(self::SESS_PAYMENT_ID, $result->getId());
+                $this->getDatabase()->execute(
+                    'UPDATE oxuserbaskets SET oxpayeverpid = ? WHERE OXID = ?',
+                    [
+                        $result->getId(),
+                        $this->getSavedBasketId(),
+                    ]
+                );
                 $this->getSession()->setVariable(self::SESS_IS_REDIRECT_METHOD, true);
                 $this->getLogger()->info('Payment successfully submitted', $responseEntity->toArray());
             } else {
@@ -135,6 +146,11 @@ class payeverStandardDispatcher extends oxUBase
     {
         $requestEntity = new SubmitPaymentRequest();
         $this->populatePaymentRequestEntity($requestEntity);
+        $basketOxid = $this->getSavedBasketId();
+        $params = [
+            'basketoxid' => $basketOxid,
+            'token' => $this->getConfigHelper()->getHash($basketOxid),
+        ];
         $requestEntity->setPaymentData([
             'birthdate' => $requestEntity->getBirthdate()
                 ? $requestEntity->getBirthdate()->format('Y-m-d')
@@ -143,12 +159,12 @@ class payeverStandardDispatcher extends oxUBase
             'riskSessionId' => null,
             'frontendFinishUrl' => $this->generateCallbackUrl(
                 'finish',
-                [],
+                $params,
                 false
             ),
             'frontendCancelUrl' => $this->generateCallbackUrl(
                 'cancel',
-                [],
+                $params,
                 false
             ),
         ]);
@@ -170,6 +186,10 @@ class payeverStandardDispatcher extends oxUBase
      * @return RequestEntity
      * @throws UnexpectedValueException
      * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     private function populatePaymentRequestEntity(RequestEntity $requestEntity)
     {
@@ -181,6 +201,7 @@ class payeverStandardDispatcher extends oxUBase
         foreach ($oBasket->getContents() as $item) {
             $basketItems[] = [
                 'name' => $item->getTitle(),
+                'sku' => preg_replace('#[^0-9a-z_]+#i', '-', $item->getArticle()->getFieldData('oxartnum')),
                 'price' => $item->getUnitPrice()->getPrice(),
                 'priceNetto' => $item->getUnitPrice()->getNettoPrice(),
                 'VatRate' => $item->getUnitPrice()->getVat(),
@@ -240,7 +261,7 @@ class payeverStandardDispatcher extends oxUBase
         $requestEntity
             ->setAmount($this->getOrderHelper()->getAmountByCart($oBasket))
             ->setFee($this->getOrderHelper()->getFeeByCart($oBasket))
-            ->setOrderId($oUser->getBasket('savedbasket')->getId())
+            ->setOrderId($this->getSavedBasketId())
             ->setCurrency($oBasket->getBasketCurrency()->name)
             ->setFirstName($deliveryAddress->oxaddress__oxfname->value)
             ->setLastName($deliveryAddress->oxaddress__oxlname->value)
@@ -294,18 +315,27 @@ class payeverStandardDispatcher extends oxUBase
 
     /**
      * @return string
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     public function redirectToThankYou()
     {
+        $fetchDest = $this->getRequestHelper()->getHeader('sec-fetch-dest');
+        $this->getLogger()->debug(
+            'Hit redirectToThankYou with fetch dest ' . $fetchDest,
+            ['sess_challenge' => $this->getSession()->getVariable('sess_challenge')]
+        );
         if ($this->isIframePayeverPayment()) {
-            $back_link = $this->getConfig()->getSslShopUrl() . "?cl=thankyou";
-            $js = <<<JS
+            $back_link = $this->getConfig()->getSslShopUrl() . '?cl=thankyou';
+            $script = <<<JS
+<script>
 function iframeredirect(){ window.top.location = "$back_link"; } iframeredirect();
+</script>
 JS;
-            $script = "<script>$js</script>";
             // @codeCoverageIgnoreStart
             if (!$this->dryRun) {
-                echo $script;
+                if ($fetchDest != 'iframe') {
+                    echo $script;
+                }
                 exit;
             }
             // @codeCoverageIgnoreEnd
@@ -316,6 +346,7 @@ JS;
 
     /**
      * @param array|string $errors
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function addErrorToDisplay($errors)
     {
@@ -341,6 +372,7 @@ JS;
      * @param bool $appendPlaceholders
      *
      * @return string
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     private function generateCallbackUrl($status, $params = [], $appendPlaceholders = true)
     {
@@ -377,20 +409,37 @@ JS;
      * Main entry point for all payever callbacks & notifications
      *
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.ExitExpression)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function payeverGatewayReturn()
     {
         $config = $this->getConfig();
         $paymentId = $config->getRequestParameter('payment_id');
-        if (!$paymentId && $this->getSession()->getVariable(self::SESS_IS_REDIRECT_METHOD)) {
-            $paymentId = $this->getSession()->getVariable(self::SESS_PAYMENT_ID);
+        if (!$paymentId) {
+            $baskedOxid = $config->getRequestParameter('basketoxid');
+            $token = $config->getRequestParameter('token');
+            $message = 'Token is invalid';
+            if ($this->getConfigHelper()->getHash($baskedOxid) === $token) {
+                $message = 'Tokens are matched';
+                $paymentId = $this->getDatabase()->getOne(
+                    'SELECT oxpayeverpid FROM oxuserbaskets WHERE OXID = ?',
+                    [$baskedOxid]
+                );
+            }
+            $this->getLogger()->debug($message);
         }
         $sts = $config->getRequestParameter(static::STATUS_PARAM);
 
         $this->getLogger()->info(sprintf('Handling callback type: %s, paymentId: %s', $sts, $paymentId), $_GET);
+        $fetchDest = $this->getRequestHelper()->getHeader('sec-fetch-dest');
+        $this->getLogger()->debug(sprintf('Hit with fetch dest: %s', $fetchDest));
 
         if ($sts == 'cancel') {
-            return $this->processCancel();
+            return $this->processCancel('', $fetchDest);
         }
 
         $_POST['sDeliveryAddressMD5'] = $config->getRequestParameter('sDeliveryAddressMD5');
@@ -421,14 +470,36 @@ JS;
             $payment['basketId'] = $retrievePaymentResult->getReference();
             $payment['paymentMethod'] = PayeverConfig::PLUGIN_PREFIX . $retrievePaymentResult->getPaymentType();
             $payment['panId'] = isset($paymentDetails['usage_text']) ? $paymentDetails['usage_text'] : null;
-
-            $oxidOrderStatus = $this->getInternalStatus($retrievePaymentResult->getStatus());
+            $payment['restoreBasketInSession'] = $fetchDest != 'iframe';
+            $payeverStatus = $retrievePaymentResult->getStatus();
+            $isNotice = $payment['paymentSts'] == 'notice';
+            $this->getLogger()->debug(
+                'Processing payever status',
+                [
+                    'payeverStatus' => $payeverStatus,
+                    'isNotice' => $isNotice,
+                    'sess_challenge' => $this->getSession()->getVariable('sess_challenge'),
+                ]
+            );
+            $oxidOrderStatus = $this->getInternalStatus($payeverStatus);
             $isPending = $config->getRequestParameter('is_pending');
             $isPaid = $this->isPaidStatus($oxidOrderStatus);
 
             $order = $this->getOrderByPaymentId($paymentId);
 
             if ($order) {
+                $this->getLogger()->debug('Order exists ' . $order->getId());
+                if ($isNotice && $payeverStatus === Status::STATUS_NEW) {
+                    $this->getLogger()->info('Notification processing is skipped; reason: Stalled new status');
+                    // @codeCoverageIgnoreStart
+                    if (!$this->dryRun) {
+                        echo json_encode(['result' => 'success', 'message' => 'Skipped stalled new status']);
+                        exit();
+                    } else {
+                        return;
+                    }
+                    // @codeCoverageIgnoreEnd
+                }
                 $notificationTimestamp = 0;
                 $rawData = $this->getRawData();
                 if ($rawData) {
@@ -436,7 +507,7 @@ JS;
                         ? strtotime($rawData['created_at'])
                         : $notificationTimestamp;
                     $shouldRejectNotification = $this->shouldRejectNotification($order, $notificationTimestamp);
-                    if ($payment['paymentSts'] == 'notice' && $shouldRejectNotification) {
+                    if ($isNotice && $shouldRejectNotification) {
                         $payment['errorMessage'] = 'Notification rejected: newer notification already processed';
 
                         return $this->rejectPayment($payment, false);
@@ -472,12 +543,16 @@ JS;
                 );
                 // @codeCoverageIgnoreStart
                 if (!$this->dryRun) {
-                    if ($payment['paymentSts'] == 'notice') {
+                    if ($isNotice) {
                         echo json_encode(['result' => 'success', 'message' => 'Order is updated']);
                     } else {
+                        $this->getLogger()->debug('Prepare session before redirect');
+                        $this->getSession()->setVariable('sess_challenge', $order->getId());
+                        $this->ensureUserAndBasketLoaded($payment);
                         $this->webRedirect(
                             $this->getConfig()->getSslShopUrl()
-                            . '?cl=payeverStandardDispatcher&fnc=redirectToThankYou'
+                            . '?cl=payeverStandardDispatcher&fnc=redirectToThankYou',
+                            $fetchDest
                         ); // exit
                     }
                     exit();
@@ -485,13 +560,17 @@ JS;
                     return;
                 }
                 // @codeCoverageIgnoreEnd
+            } else {
+                $this->getLogger()->debug('Order does not exist');
             }
 
             if ($isPaid) {
                 if ($isPending) {
-                    $this->addErrorToDisplay('Thank you, your order has been received. You will receive an update once your request has been processed.');
+                    $this->addErrorToDisplay(
+                        'Thank you, your order has been received. '
+                        . 'You will receive an update once your request has been processed.'
+                    );
                 }
-
                 $orderStateId = $this->processSuccess($payment, $oxidOrderStatus, $isPending); // exit
 
                 $this->getLocker()->releaseLock($payment['paymentId']);
@@ -503,13 +582,13 @@ JS;
                 );
                 // @codeCoverageIgnoreStart
                 if (!$this->dryRun) {
-                    if ($payment['paymentSts'] == 'notice') {
-                        $this->getSession()->deleteVariable('sess_challenge');
+                    if ($isNotice) {
+                        $payeverStatus !== Status::STATUS_NEW && $this->getSession()->deleteVariable('sess_challenge');
                         echo json_encode(['result' => 'success', 'message' => 'Order is ' . $orderAction]);
                     } else {
                         $sUrl = $this->getConfig()
                                 ->getSslShopUrl() . '?cl=payeverStandardDispatcher&fnc=redirectToThankYou';
-                        $this->webRedirect($sUrl);
+                        $this->webRedirect($sUrl, $fetchDest);
                     }
                     exit();
                 } else {
@@ -526,7 +605,8 @@ JS;
             $this->getMethodHider()->processFailedMethod($paymentMethod);
 
             $message = strpos($paymentMethod, 'santander') !== false
-                ? 'Unfortunately, the application was not successful. Please choose another payment option to pay for your order.'
+                ? 'Unfortunately, the application was not successful. '
+                    . 'Please choose another payment option to pay for your order.'
                 : 'The payment was not successful. Please try again or choose another payment option.';
 
             throw new oxException($message, 1);
@@ -637,41 +717,12 @@ JS;
      * @throws oxException
      *
      * @throws \Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     protected function processSuccess($payment, $oxidOrderStatus, $isPending = false)
     {
-        //additional check if we really really have a user now
-        $oUser = $this->getUser();
-        if (!$oUser) {
-            $oUser = oxNew('oxuser');
-            $userId = $this->getUserByBasketId($payment['basketId']);
-            $oUser->load($userId);
-        }
-
-        if (!$oUser) {
-            $this->getLogger()->alert(sprintf('NOT FOUND user for basketId "%s"', $payment['basketId']));
-            throw new oxException('USER_NOT_FOUND');
-        }
-
-        // get basket contents
-        /** @var oxBasket $oBasket */
-        $oBasket = oxNew('oxbasket');
-        $oBasket->setBasketUser($oUser);
-        $oBasket->setPayment($payment['paymentMethod']);
-        $oBasket->load();
-        $oBasket->calculateBasket(true);
-
-        if (!$oBasket->getProductsCount()) {
-            // fallback to session data, which does not work for notice callbacks
-            $oSession = $this->getSession();
-            $oBasket = $oSession->getBasket();
-            $oUser = $oBasket->getBasketUser();
-        }
-
-        if (!$oBasket->getProductsCount()) {
-            $this->getLogger()->alert(sprintf('Got empty basket basketId "%s"', $payment['basketId']));
-            throw new oxException('BASKET_EMPTY');
-        }
+        list($oUser, $oBasket) = $this->ensureUserAndBasketLoaded($payment);
 
         /** @var payeverOxOrder $oOrder */
         $oOrder = oxNew('oxorder');
@@ -694,13 +745,14 @@ JS;
         $oSession->oxidpayever_payment_id = $payment['paymentId'];
         $oSession->setVariable('oxidpayever_payment_id', $payment['paymentId']);
         $oOrder->load($oBasket->getOrderId());
-        $up = oxNew('oxUserPayment');
-        $up->load((string)$oOrder->oxorder__oxpaymentid);
-
-        $aParams['oxuserpayments__oxpspayever_transaction_id'] = $payment['paymentId'];
-        $aParams['oxuserpayments__oxpaymentsid'] = $payment['paymentMethod'];
-        $up->assign($aParams);
-        $up->save();
+        $userPayment = oxNew('oxUserPayment');
+        $userPayment->load((string)$oOrder->oxorder__oxpaymentid);
+        $aParams = [
+            'oxuserpayments__oxpspayever_transaction_id' => $payment['paymentId'],
+            'oxuserpayments__oxpaymentsid' => $payment['paymentMethod'],
+        ];
+        $userPayment->assign($aParams);
+        $userPayment->save();
 
         $oParams = [
             'oxorder__basketid' => $payment['basketId'],
@@ -732,6 +784,9 @@ JS;
      * @param bool $badRequest
      *
      * @return void
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     private function rejectPayment($payment, $badRequest = true)
     {
@@ -756,42 +811,53 @@ JS;
 
     /**
      * @param string $message
+     * @param string $fetchDest
      *
      * @return void
      */
-    private function processCancel($message = '')
+    private function processCancel($message = '', $fetchDest = '')
     {
         $message = $message ?: 'Payment was cancelled';
 
         $this->getLogger()->info(sprintf('Canceling payment with message: %s', $message));
 
         $this->addErrorToDisplay($message);
-        $this->redirectToCart();
+        $this->redirectToCart($fetchDest);
     }
 
     /**
      * @return void
      */
-    private function redirectToCart()
+    private function redirectToCart($fetchDest)
     {
         $sUrl = $this->getConfig()->getSslShopUrl() . '?cl=payment';
-        !$this->dryRun && $this->webRedirect($sUrl);
+        !$this->dryRun && $this->webRedirect($sUrl, $fetchDest);
     }
 
     /**
      * @param string $url
+     * @param string $fetchDest
      *
      * @return void
      * @codeCoverageIgnore
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
-    private function webRedirect($url)
+    private function webRedirect($url, $fetchDest)
     {
-        echo "<html><head><script language=\"javascript\">
+        if ($fetchDest == 'iframe') {
+            // after request with sec-fetch-desc=iframe header
+            // final request with sec-fetch-desc=document header is followed
+            // do not redirect to checkout success page to do not destroy session
+            $this->getLogger()->info(sprintf('Ignore redirect with fetch dest: %s', $fetchDest));
+        } else {
+            echo "<html><head><script language=\"javascript\">
                 <!--
                 parent.document.location.href=\"{$url}\";
                 //-->
                 </script>
                 </head><body><noscript><meta http-equiv=\"refresh\" content=\"0;url={$url}\"></noscript></body></html>";
+        }
         exit();
     }
 
@@ -809,6 +875,7 @@ JS;
      * Executing plugin commands
      *
      * @throws Exception
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     public function executePluginCommands()
     {
@@ -842,6 +909,7 @@ JS;
      * @param array $payment
      * @return RetrievePaymentResultEntity
      * @throws Exception
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     private function getRetrievePaymentResultEntity($payment)
     {
@@ -854,12 +922,7 @@ JS;
             /** @var RetrievePaymentResultEntity $retrievePaymentResult */
             $retrievePaymentResult = $retrievePaymentEntity->getResult();
         } else {
-            $expectedSignature = hash_hmac(
-                'sha256',
-                PayeverConfig::getApiClientId() . $paymentId,
-                PayeverConfig::getApiClientSecret()
-            );
-            if ($expectedSignature === $signature) {
+            if ($this->getConfigHelper()->getHash($paymentId) === $signature) {
                 $data = $this->getRawData();
                 $retrievePaymentResult = new RetrievePaymentResultEntity(
                     !empty($data['data']['payment']) ? $data['data']['payment'] : []
@@ -995,7 +1058,6 @@ JS;
         return null === $this->viewUtil
             ? $this->viewUtil = oxRegistry::get('oxutilsview')
             : $this->viewUtil;
-
     }
 
     /**
@@ -1056,5 +1118,77 @@ JS;
         $this->pluginCommandManager = $pluginCommandManager;
 
         return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    private function getSavedBasketId()
+    {
+        $oBasket = $this->getCart();
+        $oUser = $oBasket->getBasketUser();
+
+        return $oUser->getBasket('savedbasket')->getId();
+    }
+
+    /**
+     * Additional check if we really really have a user now.
+     *
+     * @param array $payment
+     * @return array
+     * @throws oxException
+     * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     */
+    protected function ensureUserAndBasketLoaded(array $payment)
+    {
+        $restoreBasketInSession = !empty($payment['restoreBasketInSession']) && $payment['restoreBasketInSession'];
+        $oUser = $this->getUser();
+        if (!$oUser) {
+            $oUser = oxNew('oxuser');
+            $userId = $this->getUserByBasketId($payment['basketId']);
+            $oUser->load($userId);
+        }
+
+        if (!$oUser) {
+            $this->getLogger()->alert(sprintf('NOT FOUND user for basketId "%s"', $payment['basketId']));
+            if (!$restoreBasketInSession) {
+                throw new oxException('USER_NOT_FOUND');
+            }
+        }
+
+        // get basket contents
+        /** @var oxBasket $oBasket */
+        $oBasket = oxNew('oxbasket');
+        $oBasket->setBasketUser($oUser);
+        $oBasket->setPayment($payment['paymentMethod']);
+        $oBasket->load();
+        $oBasket->calculateBasket(true);
+        if (!$oBasket->getProductsCount()) {
+            // fallback to session data, which does not work for notice callbacks
+            $oSession = $this->getSession();
+            $oBasket = $oSession->getBasket();
+            $oUser = $oBasket->getBasketUser();
+        }
+        if (!$oBasket->getProductsCount()) {
+            $this->getLogger()->alert(sprintf('Got empty basket basketId "%s"', $payment['basketId']));
+            if (!$restoreBasketInSession) {
+                throw new oxException('BASKET_EMPTY');
+            }
+        }
+        if (!empty($payment['restoreBasketInSession']) && $payment['restoreBasketInSession']) {
+            $basketName = 'basket';
+            if ($this->getConfig()->getConfigParam('blMallSharedBasket') == 0) {
+                $basketName = $this->getConfig()->getShopId() . '_basket';
+            }
+            if (!$this->getSession()->getVariable($basketName)) {
+                $this->getLogger()->debug('Saved serialized basket to session');
+                $this->getSession()->setBasket($oBasket);
+                $this->getSession()->setVariable($basketName, serialize($oBasket));
+            }
+        }
+
+        return [$oUser, $oBasket];
     }
 }

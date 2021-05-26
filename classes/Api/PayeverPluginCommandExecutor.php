@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -22,11 +23,19 @@ class PayeverPluginCommandExecutor implements PluginCommandExecutorInterface
         switch ($command->getName()) {
             case PluginCommandNameEnum::SET_SANDBOX_HOST:
                 $this->assertApiHostValid($command->getValue());
-                oxRegistry::getConfig()->saveShopConfVar('arr', PayeverConfig::VAR_SANDBOX, array(PayeverConfig::KEY_SANDBOX_URL => $command->getValue()));
+                oxRegistry::getConfig()->saveShopConfVar(
+                    'arr',
+                    PayeverConfig::VAR_SANDBOX,
+                    [PayeverConfig::KEY_SANDBOX_URL => $command->getValue()]
+                );
                 break;
             case PluginCommandNameEnum::SET_LIVE_HOST:
                 $this->assertApiHostValid($command->getValue());
-                oxRegistry::getConfig()->saveShopConfVar('arr', PayeverConfig::VAR_LIVE, array(PayeverConfig::KEY_LIVE_URL => $command->getValue()));
+                oxRegistry::getConfig()->saveShopConfVar(
+                    'arr',
+                    PayeverConfig::VAR_LIVE,
+                    [PayeverConfig::KEY_LIVE_URL => $command->getValue()]
+                );
                 break;
             default:
                 throw new \UnexpectedValueException(

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -29,25 +30,25 @@ class PayeverModuleDeactivateCommand extends PayeverAbstractModuleCommand
         if (!$this->getModule()->isActive()) {
             $output->writeln('The payever module is being deactivated');
             // @codeCoverageIgnoreStart
-        } else {
-            $oModuleInstaller = null;
-            if (class_exists('oxModuleInstaller')) {
-                /** @var \oxModuleInstaller|null $oModuleInstaller */
-                $oModuleInstaller = \oxNew(\oxModuleInstaller::class);
-            }
-            if ($oModuleInstaller) {
-                if ($oModuleInstaller->deactivate($this->getModule())) {
-                    $output->writeln('The payever module is deactivated');
-                } else {
-                    throw new \RuntimeException('Couldn\'t deactivate payever module');
-                }
-            } elseif (method_exists($this->getModule(), 'deactivate')) {
-                // old oxid versions
-                $this->getModule()->deactivate();
-            } else {
-                throw new \RuntimeException('Unable deto activate payever module');
-            }
-            // @codeCoverageIgnoreEnd
+            return;
         }
+        $oModuleInstaller = null;
+        if (class_exists('oxModuleInstaller')) {
+            /** @var \oxModuleInstaller|null $oModuleInstaller */
+            $oModuleInstaller = \oxNew(\oxModuleInstaller::class);
+        }
+        if ($oModuleInstaller) {
+            if ($oModuleInstaller->deactivate($this->getModule())) {
+                $output->writeln('The payever module is deactivated');
+                return;
+            }
+            throw new \RuntimeException('Couldn\'t deactivate payever module');
+        } elseif (method_exists($this->getModule(), 'deactivate')) {
+            // old oxid versions
+            $this->getModule()->deactivate();
+            return;
+        }
+        throw new \RuntimeException('Unable deto activate payever module');
+        // @codeCoverageIgnoreEnd
     }
 }

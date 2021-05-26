@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -21,6 +22,7 @@ class PayeverShippingGoodsHandler
 
     /**
      * @param oxorder $order
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function triggerShippingGoodsPaymentRequest($order)
     {

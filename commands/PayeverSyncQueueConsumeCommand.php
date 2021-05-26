@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -41,6 +42,8 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
 
     /**
      * {@inheritDoc}
+     * @SuppressWarnings(PHPMD.ErrorControlOperator)
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -65,10 +68,11 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
 
         $output->writeln('START: Processing payever sync action queue');
         $processed = 0;
+        $attempt = 0;
         /** @var payeversynchronizationqueue $item */
         foreach ($items as $item) {
             try {
-                $id = $item->getFieldData('oxid');
+                $queueId = $item->getFieldData('oxid');
                 $attempt = $item->getFieldData('attempt');
                 $payloadField = $item->payeversynchronizationqueue__payload;
                 $payload = !empty($payloadField) ? $payloadField->rawValue : null;
@@ -79,21 +83,21 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
                     true
                 );
                 $processed++;
-                $this->deleteItem($id);
-            } catch (\Exception $e) {
-                $this->getLogger()->warning($e->getMessage());
+                $this->deleteItem($queueId);
+            } catch (\Exception $exception) {
+                $this->getLogger()->warning($exception->getMessage());
                 if ($attempt >= self::QUEUE_PROCESSING_MAX_ATTEMPTS) {
                     $output->writeln(
                         'Queue item exceeded max processing attempts count and going to be removed.' .
                         'This may lead to data loss and out of sync state.'
                     );
-                    $this->deleteItem($id);
+                    $this->deleteItem($queueId);
                 } else {
                     $this->getDatabase()->execute(
                         sprintf(
                             'UPDATE payeversynchronizationqueue set attempt = "%s" WHERE OXID = "%s"',
                             ++$attempt,
-                            $id
+                            $queueId
                         )
                     );
                 }
@@ -103,15 +107,15 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
     }
 
     /**
-     * @param string $id
+     * @param string $queueId
      * @throws oxConnectionException
      */
-    protected function deleteItem($id)
+    protected function deleteItem($queueId)
     {
         $this->getDatabase()->execute(
             sprintf(
                 'DELETE FROM payeversynchronizationqueue WHERE OXID = "%s"',
-                $id
+                $queueId
             )
         );
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -49,25 +50,9 @@ class PayeverInstaller
      */
     private static function installDb()
     {
-        $oConfig = oxRegistry::getConfig();
-        $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
         $Columns = ['basketid' => 'TEXT', 'panid' => 'TEXT', 'payever_notification_timestamp' => 'int'];
-
         foreach ($Columns as $cval => $type) {
-            $sSql = <<<SQL
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'oxorder' AND COLUMN_NAME = ?
-SQL;
-            $aResult = $oDb->getAll(
-                $sSql,
-                [
-                    $oConfig->getConfigParam('dbName'),
-                    $cval
-                ]
-            );
-            if (empty($aResult)) {
-                $sSql = "ALTER TABLE  `oxorder` ADD `" . $cval . "` " . $type . " NOT NULL ";
-                $oDb->execute($sSql);
-            }
+            self::addColumnIfNotExists('oxorder', $cval, ['type' => $type, 'nullable' => false]);
         }
 
         $columns = [
@@ -96,9 +81,10 @@ SQL;
                 'nullable' => true,
             ],
         ];
-        self::createColumsForPaymentsTable($columns);
+        self::createColumnsForPaymentsTable($columns);
         self::createDefaultPayeverCategory();
         self::createSynchronizationQueueTable();
+        self::addPayeverPidToUserBasket();
     }
 
     /**
@@ -106,31 +92,12 @@ SQL;
      * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
      * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
      */
-    private static function createColumsForPaymentsTable($columns)
+    private static function createColumnsForPaymentsTable($columns)
     {
         $oConfig = oxRegistry::getConfig();
         $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
-        foreach ($columns as $cval => $defenition) {
-            $sSql = <<<SQL
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'oxpayments' AND COLUMN_NAME = ?
-SQL;
-            $aResult = $oDb->getAll(
-                $sSql,
-                [
-                    $oConfig->getConfigParam('dbName'),
-                    $cval
-                ]
-            );
-            if (empty($aResult)) {
-                $sSql = sprintf(
-                    'ALTER TABLE `oxpayments` ADD `%s` %s %s',
-                    $cval,
-                    $defenition['type'],
-                    $defenition['nullable'] ? '' : 'NOT NULL'
-                );
-                $oDb->execute($sSql);
-            }
-
+        foreach ($columns as $cval => $definition) {
+            self::addColumnIfNotExists('oxpayments', $cval, $definition);
             $updateViews = ['oxv_oxpayments', 'oxv_oxpayments_de', 'oxv_oxpayments_en'];
 
             foreach ($updateViews as $viewName) {
@@ -196,12 +163,23 @@ SQL;
     }
 
     /**
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function addPayeverPidToUserBasket()
+    {
+        self::addColumnIfNotExists('oxuserbaskets', 'oxpayeverpid', ['type' => 'VARCHAR(255)']);
+    }
+
+    /**
      * @retrun void
      */
     public static function migrateDB()
     {
-        $columns = ['oxvariants' => 'TEXT', 'oxthumbnail' => 'TEXT'];
-        self::createColumsForPaymentsTable($columns);
+        $columns = ['oxvariants' => ['type' => 'TEXT'], 'oxthumbnail' => ['type' => 'TEXT']];
+        self::createColumnsForPaymentsTable($columns);
+        self::createSynchronizationQueueTable();
+        self::addPayeverPidToUserBasket();
     }
 
     /**
@@ -286,12 +264,15 @@ SQL;
      * @param string $sClearFolderPath
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public static function cleanTmp($sClearFolderPath = '')
     {
         $sTempFolderPath = oxRegistry::getConfig()->getConfigParam('sCompileDir');
 
-        if (!empty($sClearFolderPath) and
+        if (
+            !empty($sClearFolderPath) and
             (strpos($sClearFolderPath, $sTempFolderPath) !== false) and
             is_dir($sClearFolderPath)
         ) {
@@ -309,9 +290,9 @@ SQL;
             while (false !== ($sFileName = readdir($hDir))) {
                 $sFilePath = $sFolderPath . '/' . $sFileName;
 
-                if (!in_array($sFileName, array('.', '..', '.htaccess')) and is_file($sFilePath)) {
+                if (!in_array($sFileName, ['.', '..', '.htaccess']) and is_file($sFilePath)) {
                     // Delete a file if it is allowed to delete
-                    @unlink($sFilePath);
+                    is_writable($sFilePath) && unlink($sFilePath);
                 } elseif ($sFileName == 'smarty' and is_dir($sFilePath)) {
                     // Recursive call to clean Smarty temp
                     self::cleanTmp($sFilePath);
@@ -320,5 +301,36 @@ SQL;
         }
 
         return true;
+    }
+
+    /**
+     * @param string $table
+     * @param string $column
+     * @param array $definition
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    protected static function addColumnIfNotExists($table, $column, array $definition = [])
+    {
+        $oConfig = oxRegistry::getConfig();
+        $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
+        $aResult = $oDb->getAll(
+            'SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+            [
+                $oConfig->getConfigParam('dbName'),
+                $table,
+                $column
+            ]
+        );
+        if (empty($aResult)) {
+            $sSql = sprintf(
+                'ALTER TABLE `%s` ADD `%s` %s %s',
+                $table,
+                $column,
+                !empty($definition['type']) ? $definition['type'] : 'TEXT',
+                array_key_exists('nullable', $definition) && !$definition['nullable'] ? 'NOT NULL' : ''
+            );
+            $oDb->execute($sSql);
+        }
     }
 }

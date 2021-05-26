@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -23,6 +24,6 @@ class PayeverCreateProductActionHandler extends PayeverUpdateProductActionHandle
      */
     protected function incrementActionResult()
     {
-        $this->_actionResult->incrementCreated();
+        $this->actionResult->incrementCreated();
     }
 }

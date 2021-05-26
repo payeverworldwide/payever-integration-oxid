@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -28,8 +29,10 @@ class PayeverImportManager
     public function import($syncAction, $externalId, $payload)
     {
         $this->cleanMessages();
-        if ($this->isProductsSyncEnabled() && $this->isValidAction($syncAction) && $this->isValidExternalId($externalId)
-            && $this->isValidPayload($payload)) {
+        if (
+            $this->isProductsSyncEnabled() && $this->isValidAction($syncAction)
+            && $this->isValidExternalId($externalId) && $this->isValidPayload($payload)
+        ) {
             $this->getSynchronizationManager()->handleAction(
                 $syncAction,
                 DirectionEnum::INWARD,
@@ -85,6 +88,7 @@ class PayeverImportManager
     /**
      * @param string $payload
      * @return bool
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     protected function isValidPayload($payload)
     {

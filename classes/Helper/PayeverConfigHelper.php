@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -14,6 +15,14 @@
  */
 class PayeverConfigHelper
 {
+    /**
+     * @retrun void
+     */
+    public function reset()
+    {
+        PayeverConfig::reset();
+    }
+
     /**
      * @return bool
      */
@@ -157,5 +166,18 @@ class PayeverConfigHelper
     public function isPayeverPaymentMethod($paymentMethod)
     {
         return PayeverConfig::isPayeverPaymentMethod($paymentMethod);
+    }
+
+    /**
+     * @param string $key
+     * @return false|string
+     */
+    public function getHash($key)
+    {
+        return hash_hmac(
+            'sha256',
+            PayeverConfig::getApiClientId() . $key,
+            (string) PayeverConfig::getApiClientSecret()
+        );
     }
 }

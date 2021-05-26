@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 /**
  * PHP version 5.4 and 7
  *

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -29,6 +30,6 @@ class PayeverSubtractInventoryActionHandler extends PayeverSetInventoryActionHan
      */
     protected function incrementActionResult()
     {
-        $this->_actionResult->incrementUpdated();
+        $this->actionResult->incrementUpdated();
     }
 }

@@ -21,6 +21,7 @@ class payeverOrderList extends payeverOrderList_parent
 
     /**
      * {@inheritDoc}
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     public function __construct($dryRun = false)
     {

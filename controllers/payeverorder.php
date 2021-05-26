@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -16,33 +17,35 @@
  */
 class payeverOrder extends payeverOrder_parent
 {
+    /**
+     * @inheritDoc
+     */
     public function execute()
     {
         $oSession = $this->getSession();
         $oBasket = $oSession->getBasket();
         $sPaymentId = $oBasket->getPaymentId();
-
-        if ($deliveryMd5 = $this->getConfig()->getRequestParameter('sDeliveryAddressMD5')) {
+        $deliveryMd5 = $this->getConfig()->getRequestParameter('sDeliveryAddressMD5');
+        if ($deliveryMd5) {
             $oSession->setVariable('oxidpayever_delivery_md5', $deliveryMd5);
         }
 
-        if (!$this->getConfig()->getRequestParameter('ord_agb')
+        if (
+            !$this->getConfig()->getRequestParameter('ord_agb')
             && $this->getConfig()->getConfigParam('blConfirmAGB')
         ) {
             oxRegistry::get("oxUtilsView")->addErrorToDisplay('READ_AND_CONFIRM_TERMS', false, true);
 
-            return;
-        } else {
-            $sPid = $oSession->getVariable('oxidpayever_payment_id');
-
-            if (!$sPid && in_array($sPaymentId, PayeverConfig::getMethodsList())) {
-                $oSession->setVariable('paymentid', $sPaymentId);
-
-                return $this->getNextStep(1);
-            }
-
-            return parent::execute();
+            return null;
         }
+        $sPid = $oSession->getVariable('oxidpayever_payment_id');
+        if (!$sPid && in_array($sPaymentId, PayeverConfig::getMethodsList())) {
+            $oSession->setVariable('paymentid', $sPaymentId);
+
+            return $this->getNextStep(1);
+        }
+
+        return parent::execute();
     }
 
     public function getIframePaymentUrl()
@@ -95,12 +98,11 @@ class payeverOrder extends payeverOrder_parent
                     $oSession->setVariable('oxidpayever_payment_view_redirect_url', $redirectUrl);
 
                     return 'payeverStandardDispatcher?fnc=processPayment';
-                } else {
-                    $oSession->setVariable('oxidpayever_payment_view_type', 'iframe');
-                    $oSession->setVariable('oxidpayever_payment_view_iframe_url', $redirectUrl);
-
-                    return "order";
                 }
+                $oSession->setVariable('oxidpayever_payment_view_type', 'iframe');
+                $oSession->setVariable('oxidpayever_payment_view_iframe_url', $redirectUrl);
+
+                return 'order';
             }
         }
 

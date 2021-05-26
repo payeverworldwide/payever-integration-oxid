@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -56,6 +57,7 @@ class PayeverSynchronizationManager
     /**
      * @param oxarticle $product
      * @param int|null $delta
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function handleInventory($product, $delta)
     {
@@ -82,6 +84,8 @@ class PayeverSynchronizationManager
      * @param string $direction
      * @param bool $forceHttp
      * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function handleAction($action, $direction, $payload, $forceHttp = false)
     {

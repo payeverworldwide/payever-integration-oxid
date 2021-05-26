@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -33,7 +34,8 @@ class PayeverCategoryManager
         foreach ($categoryIds as $categoryId) {
             $category = $this->getCategoryFactory()->create();
             $category->loadInLang($this->getConfigHelper()->getDefaultLanguageId(), $categoryId);
-            if ($name = $category->getTitle()) {
+            $name = $category->getTitle();
+            if ($name) {
                 $categoryNames[] = $name;
             }
         }
@@ -46,6 +48,7 @@ class PayeverCategoryManager
      * @param ProductRequestEntity $requestEntity
      * @throws oxConnectionException
      * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function setCategories($product, ProductRequestEntity $requestEntity)
     {
@@ -54,7 +57,8 @@ class PayeverCategoryManager
         $categoryIds = [$defaultCategoryId => $defaultCategoryId];
         $requestEntities = $requestEntity->getCategories();
         foreach ($requestEntities as $requestCategoryEntity) {
-            if ($categoryName = $this->getRequestCategoryEntityName($requestCategoryEntity)) {
+            $categoryName = $this->getRequestCategoryEntityName($requestCategoryEntity);
+            if ($categoryName) {
                 $matchedCategory = $this->getCategoryHelper()->getCategoryByTitle($categoryName);
                 if ($matchedCategory) {
                     $categoryIds[$matchedCategory->getId()] = $matchedCategory->getId();

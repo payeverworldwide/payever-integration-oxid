@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -42,6 +43,7 @@ class PayeverPriceManager
      * @param oxarticle $product
      * @param ProductRequestEntity $requestEntity
      * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function setPrice($product, ProductRequestEntity $requestEntity)
     {
@@ -94,6 +96,7 @@ class PayeverPriceManager
      * @param string $currencyIsoCode
      * @return float
      * @throws Exception
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     protected function getCurrencyRate($currencyIsoCode)
     {

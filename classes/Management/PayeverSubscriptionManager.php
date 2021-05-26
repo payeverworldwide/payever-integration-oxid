@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -32,10 +33,12 @@ class PayeverSubscriptionManager
      * @param bool $isActive
      * @return bool
      * @throws ReflectionException
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function toggleSubscription($isActive)
     {
         $this->cleanMessages();
+        $this->getConfigHelper()->reset();
         $externalId = $this->getConfigHelper()->getProductsSyncExternalId();
         if (!$externalId) {
             $externalId = $this->getRandomSourceGenerator()->generate();
@@ -75,9 +78,11 @@ class PayeverSubscriptionManager
                 /** @var SubscriptionResponseEntity $subscriptionResponseEntity */
                 $subscriptionResponseEntity = $subscriptionRecordResponse->getResponseEntity();
             } else {
+                $this->getConfigHelper()->setProductsSyncExternalId(null);
                 $this->getThirdPartyApiClient()->unsubscribe($subscriptionEntity);
             }
         } catch (\Exception $e) {
+            $this->getConfigHelper()->setProductsSyncExternalId(null);
             $this->errors[] = $e->getMessage();
         }
         $isActive = (bool) $subscriptionResponseEntity;
@@ -126,6 +131,7 @@ class PayeverSubscriptionManager
     /**
      * @param PseudoRandomStringGenerator $randomSourceGenerator
      * @return $this
+     * @internal
      */
     public function setRandomSourceGenerator(PseudoRandomStringGenerator $randomSourceGenerator)
     {

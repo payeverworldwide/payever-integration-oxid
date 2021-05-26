@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -35,7 +36,7 @@ class PayeverMethodHider
     public static function getInstance()
     {
         if (!isset(self::$instance)) {
-            self::$instance = new self;
+            self::$instance = new self();
         }
         return self::$instance;
     }
@@ -102,7 +103,10 @@ class PayeverMethodHider
     private function addFailedPaymentMethod($paymentMethod)
     {
         $this->hiddenMethods[] = $paymentMethod;
-        \oxRegistry::get('oxUtilsServer')->setOxCookie(self::FAILED_METHODS_COOKIE_NAME, implode('|', array_unique($this->hiddenMethods)));
+        \oxRegistry::get('oxUtilsServer')->setOxCookie(
+            self::FAILED_METHODS_COOKIE_NAME,
+            implode('|', array_unique($this->hiddenMethods))
+        );
     }
 
     /**

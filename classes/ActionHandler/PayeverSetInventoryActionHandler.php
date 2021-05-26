@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -39,6 +40,7 @@ class PayeverSetInventoryActionHandler extends PayeverAbstractActionHandler
 
     /**
      * @param InventoryChangedEntity $entity
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     protected function changeStock(InventoryChangedEntity $entity)
     {
@@ -60,6 +62,6 @@ class PayeverSetInventoryActionHandler extends PayeverAbstractActionHandler
      */
     protected function incrementActionResult()
     {
-        $this->_actionResult->incrementCreated();
+        $this->actionResult->incrementCreated();
     }
 }

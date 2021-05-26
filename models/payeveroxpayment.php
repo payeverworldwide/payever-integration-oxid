@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -28,12 +29,16 @@ class payeverOxPayment extends payeverOxPayment_parent
      * @param double $dBasePrice Base article price
      *
      * @return double
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function getPaymentValue($dBasePrice)
     {
         if (in_array($this->oxpayments__oxid->value, PayeverConfig::getMethodsList())) {
             if (!$this->oxpayments__oxacceptfee->value) {
-                return $dBasePrice * $this->oxpayments__oxpercentfee->value / 100 + $this->oxpayments__oxfixedfee->value;
+                $percentFee = $this->oxpayments__oxpercentfee->value;
+                $fixedFee = $this->oxpayments__oxfixedfee->value;
+
+                return $dBasePrice * $percentFee / 100 + $fixedFee;
             } else {
                 return 0;
             }

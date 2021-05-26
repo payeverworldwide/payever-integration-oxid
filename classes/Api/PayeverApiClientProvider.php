@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * PHP version 5.4 and 7
+ *
+ * @package   Payever\OXID
+ * @author payever GmbH <service@payever.de>
+ * @copyright 2017-2021 payever GmbH
+ * @license   MIT <https://opensource.org/licenses/MIT>
+ */
+
 use Payever\ExternalIntegration\Core\Base\ClientConfigurationInterface;
 use Payever\ExternalIntegration\Core\ClientConfiguration;
 use Payever\ExternalIntegration\Core\Enum\ChannelSet;
@@ -18,10 +27,16 @@ use Payever\ExternalIntegration\ThirdParty\ThirdPartyApiClient;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class PayeverApiClientProvider
 {
     /** @var ClientConfiguration */
     private static $clientConfiguration;
+
+    /** @var ClientConfiguration */
+    private static $thirdPartyProductsClientConfig;
 
     /** @var PayeverApiOauthTokenList */
     private static $oauthTokenList;
@@ -97,6 +112,7 @@ class PayeverApiClientProvider
      * @param bool $forceReload
      * @return PaymentsApiClient
      * @throws Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     public static function getPaymentsApiClient($forceReload = false)
     {
@@ -114,12 +130,13 @@ class PayeverApiClientProvider
      * @param bool $forceReload
      * @return ThirdPartyApiClient
      * @throws Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     public static function getThirdPartyApiClient($forceReload = false)
     {
         if (null === static::$thirdPartyApiClient || $forceReload) {
             static::$thirdPartyApiClient = new ThirdPartyApiClient(
-                static::getClientConfiguration($forceReload),
+                static::getThirdPartyProductsClientConfig($forceReload),
                 static::getOauthTokenList()
             );
         }
@@ -135,7 +152,7 @@ class PayeverApiClientProvider
     {
         if (null === static::$productsApiClient) {
             static::$productsApiClient = new ProductsApiClient(
-                static::getClientConfiguration(),
+                static::getThirdPartyProductsClientConfig(),
                 static::getOauthTokenList()
             );
         }
@@ -151,7 +168,7 @@ class PayeverApiClientProvider
     {
         if (null === static::$inventoryApiClient) {
             static::$inventoryApiClient = new InventoryApiClient(
-                static::getClientConfiguration(),
+                static::getThirdPartyProductsClientConfig(),
                 static::getOauthTokenList()
             );
         }
@@ -256,6 +273,7 @@ class PayeverApiClientProvider
      * @param bool $forceReload
      * @return ClientConfiguration
      * @throws Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     private static function getClientConfiguration($forceReload = false)
     {
@@ -267,13 +285,37 @@ class PayeverApiClientProvider
     }
 
     /**
+     * @param bool $forceReload
+     * @return ClientConfiguration
+     * @throws Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     */
+    private static function getThirdPartyProductsClientConfig($forceReload = false)
+    {
+        if (null === static::$thirdPartyProductsClientConfig || $forceReload) {
+            static::$thirdPartyProductsClientConfig = static::loadClientConfiguration();
+            static::$thirdPartyProductsClientConfig->setCustomSandboxUrl(null);
+            $customSandboxUrl = PayeverConfig::getCustomThirdPartyProductsSandboxUrl();
+            if ($customSandboxUrl) {
+                static::$thirdPartyProductsClientConfig->setCustomSandboxUrl($customSandboxUrl);
+            }
+            static::$thirdPartyProductsClientConfig->setCustomLiveUrl(null);
+            $customLiveUrl = PayeverConfig::getCustomThirdPartyProductsLiveUrl();
+            if ($customLiveUrl) {
+                static::$thirdPartyProductsClientConfig->setCustomLiveUrl($customLiveUrl);
+            }
+        }
+
+        return static::$thirdPartyProductsClientConfig;
+    }
+
+    /**
      * @return ClientConfiguration
      * @throws Exception
      */
     private static function loadClientConfiguration()
     {
         $clientConfiguration = new ClientConfiguration();
-
         $isSandbox = PayeverConfig::getApiMode() == PayeverConfig::API_MODE_SANDBOX;
         $apiMode = $isSandbox
             ? ClientConfigurationInterface::API_MODE_SANDBOX
@@ -285,11 +327,12 @@ class PayeverApiClientProvider
             ->setClientId(PayeverConfig::getApiClientId())
             ->setClientSecret(PayeverConfig::getApiClientSecret())
             ->setLogger(PayeverConfig::getLogger());
-
-        if ($sandboxUrl = PayeverConfig::getCustomSandboxUrl()) {
+        $sandboxUrl = PayeverConfig::getCustomSandboxUrl();
+        if ($sandboxUrl) {
             $clientConfiguration->setCustomSandboxUrl($sandboxUrl);
         }
-        if ($liveUrl = PayeverConfig::getCustomLiveUrl()) {
+        $liveUrl = PayeverConfig::getCustomLiveUrl();
+        if ($liveUrl) {
             $clientConfiguration->setCustomLiveUrl($liveUrl);
         }
 

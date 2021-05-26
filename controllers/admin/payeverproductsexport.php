@@ -2,6 +2,7 @@
 
 /**
  * @codeCoverageIgnore
+ * phpcs:disable PSR2.Methods.MethodDeclaration.Underscore
  */
 class payeverproductsexport extends oxAdminView
 {
@@ -31,6 +32,7 @@ class payeverproductsexport extends oxAdminView
 
     /**
      * Performs export
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     public function export()
     {
@@ -48,3 +50,4 @@ class payeverproductsexport extends oxAdminView
         exit;
     }
 }
+// phpcs:enable PSR2.Methods.MethodDeclaration.Underscore

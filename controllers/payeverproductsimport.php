@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -32,12 +33,15 @@ class payeverProductsImport extends oxUBase
 
     /**
      * {@inheritDoc}
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     public function render()
     {
         $data = [];
         !$this->enableOutput || header('Content-Type: application/json');
-        if ($errors = $this->getImportManager()->getErrors()) {
+        $errors = $this->getImportManager()->getErrors();
+        if ($errors) {
             !$this->enableOutput || header('HTTP/1.1 400 Bad Request');
             $data['errors'] = $errors;
         } else {

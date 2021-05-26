@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -30,6 +31,12 @@ class PayeverConfig
 
     const VAR_LIVE = 'payever_live_url';
     const KEY_LIVE_URL = 'payeverLiveUrl';
+
+    const VAR_CUSTOM_THIRD_PARTY_PRODUCTS_SANDBOX_URL = 'payever_products_sandbox_url';
+    const KEY_CUSTOM_THIRD_PARTY_PRODUCTS_SANDBOX_URL = 'payeverThirdPartyProductsSandboxUrl';
+
+    const VAR_CUSTOM_THIRD_PARTY_PRODUCTS_LIVE_URL = 'payever_products_live_url';
+    const KEY_CUSTOM_THIRD_PARTY_PRODUCTS_LIVE_URL = 'payeverThirdPartyProductsLiveUrl';
 
     const VAR_CONFIG = 'payever_config';
 
@@ -81,6 +88,7 @@ class PayeverConfig
      * @param bool $withPrefix
      *
      * @return array
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     public static function getMethodsList($withPrefix = true)
     {
@@ -225,6 +233,22 @@ class PayeverConfig
     public static function getCustomLiveUrl()
     {
         return static::get(static::VAR_LIVE, static::KEY_LIVE_URL);
+    }
+
+    public static function getCustomThirdPartyProductsSandboxUrl()
+    {
+        return static::get(
+            static::VAR_CUSTOM_THIRD_PARTY_PRODUCTS_SANDBOX_URL,
+            static::KEY_CUSTOM_THIRD_PARTY_PRODUCTS_SANDBOX_URL
+        );
+    }
+
+    public static function getCustomThirdPartyProductsLiveUrl()
+    {
+        return static::get(
+            static::VAR_CUSTOM_THIRD_PARTY_PRODUCTS_LIVE_URL,
+            static::KEY_CUSTOM_THIRD_PARTY_PRODUCTS_LIVE_URL
+        );
     }
 
     public static function getIsLiveKeys()

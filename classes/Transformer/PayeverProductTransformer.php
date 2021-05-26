@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -49,6 +50,9 @@ class PayeverProductTransformer
      * @param bool $variantMode
      * @return ProductRequestEntity
      * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function transformFromOxidIntoPayever($product, $variantMode = false)
     {
@@ -65,12 +69,14 @@ class PayeverProductTransformer
         foreach ($categoryIds as $categoryId) {
             $category = $this->getCategoryFactory()->create();
             $category->loadInLang($this->getConfigHelper()->getDefaultLanguageId(), $categoryId);
-            if ($name = $category->getFieldData('oxtitle')) {
+            $name = $category->getFieldData('oxtitle');
+            if ($name) {
                 $categoryNames[] = $name;
             }
         }
         $gallery = !$variantMode ? $this->getGalleryManager()->getGallery($product) : [];
-        if ($price = $product->getFieldData('oxtprice')) {
+        $price = $product->getFieldData('oxtprice');
+        if ($price) {
             $salePrice = (float) $product->getFieldData('oxprice');
         } else {
             $salePrice = null;
@@ -92,7 +98,8 @@ class PayeverProductTransformer
             ->setImagesUrl($gallery);
         if (!$variantMode) {
             $product->setInList();
-            if ($variants = $product->getVariants()) {
+            $variants = $product->getVariants();
+            if ($variants) {
                 $requestVariants = [];
                 foreach ($variants as $variant) {
                     $requestVariants[] = $this->transformFromOxidIntoPayever($variant, true);
@@ -114,9 +121,10 @@ class PayeverProductTransformer
     {
         $product = $this->getProductHelper()->getProductBySku($requestEntity->getSku());
         $this->fillProductFromRequestEntity($requestEntity, $product);
-        if ($variants = $requestEntity->getVariants()) {
+        $variants = $requestEntity->getVariants();
+        if ($variants) {
             $this->getOptionManager()->setSelectionName($product, $variants);
-            foreach ($variants as $key => $variantRequestEntity) {
+            foreach ($variants as $variantRequestEntity) {
                 if (!$variantRequestEntity->getVatRate()) {
                     $variantRequestEntity->setVatRate($requestEntity->getVatRate());
                 }

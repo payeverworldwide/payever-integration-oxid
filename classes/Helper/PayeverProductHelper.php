@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -14,14 +15,14 @@ class PayeverProductHelper
     protected $articleFactory;
 
     /**
-     * @param string $id
+     * @param string $productId
      * @return oxarticle
      * @throws oxSystemComponentException
      */
-    public function getProductById($id)
+    public function getProductById($productId)
     {
         $product = $this->getArticleFactory()->create();
-        $product->load($id);
+        $product->load($productId);
 
         return $product;
     }

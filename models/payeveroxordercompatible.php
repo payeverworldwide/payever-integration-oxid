@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -10,6 +11,9 @@
 
 class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
 {
+    use PayeverLoggerTrait;
+    use PayeverRequestHelperTrait;
+
     /**
      * @var string
      */
@@ -53,9 +57,17 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
      * @extend finalizeOrder
      *
      * @throws \Exception
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function finalizeOrder(OxidEsales\Eshop\Application\Model\Basket $oBasket, $oUser, $blRecalculatingOrder = false)
-    {
+    public function finalizeOrder(
+        OxidEsales\Eshop\Application\Model\Basket $oBasket,
+        $oUser,
+        $blRecalculatingOrder = false
+    ) {
         $sPaymentId = $oBasket->getPaymentId();
 
         if (!in_array($sPaymentId, PayeverConfig::getMethodsList())) {
@@ -78,9 +90,9 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         if (!$blRecalculatingOrder) {
             // use this ID
             $this->setId($sGetChallenge);
-
             // validating various order/basket parameters before finalizing
-            if ($iOrderState = $this->validateOrder($oBasket, $oUser)) {
+            $iOrderState = $this->validateOrder($oBasket, $oUser);
+            if ($iOrderState) {
                 return $iOrderState;
             }
         }
@@ -132,9 +144,13 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
             }
         }
 
-        // deleting remark info only when order is finished
-        oxRegistry::getSession()->deleteVariable('ordrem');
-        oxRegistry::getSession()->deleteVariable('stsprotection');
+        $fetchMode = $this->getRequestHelper()->getHeader('sec-fetch-dest');
+        if ($fetchMode !== 'iframe') {
+            $this->getLogger()->debug('Cleanup session');
+            // deleting remark info only when order is finished
+            oxRegistry::getSession()->deleteVariable('ordrem');
+            oxRegistry::getSession()->deleteVariable('stsprotection');
+        }
 
         $sPid = $this->getSession()->getVariable('oxidpayever_payment_id');
         $this->getSession()->deleteVariable('oxidpayever_payment_id');
@@ -147,11 +163,13 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         // updating order trans status (success status)
         $oxidOrderStatus = $this->getOrderStatus();
         $this->_setOrderStatus($oxidOrderStatus);
-        $up = oxNew('oxUserPayment');
-        $up->load((string)$this->oxorder__oxpaymentid);
-        $aParams['oxuserpayments__oxpspayever_transaction_id'] = $sPid;
-        $up->assign($aParams);
-        $up->save();
+        $userPayment = oxNew('oxUserPayment');
+        $userPayment->load((string)$this->oxorder__oxpaymentid);
+        $aParams = [
+            'oxuserpayments__oxpspayever_transaction_id' => $sPid,
+        ];
+        $userPayment->assign($aParams);
+        $userPayment->save();
 
         // store orderid
         $oBasket->setOrderId($this->getId());
@@ -175,6 +193,10 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         return self::ORDER_STATE_OK;
     }
 
+    /**
+     * @param string $oxidOrderStatus
+     * @return $this
+     */
     public function setOrderStatus($oxidOrderStatus)
     {
         $this->oxidOrderStatus = $oxidOrderStatus;

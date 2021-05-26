@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -12,15 +13,18 @@ use Payever\ExternalIntegration\Payments\Http\MessageEntity\ConvertedPaymentOpti
 use Payever\ExternalIntegration\Payments\Http\MessageEntity\ListPaymentOptionsResultEntity;
 use Payever\ExternalIntegration\Payments\Http\ResponseEntity\ListPaymentOptionsResponse;
 use Payever\ExternalIntegration\Plugins\Http\ResponseEntity\PluginVersionResponseEntity;
+use Psr\Log\LogLevel;
 
 /**
- * Configure Payever interface
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * phpcs:disable PSR2.Classes.PropertyDeclaration.Underscore
  */
 class payever_config extends Shop_Config
 {
     const THUMBNAILS_PATH = 'out/pictures/%s.png';
 
-    /** @var string|null  */
+    /** @var string|null */
     private $errorMessage = null;
 
     /** @var array  */
@@ -77,7 +81,10 @@ class payever_config extends Shop_Config
         $this->_aViewData['payever_new_version'] = $this->checkLatestVersion();
 
         if (file_exists(PayeverConfig::getLogFilename())) {
-            $this->_aViewData['log_filename'] = substr(PayeverConfig::getLogFilename(), strlen($_SERVER['DOCUMENT_ROOT']));
+            $this->_aViewData['log_filename'] = substr(
+                PayeverConfig::getLogFilename(),
+                strlen($_SERVER['DOCUMENT_ROOT'])
+            );
         }
 
         return $this->_sThisTemplate;
@@ -103,6 +110,7 @@ class payever_config extends Shop_Config
         if ($wasActive !== $isActive) {
             $this->_parameters[PayeverConfig::PRODUCTS_SYNC_ENABLED] = $this->subscriptionManager
                 ->toggleSubscription($isActive);
+            $this->_parameters[PayeverConfig::PRODUCTS_SYNC_EXTERNAL_ID] = PayeverConfig::getProductsSyncExternalId();
         }
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_CONFIG, $this->_parameters);
     }
@@ -212,8 +220,9 @@ class payever_config extends Shop_Config
         $oPayment = oxNew('oxPayment');
 
         try {
-            if (!($methods = $this->retrieveActiveMethods())) {
-                throw new UnexpectedValueException("Empty payment option list result");
+            $methods = $this->retrieveActiveMethods();
+            if (!$methods) {
+                throw new UnexpectedValueException('Empty payment option list result');
             }
         } catch (Exception $exception) {
             $this->errorMessage = $exception->getMessage();
@@ -229,8 +238,14 @@ class payever_config extends Shop_Config
             $oPayment->oxpayments__oxid = new oxField($methodCode, oxField::T_RAW);
 
             foreach ($locales as $locale => $lang) {
-                $oPayment->{'oxpayments__oxdesc' . $lang} = new oxField('payever ' . $methodData["name_{$locale}"], oxField::T_RAW);
-                $oPayment->{'oxpayments__oxlongdesc' . $lang} = new oxField(strip_tags($methodData["description_offer_{$locale}"]), oxField::T_RAW);
+                $oPayment->{'oxpayments__oxdesc' . $lang} = new oxField(
+                    'payever ' . $methodData["name_{$locale}"],
+                    oxField::T_RAW
+                );
+                $oPayment->{'oxpayments__oxlongdesc' . $lang} = new oxField(
+                    strip_tags($methodData["description_offer_{$locale}"]),
+                    oxField::T_RAW
+                );
             }
 
             // todo: describe magic values
@@ -247,9 +262,7 @@ class payever_config extends Shop_Config
             $oPayment->oxpayments__oxacceptfee = new oxField(($method->getAcceptFee()) ? 1 : 0, oxField::T_RAW);
             $oPayment->oxpayments__oxpercentfee = new oxField($method->getVariableFee(), oxField::T_RAW);
             $oPayment->oxpayments__oxfixedfee = new oxField($method->getFixedFee(), oxField::T_RAW);
-            if ($method->isRedirectMethod()) {
-                $oPayment->oxpayments__oxisredirectmethod = new oxField(true, oxField::T_RAW);
-            }
+            $oPayment->oxpayments__oxisredirectmethod = new oxField($method->isRedirectMethod(), oxField::T_RAW);
 
             $thumbnailPath = $this->saveThumbnailInDirectory($method->getThumbnail1(), $oPayment->oxpayments__oxid);
             if ($thumbnailPath) {
@@ -323,8 +336,11 @@ class payever_config extends Shop_Config
         $paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient();
         $payeverMethods = [];
 
-        foreach ($locales as $locale => $langName) {
-            $optionsResponse = $paymentsApiClient->listPaymentOptionsWithVariantsRequest(['_locale' => $locale, '_currency' => $currency->name]);
+        foreach (array_keys($locales) as $locale) {
+            $optionsResponse = $paymentsApiClient->listPaymentOptionsWithVariantsRequest([
+                '_locale' => $locale,
+                '_currency' => $currency->name,
+            ]);
             /** @var ListPaymentOptionsResponse $responseEntity */
             $responseEntity = $optionsResponse->getResponseEntity();
 
@@ -352,7 +368,10 @@ class payever_config extends Shop_Config
                     $payeverMethods[$key] = $method;
                 }
 
-                $payeverMethods[$key]->offsetSet("name_{$locale}", sprintf('%s %s', $method->getName(), $method->getVariantName()));
+                $payeverMethods[$key]->offsetSet(
+                    "name_{$locale}",
+                    sprintf('%s %s', $method->getName(), $method->getVariantName())
+                );
                 $payeverMethods[$key]->offsetSet("description_offer_{$locale}", $method->getDescriptionOffer());
                 $payeverMethods[$key]->offsetSet("description_fee_{$locale}", $method->getDescriptionFee());
             }
@@ -394,7 +413,7 @@ class payever_config extends Shop_Config
      * @see ./../../views/admin/tpl/payever_config.tpl
      *
      * @param null
-     * @return boolean
+     * @return int
      */
     public function getMerchantConfigErrorId()
     {
@@ -422,6 +441,7 @@ class payever_config extends Shop_Config
     {
         try {
             $pluginsApiClient = PayeverApiClientProvider::getPluginsApiClient();
+            $pluginsApiClient->setHttpClientRequestFailureLogLevelOnce(LogLevel::NOTICE);
             /** @var PluginVersionResponseEntity $latestVersion */
             $latestVersion = $pluginsApiClient->getLatestPluginVersion()->getResponseEntity();
             if (version_compare($latestVersion->getVersion(), PayeverConfig::getPluginVersion(), '>')) {
@@ -437,6 +457,7 @@ class payever_config extends Shop_Config
     /**
      * @param array $poWithVariants
      * @return array
+     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     private function convertPaymentOptionVariants(array $poWithVariants)
     {
@@ -446,7 +467,7 @@ class payever_config extends Shop_Config
             $convertedPaymentOption = array();
             $baseData = $poWithVariant->toArray();
 
-            $i = 1;
+            $poIndex = 1;
             foreach ($poWithVariant->getVariants() as $variant) {
                 $variantName = $variant->getName();
                 $convertedOption = new ConvertedPaymentOptionEntity($baseData);
@@ -458,9 +479,11 @@ class payever_config extends Shop_Config
                     /** default variant */
                     $convertedPaymentOption[$poWithVariant->getPaymentMethod()] = $convertedOption;
                 } else {
-                    $key = $i ? $poWithVariant->getPaymentMethod().'-'.$i : $poWithVariant->getPaymentMethod();
+                    $key = $poIndex
+                        ? $poWithVariant->getPaymentMethod() . '-' . $poIndex
+                        : $poWithVariant->getPaymentMethod();
                     $convertedPaymentOption[$key] = $convertedOption;
-                    $i++;
+                    $poIndex++;
                 }
             }
             $result = array_merge($result, $convertedPaymentOption);
@@ -471,6 +494,7 @@ class payever_config extends Shop_Config
 
     /**
      * @param string $filePath
+     * @SuppressWarnings(PHPMD.ExitExpression)
      */
     protected function sendFile($filePath)
     {
@@ -489,3 +513,4 @@ class payever_config extends Shop_Config
         exit;
     }
 }
+// phpcs:enable PSR2.Classes.PropertyDeclaration.Underscore

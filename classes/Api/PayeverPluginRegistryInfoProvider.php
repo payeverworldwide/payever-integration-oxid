@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHP version 5.4 and 7
  *
@@ -14,7 +15,6 @@ use Payever\ExternalIntegration\Plugins\Base\PluginRegistryInfoProviderInterface
 
 class PayeverPluginRegistryInfoProvider implements PluginRegistryInfoProviderInterface
 {
-
     /**
      * @inheritDoc
      */

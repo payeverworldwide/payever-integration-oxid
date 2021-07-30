@@ -627,7 +627,7 @@ JS;
      * @param $payeverStatus
      * @return string
      */
-    private function getInternalStatus($payeverStatus)
+    protected function getInternalStatus($payeverStatus)
     {
         switch ($payeverStatus) {
             case Status::STATUS_PAID:
@@ -648,7 +648,7 @@ JS;
      * @param string $oxidStatus
      * @return bool
      */
-    private function isPaidStatus($oxidStatus)
+    protected function isPaidStatus($oxidStatus)
     {
         return in_array($oxidStatus, ['OK', 'IN_PROCESS']);
     }
@@ -788,7 +788,7 @@ JS;
      * @SuppressWarnings(PHPMD.ElseExpression)
      * @SuppressWarnings(PHPMD.ExitExpression)
      */
-    private function rejectPayment($payment, $badRequest = true)
+    protected function rejectPayment($payment, $badRequest = true)
     {
         $this->getLocker()->releaseLock($payment['paymentId']);
 
@@ -828,7 +828,7 @@ JS;
     /**
      * @return void
      */
-    private function redirectToCart($fetchDest)
+    protected function redirectToCart($fetchDest)
     {
         $sUrl = $this->getConfig()->getSslShopUrl() . '?cl=payment';
         !$this->dryRun && $this->webRedirect($sUrl, $fetchDest);
@@ -843,7 +843,7 @@ JS;
      * @SuppressWarnings(PHPMD.ElseExpression)
      * @SuppressWarnings(PHPMD.ExitExpression)
      */
-    private function webRedirect($url, $fetchDest)
+    public function webRedirect($url, $fetchDest)
     {
         if ($fetchDest == 'iframe') {
             // after request with sec-fetch-desc=iframe header
@@ -866,7 +866,7 @@ JS;
      * @param int $notificationTimestamp
      * @return bool
      */
-    private function shouldRejectNotification($order, $notificationTimestamp)
+    protected function shouldRejectNotification($order, $notificationTimestamp)
     {
         return (int) $order->oxorder__payever_notification_timestamp->rawValue >= $notificationTimestamp;
     }
@@ -939,7 +939,7 @@ JS;
     /**
      * @return array
      */
-    private function getRawData()
+    protected function getRawData()
     {
         $data = [];
         $rawContent = $this->getRequestHelper()->getRequestContent();

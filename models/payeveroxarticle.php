@@ -9,7 +9,7 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-class payeverOxArticle extends oxarticle
+class payeverOxArticle extends payeverOxArticle_parent
 {
     use PayeverSynchronizationManagerTrait;
 

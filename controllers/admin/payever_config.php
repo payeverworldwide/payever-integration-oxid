@@ -208,6 +208,7 @@ class payever_config extends Shop_Config
      * @throws ReflectionException
      * @throws oxConnectionException
      * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function synchronize()
     {
@@ -226,6 +227,10 @@ class payever_config extends Shop_Config
             }
         } catch (Exception $exception) {
             $this->errorMessage = $exception->getMessage();
+            if (401 === $exception->getCode()) {
+                $this->errorMessage = 'Could not synch - please check if the credentials you entered are correct' .
+                    ' and match the mode (live/sandbox)';
+            }
             return;
         }
 

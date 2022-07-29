@@ -5,7 +5,7 @@
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
- * @copyright 2017-2019 payever GmbH
+ * @copyright 2017-2021 payever GmbH
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -93,10 +93,12 @@ class payever_config extends Shop_Config
     /**
      * Saves shop configuration parameters.
      *
+     * @param array $parameters
+     *
      * @return void
      * @throws ReflectionException
      */
-    public function save()
+    public function save($parameters = [])
     {
         /** @var oxConfig $oxConfig */
         $oxConfig = $this->getConfig();
@@ -112,6 +114,7 @@ class payever_config extends Shop_Config
                 ->toggleSubscription($isActive);
             $this->_parameters[PayeverConfig::PRODUCTS_SYNC_EXTERNAL_ID] = PayeverConfig::getProductsSyncExternalId();
         }
+        $this->_parameters = array_merge($this->_parameters, $parameters);
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_CONFIG, $this->_parameters);
     }
 
@@ -195,7 +198,7 @@ class payever_config extends Shop_Config
         $file = fopen($savePath, 'wb');
         curl_setopt($curl, CURLOPT_FILE, $file);
         curl_setopt($curl, CURLOPT_HEADER, 0);
-        if (!curl_exec($curl)) {
+        if (false === curl_exec($curl)) {
             return false;
         }
         curl_close($curl);
@@ -234,6 +237,8 @@ class payever_config extends Shop_Config
             return;
         }
 
+        $checkAddressEqualityMethods = [];
+        $shippingNotAllowedMethods = [];
         foreach ($methods as $methodCode => $method) {
             $methodData = $method->toArray();
 
@@ -269,6 +274,14 @@ class payever_config extends Shop_Config
             $oPayment->oxpayments__oxfixedfee = new oxField($method->getFixedFee(), oxField::T_RAW);
             $oPayment->oxpayments__oxisredirectmethod = new oxField($method->isRedirectMethod(), oxField::T_RAW);
 
+            if ($method->getShippingAddressEquality()) {
+                $checkAddressEqualityMethods[] = PayeverConfig::removeMethodPrefix($methodCode);
+            }
+
+            if (!$method->getShippingAddressAllowed()) {
+                $shippingNotAllowedMethods[] = PayeverConfig::removeMethodPrefix($methodCode);
+            }
+
             $thumbnailPath = $this->saveThumbnailInDirectory($method->getThumbnail1(), $oPayment->oxpayments__oxid);
             if ($thumbnailPath) {
                 $oPayment->oxpayments__oxthumbnail = new oxField($thumbnailPath, oxField::T_RAW);
@@ -298,7 +311,12 @@ class payever_config extends Shop_Config
             }
         }
 
-        $this->save();
+        $this->save(
+            [
+                PayeverConfig::ADDRESS_EQUALIY_METHODS => $checkAddressEqualityMethods,
+                PayeverConfig::SHIPPING_NOT_ALLOWED_METHODS => $shippingNotAllowedMethods
+            ]
+        );
     }
 
     /**
@@ -343,7 +361,7 @@ class payever_config extends Shop_Config
 
         foreach (array_keys($locales) as $locale) {
             $optionsResponse = $paymentsApiClient->listPaymentOptionsWithVariantsRequest([
-                '_locale' => $locale,
+                'locale' => $locale,
                 '_currency' => $currency->name,
             ]);
             /** @var ListPaymentOptionsResponse $responseEntity */
@@ -479,16 +497,18 @@ class payever_config extends Shop_Config
                 $convertedOption->setVariantId($variant->getId());
                 $convertedOption->setAcceptFee($variant->getAcceptFee());
                 $convertedOption->setVariantName($variantName);
+                $convertedOption->setShippingAddressAllowed($variant->getShippingAddressAllowed());
+                $convertedOption->setShippingAddressEquality($variant->getShippingAddressEquality());
 
-                if (empty($variantName)) {
-                    /** default variant */
-                    $convertedPaymentOption[$poWithVariant->getPaymentMethod()] = $convertedOption;
-                } else {
+                if (isset($convertedPaymentOption[$poWithVariant->getPaymentMethod()])) {
                     $key = $poIndex
                         ? $poWithVariant->getPaymentMethod() . '-' . $poIndex
                         : $poWithVariant->getPaymentMethod();
                     $convertedPaymentOption[$key] = $convertedOption;
                     $poIndex++;
+                } else {
+                    /** default variant */
+                    $convertedPaymentOption[$poWithVariant->getPaymentMethod()] = $convertedOption;
                 }
             }
             $result = array_merge($result, $convertedPaymentOption);

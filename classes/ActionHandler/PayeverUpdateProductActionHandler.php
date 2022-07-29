@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -45,6 +45,9 @@ class PayeverUpdateProductActionHandler extends PayeverAbstractActionHandler
         $product = $this->getProductTransformer()->transformFromPayeverIntoOxid($entity);
         $this->pushToRegistry($product);
         if ($product->save()) {
+            if (null === $product->getFieldData('oxvarcount')) {
+                $product->assign(['oxvarcount' => 0]);
+            }
             $this->getSeoHelper()->processProductSeo($product);
             $collection = $product->getFullVariants(false);
             if ($collection instanceof oxArticleList) {

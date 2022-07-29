@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6aabe65d2eddfa82ddd5cfffdcd51b9e",
+    "content-hash": "1e83b1c4e1329857bca8aa46a08f5c22",
     "packages": [
         {
             "name": "payever/sdk-php",
-            "version": "3.0.0",
+            "version": "3.0.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/payeverworldwide/sdk-php.git",
-                "reference": "1fb476f9c7a03a49ca698591072e5995c79d4ed4"
+                "reference": "f0cb682b04923f87831d97891615bef30fb576ad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/payeverworldwide/sdk-php/zipball/1fb476f9c7a03a49ca698591072e5995c79d4ed4",
-                "reference": "1fb476f9c7a03a49ca698591072e5995c79d4ed4",
+                "url": "https://api.github.com/repos/payeverworldwide/sdk-php/zipball/f0cb682b04923f87831d97891615bef30fb576ad",
+                "reference": "f0cb682b04923f87831d97891615bef30fb576ad",
                 "shasum": ""
             },
             "require": {
@@ -29,9 +29,10 @@
             "require-dev": {
                 "behat/behat": "^3.4",
                 "friendsofphp/php-cs-fixer": "^2.18",
-                "laminas/laminas-diactoros": "^1.8",
+                "laminas/laminas-diactoros": "^2.5",
+                "laminas/laminas-httphandlerrunner": "^1.4",
                 "phpmd/phpmd": "^2.9",
-                "phpunit/phpunit": "^6",
+                "phpunit/phpunit": "^9",
                 "squizlabs/php_codesniffer": "^3.5"
             },
             "suggest": {
@@ -74,9 +75,9 @@
             ],
             "support": {
                 "issues": "https://github.com/payeverworldwide/sdk-php/issues",
-                "source": "https://github.com/payeverworldwide/sdk-php/tree/3.0.0"
+                "source": "https://github.com/payeverworldwide/sdk-php/tree/3.0.8"
             },
-            "time": "2021-06-30T13:26:35+00:00"
+            "time": "2021-11-05T17:05:00+00:00"
         },
         {
             "name": "psr/log",

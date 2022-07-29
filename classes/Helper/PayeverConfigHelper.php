@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -45,6 +45,14 @@ class PayeverConfigHelper
     public function getProductsSyncExternalId()
     {
         return PayeverConfig::getProductsSyncExternalId();
+    }
+
+    /**
+     * @param bool $flag
+     */
+    public function setProductsSyncEnabled($flag)
+    {
+        PayeverConfig::setConfig(PayeverConfig::PRODUCTS_SYNC_ENABLED, $flag);
     }
 
     /**

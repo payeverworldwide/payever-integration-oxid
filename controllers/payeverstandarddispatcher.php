@@ -5,7 +5,7 @@
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
- * @copyright 2017-2019 payever GmbH
+ * @copyright 2017-2021 payever GmbH
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -14,6 +14,7 @@ use Payever\ExternalIntegration\Core\Lock\FileLock;
 use Payever\ExternalIntegration\Core\Lock\LockInterface;
 use Payever\ExternalIntegration\Payments\Enum\Status;
 use Payever\ExternalIntegration\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
+use Payever\ExternalIntegration\Payments\Http\MessageEntity\ShippingAddressEntity;
 use Payever\ExternalIntegration\Payments\Http\RequestEntity\CreatePaymentRequest;
 use Payever\ExternalIntegration\Payments\Http\RequestEntity\SubmitPaymentRequest;
 use Payever\ExternalIntegration\Payments\Http\ResponseEntity\CreatePaymentResponse;
@@ -125,7 +126,9 @@ class payeverStandardDispatcher extends oxUBase
                 $responseEntity = $response->getResponseEntity();
                 $language = $this->getConfigHelper()->getLanguage()
                     ?: substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2);
-                $redirectUrl = $responseEntity->getRedirectUrl() . '?_locale=' . $language;
+
+                $redirectUrl = $responseEntity->getRedirectUrl();
+                $redirectUrl .= (strpos($redirectUrl, '?') === false ? '?' : '&') . '_locale=' . $language;
                 $this->getLogger()->info('Payment successfully created', $responseEntity->toArray());
             }
 
@@ -215,11 +218,13 @@ class payeverStandardDispatcher extends oxUBase
             throw new UnexpectedValueException('Basket is empty');
         }
         $oSession = $this->getSession();
+
         $soxAddressId = $oSession->getVariable('deladrid');
         $deliveryAddress = $this->getAddressFactory()->create();
         if ($soxAddressId) {
             $deliveryAddress->load($soxAddressId);
         } else {
+            $deliveryAddress->oxaddress__oxsal = $oUser->oxuser__oxsal;
             $deliveryAddress->oxaddress__oxfname = $oUser->oxuser__oxfname;
             $deliveryAddress->oxaddress__oxlname = $oUser->oxuser__oxlname;
             $deliveryAddress->oxaddress__oxstreet = $oUser->oxuser__oxstreet;
@@ -228,11 +233,14 @@ class payeverStandardDispatcher extends oxUBase
             $deliveryAddress->oxaddress__oxcity = $oUser->oxuser__oxcity;
             $deliveryAddress->oxaddress__oxfon = $oUser->oxuser__oxfon;
             if ($oUser->oxuser__oxcountryid) {
-                $oxCountry = $this->getCountryFactory()->create();
-                $oxCountry->load($oUser->oxuser__oxcountryid->value);
-                $deliveryAddress->oxaddress__oxcountryid = $oxCountry->oxcountry__oxisoalpha2;
+                $deliveryAddress->oxaddress__oxcountryid = $oUser->oxuser__oxcountryid;
             }
         }
+
+        $shippingAddressEntity = $this->populateShippingAddressEntity($deliveryAddress);
+        $oxCountry = $this->getCountryFactory()->create();
+        $oxCountry->load($oUser->oxuser__oxcountryid->value);
+        $oxcountryIsoCode = $oxCountry->oxcountry__oxisoalpha2->value;
 
         /**
          * cut off the plugin prefix {@see PayeverConfig::PLUGIN_PREFIX}
@@ -263,26 +271,28 @@ class payeverStandardDispatcher extends oxUBase
             ->setFee($this->getOrderHelper()->getFeeByCart($oBasket))
             ->setOrderId($this->getSavedBasketId())
             ->setCurrency($oBasket->getBasketCurrency()->name)
-            ->setFirstName($deliveryAddress->oxaddress__oxfname->value)
-            ->setLastName($deliveryAddress->oxaddress__oxlname->value)
-            ->setPhone($deliveryAddress->oxaddress__oxfon->value)
+            ->setFirstName($oUser->oxuser__oxfname->value)
+            ->setLastName($oUser->oxuser__oxlname->value)
+            ->setPhone($oUser->oxuser__oxfon->value)
             ->setEmail($oUser->oxuser__oxusername ? $oUser->oxuser__oxusername->value : null)
             ->setStreet(
-                $deliveryAddress->oxaddress__oxstreet->value . ' ' . $deliveryAddress->oxaddress__oxstreetnr->value
+                $oUser->oxuser__oxstreet->value . ' ' . $oUser->oxuser__oxstreetnr->value
             )
-            ->setCity($deliveryAddress->oxaddress__oxcity->value)
-            ->setCountry($deliveryAddress->oxaddress__oxcountryid->value)
-            ->setZip($deliveryAddress->oxaddress__oxzip->value)
+            ->setCity($oUser->oxuser__oxcity->value)
+            ->setCountry($oxcountryIsoCode)
+            ->setZip($oUser->oxuser__oxzip->value)
             ->setSuccessUrl($this->generateCallbackUrl('success'))
             ->setPendingUrl($this->generateCallbackUrl('success', ['is_pending' => true]))
             ->setCancelUrl($this->generateCallbackUrl('cancel'))
             ->setFailureUrl($this->generateCallbackUrl('failure'))
             ->setNoticeUrl($this->generateCallbackUrl('notice'))
             ->setPluginVersion($this->getConfigHelper()->getPluginVersion())
-            ->setCart($basketItems);
+            ->setCart($basketItems)
+            ->setShippingAddress($shippingAddressEntity);
+
         $birthdate = null;
-        if ($deliveryAddress->getUser()->oxuser__oxbirthdate) {
-            $birthdate = $deliveryAddress->getUser()->oxuser__oxbirthdate->value;
+        if ($oUser->oxuser__oxbirthdate) {
+            $birthdate = $oUser->oxuser__oxbirthdate->value;
         }
         if (!empty($birthdate) && $birthdate != '0000-00-00') {
             $requestEntity->setBirthdate($birthdate);
@@ -301,11 +311,48 @@ class payeverStandardDispatcher extends oxUBase
     }
 
     /**
+     * @param $deliveryAddress
+     *
+     * @return ShippingAddressEntity
+     */
+    private function populateShippingAddressEntity($deliveryAddress)
+    {
+        $oxCountry = $this->getCountryFactory()->create();
+        $oxCountry->load($deliveryAddress->oxaddress__oxcountryid->value);
+        $oxcountry = $oxCountry->oxcountry__oxisoalpha2->value;
+
+        $shippingAddressEntity = new ShippingAddressEntity();
+        $shippingAddressEntity
+            ->setFirstName($deliveryAddress->oxaddress__oxfname->value)
+            ->setLastName($deliveryAddress->oxaddress__oxlname->value)
+            ->setCity($deliveryAddress->oxaddress__oxcity->value)
+            ->setZip($deliveryAddress->oxaddress__oxzip->value)
+            ->setStreet(
+                $deliveryAddress->oxaddress__oxstreet->value . ' ' . $deliveryAddress->oxaddress__oxstreetnr->value
+            )
+            ->setCountry($oxcountry);
+
+        $salutation = null;
+        if ($deliveryAddress->oxaddress__oxsal) {
+            $salutation = $this->getSalutation($deliveryAddress->oxaddress__oxsal->value);
+        }
+        if ($salutation) {
+            $shippingAddressEntity->setSalutation($salutation);
+        }
+
+        return $shippingAddressEntity;
+    }
+
+    /**
      * @param string $salutation
      * @return string
      */
     private function getSalutation($salutation)
     {
+        if (!$salutation) {
+            return false;
+        }
+
         $salutation = strtolower($salutation);
 
         return ($salutation == self::MR_SALUTATION

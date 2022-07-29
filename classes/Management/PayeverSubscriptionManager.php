@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -21,6 +21,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 
 class PayeverSubscriptionManager
 {
+    use PayeverActionQueueManagerTrait;
     use PayeverGenericManagerTrait;
 
     /** @var ThirdPartyApiClient */
@@ -32,63 +33,27 @@ class PayeverSubscriptionManager
     /**
      * @param bool $isActive
      * @return bool
-     * @throws ReflectionException
-     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function toggleSubscription($isActive)
     {
         $this->cleanMessages();
         $this->getConfigHelper()->reset();
-        $externalId = $this->getConfigHelper()->getProductsSyncExternalId();
-        if (!$externalId) {
-            $externalId = $this->getRandomSourceGenerator()->generate();
-            $this->getConfigHelper()->setProductsSyncExternalId($externalId);
-        }
-        $businessId = $this->getConfigHelper()->getBusinessUuid();
-        $subscriptionEntity = new SubscriptionRequestEntity();
-        $subscriptionEntity->setExternalId($externalId);
-        $subscriptionEntity->setBusinessUuid($businessId);
-        $subscriptionEntity->setThirdPartyName(ChannelSet::CHANNEL_OXID);
-        $baseUrl = rtrim($this->getConfigHelper()->getShopUrl(), '/');
-        foreach ($this->getSupportedActions() as $actionName) {
-            $actionUrl = sprintf(
-                '%s/index.php?cl=payeverProductsImport&fnc=import&%s=%s&%s=%s',
-                $baseUrl,
-                'sync_action',
-                $actionName,
-                'external_id',
-                $externalId
-            );
-            $subscriptionEntity->addAction(
-                new SubscriptionActionEntity(
-                    [
-                        'name' => $actionName,
-                        'url' => $actionUrl,
-                        'method' => 'POST',
-                    ]
-                )
-            );
-        }
-        $subscriptionResponseEntity = null;
+        $result = false;
         try {
-            if ($isActive) {
-                $this->getThirdPartyApiClient()->subscribe($subscriptionEntity);
-                $subscriptionRecordResponse = $this->getThirdPartyApiClient()
-                    ->getSubscriptionStatus($subscriptionEntity);
-                /** @var SubscriptionResponseEntity $subscriptionResponseEntity */
-                $subscriptionResponseEntity = $subscriptionRecordResponse->getResponseEntity();
-            } else {
-                $this->getConfigHelper()->setProductsSyncExternalId(null);
-                $this->getThirdPartyApiClient()->unsubscribe($subscriptionEntity);
-            }
-        } catch (\Exception $e) {
-            $this->getConfigHelper()->setProductsSyncExternalId(null);
-            $this->errors[] = $e->getMessage();
+            $isActive ? $this->enable() : $this->disable();
+            $result = $isActive;
+        } catch (\Exception $exception) {
+            $this->cleanup();
+            $message = sprintf(
+                'Unable to %s subscription: %s',
+                $isActive ? 'disable' : 'enable',
+                $exception->getMessage()
+            );
+            $this->addError($message);
         }
-        $isActive = (bool) $subscriptionResponseEntity;
         $this->logMessages();
 
-        return $isActive;
+        return $result;
     }
 
     /**
@@ -106,8 +71,89 @@ class PayeverSubscriptionManager
     }
 
     /**
+     * @return void
+     */
+    public function disable()
+    {
+        try {
+            $this->getThirdPartyApiClient()->unsubscribe($this->getSubscriptionEntity());
+        } catch (\Exception $e) {
+            $this->getLogger()->notice('Unable to unsubscribe');
+        }
+        $this->cleanup();
+    }
+
+    /**
+     * @throws \Exception
+     * @throws ReflectionException
+     */
+    private function enable()
+    {
+        $subscriptionEntity = $this->getSubscriptionEntity();
+        $baseUrl = rtrim($this->getConfigHelper()->getShopUrl(), '/');
+        foreach ($this->getSupportedActions() as $actionName) {
+            $actionUrl = sprintf(
+                '%s/index.php?cl=payeverProductsImport&fnc=import&%s=%s&%s=%s',
+                $baseUrl,
+                'sync_action',
+                $actionName,
+                'external_id',
+                $subscriptionEntity->getExternalId()
+            );
+            $subscriptionEntity->addAction(
+                new SubscriptionActionEntity(
+                    [
+                        'name' => $actionName,
+                        'url' => $actionUrl,
+                        'method' => 'POST',
+                    ]
+                )
+            );
+        }
+        $this->getThirdPartyApiClient()->subscribe($subscriptionEntity);
+        $subscriptionRecordResponse = $this->getThirdPartyApiClient()->getSubscriptionStatus($subscriptionEntity);
+        /** @var SubscriptionResponseEntity $responseEntity */
+        $responseEntity = $subscriptionRecordResponse->getResponseEntity();
+        $this->getConfigHelper()->setProductsSyncEnabled((bool) $responseEntity);
+        $this->getConfigHelper()->setProductsSyncExternalId($subscriptionEntity->getExternalId());
+    }
+
+    /**
+     * @return SubscriptionRequestEntity
+     * @throws \Exception
+     */
+    private function getSubscriptionEntity()
+    {
+        $subscriptionEntity = new SubscriptionRequestEntity();
+        $externalId = $this->getConfigHelper()->getProductsSyncExternalId();
+        if (!$externalId) {
+            $externalId = $this->getRandomSourceGenerator()->generate();
+        }
+        $subscriptionEntity->setExternalId($externalId);
+        $subscriptionEntity->setBusinessUuid($this->configHelper->getBusinessUuid());
+        $subscriptionEntity->setThirdPartyName(ChannelSet::CHANNEL_OXID);
+
+        return $subscriptionEntity;
+    }
+
+    /**
+     * @return void
+     */
+    protected function cleanup()
+    {
+        try {
+            $this->getActionQueueManager()->emptyQueue();
+            $this->getConfigHelper()->setProductsSyncEnabled(false);
+            $this->getConfigHelper()->setProductsSyncExternalId('');
+        } catch (\Exception $exception) {
+            $this->getLogger()->warning($exception->getMessage());
+        }
+    }
+
+    /**
      * @param ThirdPartyApiClient $thirdPartyApiClient
      * @return $this
+     * @internal
      */
     public function setThirdPartyApiClient(ThirdPartyApiClient $thirdPartyApiClient)
     {

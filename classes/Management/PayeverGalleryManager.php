@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -61,6 +61,9 @@ class PayeverGalleryManager
             if ($imageIndex > 7) {
                 break;
             }
+            if (empty($imagesName[$key])) {
+                continue;
+            }
             $filename = $imagesName[$key];
             if (strpos($filename, '.') === false) {
                 $filename .= '.png';
@@ -80,7 +83,9 @@ class PayeverGalleryManager
                     $filesToProcess['name'][$keyName] = $filename;
                     $filesToProcess['size'][$keyName] = $this->skipFs ? 0 : filesize($filePath);
                     $filesToProcess['tmp_name'][$keyName] = $filePath;
-                    $filesToProcess['type'][$keyName] = $this->skipFs ? 'image/jpg' : mime_content_type($filePath);
+                    $filesToProcess['type'][$keyName] = $this->skipFs || !function_exists('mime_content_type')
+                        ? 'image/jpg'
+                        : mime_content_type($filePath);
                     $imageIndex++;
                 }
             }

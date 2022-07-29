@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -17,13 +17,28 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 
 class PayeverSynchronizationManager
 {
+    use PayeverActionQueueManagerTrait;
     use PayeverGenericManagerTrait;
     use PayeverInventoryTransformerTrait;
     use PayeverProductTransformerTrait;
-    use PayeverSynchronizationQueueFactoryTrait;
+    use PayeverSubscriptionManagerTrait;
 
     /** @var BidirectionalActionProcessor */
     protected $bidirectionalSyncActionProcessor;
+
+    /** @var bool  */
+    private $isInstantMode = false;
+
+    /**
+     * @param bool $isInstantMode
+     * @return $this
+     */
+    public function setIsInstantMode($isInstantMode)
+    {
+        $this->isInstantMode = $isInstantMode;
+
+        return $this;
+    }
 
     /**
      * @param oxarticle $product
@@ -32,10 +47,14 @@ class PayeverSynchronizationManager
     public function handleProductSave($product)
     {
         if ($this->isProductSupported($product)) {
-            $this->handleAction(
+            $requestEntity = $this->getProductTransformer()->transformFromOxidIntoPayever($product);
+            if (!$requestEntity->getSku()) {
+                $this->getLogger()->info('Skip handling product with empty sku');
+                return;
+            }
+            $this->handleOutwardAction(
                 ActionEnum::ACTION_UPDATE_PRODUCT,
-                DirectionEnum::OUTWARD,
-                $this->getProductTransformer()->transformFromOxidIntoPayever($product)
+                $requestEntity
             );
         }
     }
@@ -46,9 +65,8 @@ class PayeverSynchronizationManager
     public function handleProductDelete($product)
     {
         if ($this->isProductSupported($product)) {
-            $this->handleAction(
+            $this->handleOutwardAction(
                 ActionEnum::ACTION_REMOVE_PRODUCT,
-                DirectionEnum::OUTWARD,
                 $this->getProductTransformer()->transformRemovedOxidIntoPayever($product)
             );
         }
@@ -57,37 +75,52 @@ class PayeverSynchronizationManager
     /**
      * @param oxarticle $product
      * @param int|null $delta
-     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function handleInventory($product, $delta)
     {
         if ($this->isProductSupported($product)) {
-            if ($delta) {
-                $this->handleAction(
-                    $delta < 0 ? ActionEnum::ACTION_SUBTRACT_INVENTORY : ActionEnum::ACTION_ADD_INVENTORY,
-                    DirectionEnum::OUTWARD,
-                    $this->getInventoryTransformer()->transformFromOxidIntoPayever($product, $delta)
-                );
-            } else {
-                $inventoryRequestEntity = $this->getInventoryTransformer()->transformCreatedOxidIntoPayever($product);
-                $this->handleAction(
-                    ActionEnum::ACTION_SET_INVENTORY,
-                    DirectionEnum::OUTWARD,
-                    $inventoryRequestEntity
-                );
+            $action = ActionEnum::ACTION_SET_INVENTORY;
+            if (0.0 === $delta) {
+                $this->getLogger()->debug('Skip zero delta');
+                return;
             }
+            if ($delta) {
+                $action = $delta < 0 ? ActionEnum::ACTION_SUBTRACT_INVENTORY : ActionEnum::ACTION_ADD_INVENTORY;
+            }
+            $this->handleOutwardAction(
+                $action,
+                $delta !== null
+                    ? $this->getInventoryTransformer()->transformFromOxidIntoPayever($product, $delta)
+                    : $this->getInventoryTransformer()->transformCreatedOxidIntoPayever($product)
+            );
         }
     }
 
     /**
      * @param string $action
-     * @param string $direction
-     * @param bool $forceHttp
-     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload
-     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
-     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload $payload
      */
-    public function handleAction($action, $direction, $payload, $forceHttp = false)
+    public function handleInwardAction($action, $payload)
+    {
+        $this->handleAction($action, DirectionEnum::INWARD, $payload);
+    }
+
+    /**
+     * @param string $action
+     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload $payload
+     */
+    public function handleOutwardAction($action, $payload)
+    {
+        $this->handleAction($action, DirectionEnum::OUTWARD, $payload);
+    }
+
+    /**
+     * @param string $action
+     * @param string $direction
+     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     */
+    public function handleAction($action, $direction, $payload)
     {
         $this->cleanMessages();
         if (!$this->isEnabled() || ($direction === DirectionEnum::OUTWARD && !$this->isOutwardSyncEnabled())) {
@@ -95,16 +128,23 @@ class PayeverSynchronizationManager
             return;
         }
         try {
-            if ($this->getConfigHelper()->isCronMode() && !$forceHttp) {
-                $this->enqueueAction(
-                    $action,
+            if (!$this->isInstantMode && $this->getConfigHelper()->isCronMode()) {
+                $this->getActionQueueManager()->addItem(
                     $direction,
+                    $action,
                     is_string($payload) ? $payload : $payload->toString()
                 );
-            } elseif ($direction === DirectionEnum::INWARD) {
+                return;
+            }
+            if ($direction === DirectionEnum::INWARD) {
                 $this->getBidirectionalSyncActionProcessor()->processInwardAction($action, $payload);
-            } else {
+                return;
+            }
+            try {
                 $this->getBidirectionalSyncActionProcessor()->processOutwardAction($action, $payload);
+            } catch (\Exception $exception) {
+                $this->getSubscriptionManager()->disable();
+                throw $exception;
             }
         } catch (\Exception $e) {
             $this->getLogger()->warning($e->getMessage());
@@ -118,6 +158,21 @@ class PayeverSynchronizationManager
     public function isEnabled()
     {
         return $this->getConfigHelper()->isProductsSyncEnabled();
+    }
+
+    /**
+     * @param oxarticle $product
+     * @return bool
+     */
+    public function isVariant($product)
+    {
+        $result = false;
+        if ($product->getFieldData('oxparentid')) {
+            $this->getLogger()->debug('Skip variant save processing');
+            $result = true;
+        }
+
+        return $result;
     }
 
     /**
@@ -139,27 +194,6 @@ class PayeverSynchronizationManager
 
         return !$lastProcessedProduct ||
             $lastProcessedProduct->getFieldData('oxid') !== $product->getFieldData('oxid');
-    }
-
-    /**
-     * @param string $action
-     * @param string $direction
-     * @param string $payload
-     */
-    protected function enqueueAction($action, $direction, $payload)
-    {
-        $item = $this->getSynchronizationQueueFactory()->create();
-        $item->assign([
-            'action' => $action,
-            'direction' => $direction,
-            'payload' => $payload,
-            'created_at' => date(DATE_ATOM),
-        ]);
-        try {
-            $item->save();
-        } catch (\Exception $e) {
-            $this->getLogger()->warning($e->getMessage());
-        }
     }
 
     /**

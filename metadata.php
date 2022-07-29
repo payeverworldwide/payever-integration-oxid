@@ -4,7 +4,7 @@
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
- * @copyright 2017-2019 payever GmbH
+ * @copyright 2017-2021 payever GmbH
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -28,7 +28,7 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '2.13.0',
+    'version' => '2.15.0',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
@@ -44,6 +44,7 @@ $aModule = [
         // classes map (OXID < 6.0 doesn't support composer autoloading)
         'DryRunTrait' => 'payever/classes/DryRunTrait.php',
         'PayeverPaymentsApiClientTrait' => 'payever/classes/Api/PayeverPaymentsApiClientTrait.php',
+        'PayeverProductRequestEntity' => 'payever/classes/Api/PayeverProductRequestEntity.php',
         'payever_config' => 'payever/controllers/admin/payever_config.php',
         'PayeverConfigHelperTrait' => 'payever/classes/Helper/PayeverConfigHelperTrait.php',
         'PayeverCartFactory' => 'payever/classes/Factory/PayeverCartFactory.php',
@@ -95,6 +96,10 @@ $aModule = [
         'PayeverGalleryManager' => 'payever/classes/Management/PayeverGalleryManager.php',
         'PayeverPriceManager' => 'payever/classes/Management/PayeverPriceManager.php',
         'PayeverShippingManager' => 'payever/classes/Management/PayeverShippingManager.php',
+        'PayeverActionQueueManager' => 'payever/classes/Management/PayeverActionQueueManager.php',
+        'PayeverActionQueueManagerTrait' => 'payever/classes/Management/PayeverActionQueueManagerTrait.php',
+        'PayeverSubscriptionManager' => 'payever/classes/Management/PayeverSubscriptionManager.php',
+        'PayeverSubscriptionManagerTrait' => 'payever/classes/Management/PayeverSubscriptionManagerTrait.php',
         'PayeverExportManager' => 'payever/classes/Management/PayeverExportManager.php',
         'PayeverOptionManager' => 'payever/classes/Management/PayeverOptionManager.php',
         'PayeverConfigHelper' => 'payever/classes/Helper/PayeverConfigHelper.php',
@@ -109,7 +114,6 @@ $aModule = [
         'PayeverInventoryIterator' => 'payever/classes/Iterator/PayeverInventoryIterator.php',
         'PayeverSynchronizationManager' => 'payever/classes/Management/PayeverSynchronizationManager.php',
         'PayeverSynchronizationManagerTrait' => 'payever/classes/Management/PayeverSynchronizationManagerTrait.php',
-        'PayeverSubscriptionManager' => 'payever/classes/Management/PayeverSubscriptionManager.php',
         'PayeverImportManager' => 'payever/classes/Management/PayeverImportManager.php',
         'payeverProductsImport' => 'payever/controllers/payeverproductsimport.php',
         'PayeverAbstractActionHandler' => 'payever/classes/ActionHandler/PayeverAbstractActionHandler.php',

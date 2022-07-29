@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -43,7 +43,6 @@ class PayeverPriceManager
      * @param oxarticle $product
      * @param ProductRequestEntity $requestEntity
      * @throws oxSystemComponentException
-     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     public function setPrice($product, ProductRequestEntity $requestEntity)
     {
@@ -59,16 +58,18 @@ class PayeverPriceManager
         $priceCarrier->setVat($vatRate);
         $priceCarrier->setPrice($price);
         $priceCarrier->multiply($currencyRate);
-        if ($salesPrice) {
+        $data = [
+            'oxprice' => $priceCarrier->getPrice(),
+            'oxtprice' => null,
+        ];
+        if (null !== $salesPrice) {
             $salesPriceCarrier = $this->getPriceFactory()->create();
             $salesPriceCarrier->setBruttoPriceMode();
             $salesPriceCarrier->setVat($vatRate);
             $salesPriceCarrier->setPrice($salesPrice);
             $salesPriceCarrier->multiply($currencyRate);
-            $data['oxtprice'] = $priceCarrier->getPrice();
             $data['oxprice'] = $salesPriceCarrier->getPrice();
-        } else {
-            $data = ['oxprice' => $priceCarrier->getPrice()];
+            $data['oxtprice'] = $priceCarrier->getPrice();
         }
         $product->assign($data);
         unset($_POST['currency']);

@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -13,10 +13,14 @@ use Payever\ExternalIntegration\Products\Enum\ProductTypeEnum;
 use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRemovedRequestEntity;
 use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class PayeverProductTransformer
 {
     use PayeverCategoryFactoryTrait;
     use PayeverConfigHelperTrait;
+    use PayeverConfigTrait;
     use PayeverProductHelperTrait;
 
     const STOCK_FLAG_STANDARD = 1;
@@ -56,11 +60,11 @@ class PayeverProductTransformer
      */
     public function transformFromOxidIntoPayever($product, $variantMode = false)
     {
-        $productRequestEntity = new ProductRequestEntity();
+        $productRequestEntity = new PayeverProductRequestEntity();
         $sku = $product->getFieldData('oxartnum');
         $title = $product->getFieldData('oxtitle');
         $description = $product->getFieldData('oxshortdesc');
-        $isActive = $product->getFieldData('oxactive');
+        $isActive = (bool) $product->getFieldData('oxactive');
         $type = $product->getFieldData('oxnonmaterial')
             ? ProductTypeEnum::TYPE_DIGITAL
             : ProductTypeEnum::TYPE_PHYSICAL;
@@ -75,12 +79,11 @@ class PayeverProductTransformer
             }
         }
         $gallery = !$variantMode ? $this->getGalleryManager()->getGallery($product) : [];
-        $price = $product->getFieldData('oxtprice');
-        if ($price) {
+        $price = (float) $product->getFieldData('oxprice');
+        $salePrice = null;
+        if ($product->getFieldData('oxtprice')) {
+            $price = (float) $product->getFieldData('oxtprice');
             $salePrice = (float) $product->getFieldData('oxprice');
-        } else {
-            $salePrice = null;
-            $price = (float) $product->getFieldData('oxprice');
         }
         $productRequestEntity
             ->setBusinessUuid($this->getConfigHelper()->getBusinessUuid())
@@ -95,7 +98,7 @@ class PayeverProductTransformer
             ->setCurrency($this->getPriceManager()->getCurrencyName())
             ->setShipping($this->getShippingManager()->getShipping($product))
             ->setCategories($categoryNames)
-            ->setImagesUrl($gallery);
+            ->setImages($gallery);
         if (!$variantMode) {
             $product->setInList();
             $variants = $product->getVariants();
@@ -152,6 +155,11 @@ class PayeverProductTransformer
             'oxshortdesc' => $requestEntity->getDescription(),
             'oxactive' => $requestEntity->getActive(),
             'oxnonmaterial' => $requestEntity->getType() !== ProductTypeEnum::TYPE_PHYSICAL,
+            'oxstock' => 0,
+            'oxvarstock' => 0,
+            'oxvarcount' => 0,
+            'oxparentid' => null,
+            'oxshopid' => $this->getConfig()->getShopId(),
         ];
         PayeverRegistry::set(PayeverRegistry::LAST_INWARD_PROCESSED_PRODUCT, $product);
         foreach ($this->getConfigHelper()->getLanguageIds() as $langId) {
@@ -176,6 +184,8 @@ class PayeverProductTransformer
     {
         $variant = $this->getProductHelper()->getProductBySku($variantRequestEntity->getSku());
         $this->fillProductFromRequestEntity($variantRequestEntity, $variant);
+        $variant->setAdminMode(true);
+        $variant->setLoadParentData(false);
         $variant->assign([
             'oxparentid' => $product->getId(),
             'oxstockflag' => self::STOCK_FLAG_STANDARD,

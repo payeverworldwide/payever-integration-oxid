@@ -25,6 +25,6 @@
     "ext-json": "*",
     "ext-curl": "*",
     "ext-fileinfo": "*",
-    "payever/sdk-php": "3.0.0"
+    "payever/sdk-php": "3.0.8"
   }
 }

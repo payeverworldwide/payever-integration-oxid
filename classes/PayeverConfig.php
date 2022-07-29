@@ -5,7 +5,7 @@
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
- * @copyright 2017-2019 payever GmbH
+ * @copyright 2017-2021 payever GmbH
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -66,6 +66,9 @@ class PayeverConfig
     const PRODUCTS_SYNC_MODE = 'payeverProductsSyncMode';
     const PRODUCTS_SYNC_EXTERNAL_ID = 'payeverProductsSyncExternalId';
     const PRODUCTS_SYNC_CURRENCY_RATE_SOURCE = 'payeverProductsCurrencyRateSource';
+
+    const ADDRESS_EQUALIY_METHODS = 'payeverCheckAddressEqualityMethods';
+    const SHIPPING_NOT_ALLOWED_METHODS = 'shippingNotAllowedMethods';
 
     const SYNC_MODE_INSTANT = 'instant';
     const SYNC_MODE_CRON = 'cron';
@@ -203,6 +206,16 @@ class PayeverConfig
     public static function getIsRedirect()
     {
         return static::get(static::VAR_CONFIG, static::KEY_IS_REDIRECT);
+    }
+
+    public static function getAddressEqualityMethods()
+    {
+        return static::get(static::VAR_CONFIG, static::ADDRESS_EQUALIY_METHODS);
+    }
+
+    public static function getShippingNotAllowedMethods()
+    {
+        return static::get(static::VAR_CONFIG, static::SHIPPING_NOT_ALLOWED_METHODS);
     }
 
     public static function getDisplayDescription()
@@ -368,5 +381,17 @@ class PayeverConfig
     public static function isPayeverPaymentMethod($paymentMethod)
     {
         return strpos($paymentMethod, static::PLUGIN_PREFIX) !== false;
+    }
+
+    /**
+     * @param string $paymentMethod
+     * @return string
+     */
+    public static function removeMethodPrefix($paymentMethod)
+    {
+        return strpos($paymentMethod, PayeverConfig::PLUGIN_PREFIX) !== false
+            ? substr($paymentMethod, strlen(PayeverConfig::PLUGIN_PREFIX))
+            : $paymentMethod
+            ;
     }
 }

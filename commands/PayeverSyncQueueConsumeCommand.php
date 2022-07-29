@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -14,10 +14,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\Command
 {
-    use PayeverDatabaseTrait;
+    use PayeverActionQueueManagerTrait;
     use PayeverLoggerTrait;
     use PayeverSynchronizationManagerTrait;
-    use PayeverSynchronizationQueueFactoryTrait;
 
     /**
      * How many queue items we process during one cron job run
@@ -29,9 +28,6 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
      */
     const QUEUE_PROCESSING_MAX_ATTEMPTS = 2;
 
-    /** @var PayeverSynchronizationQueueListFactory */
-    protected $syncQueueListFactory;
-
     /**
      * {@inheritDoc}
      */
@@ -42,8 +38,6 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
 
     /**
      * {@inheritDoc}
-     * @SuppressWarnings(PHPMD.ErrorControlOperator)
-     * @SuppressWarnings(PHPMD.ElseExpression)
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -51,21 +45,7 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
             $output->writeln('Products and inventory synchronization is disabled');
             return;
         }
-        $collection = $this->getSyncQueueListFactory()->create();
-        $collection->clear();
-        $listObject = $this->getSynchronizationQueueFactory()->create();
-        method_exists($collection, 'setBaseObject') && $collection->setBaseObject($listObject);
-        $query = $listObject->buildSelectString(null);
-        $collection->setSqlLimit(0, self::QUEUE_PROCESSING_SIZE);
-        $query .= ' ORDER BY `inc`';
-        $collection->selectString($query);
-        $items = $collection->getArray();
-        @usort($items, function ($itemA, $itemB) {
-            /** @var payeversynchronizationqueue $itemA */
-            /** @var payeversynchronizationqueue $itemB */
-            return $itemA->getFieldData('inc') < $itemB->getFieldData('inc') ? -1 : 1;
-        });
-
+        $items = $this->getActionQueueManager()->getItems(self::QUEUE_PROCESSING_SIZE);
         $output->writeln('START: Processing payever sync action queue');
         $processed = 0;
         $attempt = 0;
@@ -76,14 +56,15 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
                 $attempt = $item->getFieldData('attempt');
                 $payloadField = $item->payeversynchronizationqueue__payload;
                 $payload = !empty($payloadField) ? $payloadField->rawValue : null;
-                $this->getSynchronizationManager()->handleAction(
-                    $item->getFieldData('action'),
-                    $item->getFieldData('direction'),
-                    \json_decode($payload, true),
-                    true
-                );
+                $this->getSynchronizationManager()
+                    ->setIsInstantMode(true)
+                    ->handleAction(
+                        $item->getFieldData('action'),
+                        $item->getFieldData('direction'),
+                        \json_decode($payload, true)
+                    );
                 $processed++;
-                $this->deleteItem($queueId);
+                $this->getActionQueueManager()->delete($queueId);
             } catch (\Exception $exception) {
                 $this->getLogger()->warning($exception->getMessage());
                 if ($attempt >= self::QUEUE_PROCESSING_MAX_ATTEMPTS) {
@@ -91,54 +72,12 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
                         'Queue item exceeded max processing attempts count and going to be removed.' .
                         'This may lead to data loss and out of sync state.'
                     );
-                    $this->deleteItem($queueId);
-                } else {
-                    $this->getDatabase()->execute(
-                        sprintf(
-                            'UPDATE payeversynchronizationqueue set attempt = "%s" WHERE OXID = "%s"',
-                            ++$attempt,
-                            $queueId
-                        )
-                    );
+                    $this->getActionQueueManager()->delete($queueId);
+                    continue;
                 }
+                $this->getActionQueueManager()->setAttempt($queueId, ++$attempt);
             }
         }
         $output->writeln(sprintf('FINISH: Processed %d queue records', $processed));
-    }
-
-    /**
-     * @param string $queueId
-     * @throws oxConnectionException
-     */
-    protected function deleteItem($queueId)
-    {
-        $this->getDatabase()->execute(
-            sprintf(
-                'DELETE FROM payeversynchronizationqueue WHERE OXID = "%s"',
-                $queueId
-            )
-        );
-    }
-
-    /**
-     * @param PayeverSynchronizationQueueListFactory $syncQueueListFactory
-     * @return $this
-     */
-    public function setSyncQueueListFactory(PayeverSynchronizationQueueListFactory $syncQueueListFactory)
-    {
-        $this->syncQueueListFactory = $syncQueueListFactory;
-
-        return $this;
-    }
-
-    /**
-     * @return PayeverSynchronizationQueueListFactory
-     * @codeCoverageIgnore
-     */
-    protected function getSyncQueueListFactory()
-    {
-        return null === $this->syncQueueListFactory
-            ? new PayeverSynchronizationQueueListFactory()
-            : $this->syncQueueListFactory;
     }
 }

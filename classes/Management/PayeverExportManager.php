@@ -5,7 +5,7 @@
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
- * @copyright   2017-2020 payever GmbH
+ * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -17,6 +17,7 @@ class PayeverExportManager
     use PayeverConfigTrait;
     use PayeverDatabaseTrait;
     use PayeverGenericManagerTrait;
+    use PayeverSubscriptionManagerTrait;
 
     const DEFAULT_LIMIT = 5;
 
@@ -63,7 +64,8 @@ class PayeverExportManager
                 }
             }
         } catch (\Exception $e) {
-            $this->errors[] = $e->getMessage();
+            $this->getSubscriptionManager()->disable();
+            $this->addError($e->getMessage());
             $this->nextPage = null;
         }
         $this->logMessages();
@@ -113,6 +115,10 @@ class PayeverExportManager
         $collection->setSqlLimit($offset, $limit);
         $collection->selectString($query);
         $items = $collection->getArray();
+        $items = array_filter($items, function ($item) {
+            /** @var oxarticle $item */
+            return (bool) $item->getFieldData('oxartnum');
+        });
         $productsIterator = new PayeverProductsIterator($items);
         $externalId = $this->getConfigHelper()->getProductsSyncExternalId();
         $successCount = $this->getProductsApiClient()->exportProducts($productsIterator, $externalId);

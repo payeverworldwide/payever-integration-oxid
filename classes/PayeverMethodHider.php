@@ -5,7 +5,7 @@
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
- * @copyright 2017-2019 payever GmbH
+ * @copyright 2017-2021 payever GmbH
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
@@ -54,7 +54,7 @@ class PayeverMethodHider
      */
     public function processFailedMethod($paymentMethod)
     {
-        $paymentMethod = $this->removeMethodPrefix($paymentMethod);
+        $paymentMethod = PayeverConfig::removeMethodPrefix($paymentMethod);
 
         if (PaymentMethod::shouldHideOnReject($paymentMethod)) {
             $this->addFailedPaymentMethod($paymentMethod);
@@ -69,7 +69,7 @@ class PayeverMethodHider
      */
     public function isHiddenPaymentMethod($paymentMethod)
     {
-        return in_array($this->removeMethodPrefix($paymentMethod), $this->getHiddenMethods());
+        return in_array(PayeverConfig::removeMethodPrefix($paymentMethod), $this->getHiddenMethods());
     }
 
     /**
@@ -78,20 +78,16 @@ class PayeverMethodHider
     private function getHiddenMethods()
     {
         return $this->isCurrentAddressesDifferent()
-            ? array_merge($this->hiddenMethods, PaymentMethod::getShouldHideOnDifferentAddressMethods())
+            ? array_merge($this->hiddenMethods, $this->getShouldHideOnDifferentAddressMethods())
             : $this->hiddenMethods;
     }
 
     /**
-     * @param string $paymentMethod
-     * @return string
+     *
      */
-    private function removeMethodPrefix($paymentMethod)
+    private function getShouldHideOnDifferentAddressMethods()
     {
-        return strpos($paymentMethod, PayeverConfig::PLUGIN_PREFIX) !== false
-            ? substr($paymentMethod, strlen(PayeverConfig::PLUGIN_PREFIX))
-            : $paymentMethod
-        ;
+        return PayeverConfig::getAddressEqualityMethods() ? : PaymentMethod::getShouldHideOnDifferentAddressMethods();
     }
 
     /**

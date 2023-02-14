@@ -1,5 +1,6 @@
 [{include file="headitem.tpl" title="Payever Configuration"}]
 [{oxscript include="js/libs/jquery.min.js"}]
+[{assign var="sOxidBasePath" value=$oViewConf->getSslSelfLink()}]
 [{assign var="sPayeverCssPath" value=$oViewConf->getModuleUrl('payever', 'out/admin/src/css/payever_admin.css')}]
 <link rel="stylesheet" href="[{$sPayeverCssPath}]" type="text/css" />
 <div class="payever-config-header">
@@ -305,7 +306,7 @@
     }
     function payeverDoExport(externalId, exportUrl, page, aggregate) {
         if (!exportUrl) {
-            exportUrl = '/admin/index.php?cl=payeverproductsexport&fnc=export'
+            exportUrl = '[{$sOxidBasePath}]' + '/admin/index.php?cl=payeverproductsexport&fnc=export'
         }
         let messageContainerSelector = '.payever-message-container';
         $(messageContainerSelector).empty();

@@ -24,7 +24,7 @@ class PayeverOrderHelper
             ? ($cart->getPaymentCost() instanceof oxprice ? $cart->getPaymentCost()->getPrice() : 0)
             : ($cart->getCosts('oxpayment') instanceof oxprice ? $cart->getCosts('oxpayment')->getPrice() : 0);
 
-        return $cart->getPrice()->getPrice() - $paymentCost;
+        return (float) ($cart->getPrice()->getPrice() - $paymentCost);
     }
 
     /**
@@ -36,7 +36,7 @@ class PayeverOrderHelper
         $version = $this->getConfigHelper()->getOxidVersionInt();
 
         return $version > 47
-            ? $cart->getDeliveryCost()->getPrice()
-            : $cart->getCosts('oxdelivery')->getPrice();
+            ? (float) $cart->getDeliveryCost()->getPrice()
+            : (float) $cart->getCosts('oxdelivery')->getPrice();
     }
 }

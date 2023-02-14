@@ -75,7 +75,7 @@ class PayeverRequestHelper
      * @return array
      * @codeCoverageIgnore
      */
-    public function &getSessionData()
+    public function &getSessionData() //phpcs:ignore
     {
         return $_SESSION;
     }

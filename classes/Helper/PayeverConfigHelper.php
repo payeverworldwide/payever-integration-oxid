@@ -188,4 +188,12 @@ class PayeverConfigHelper
             (string) PayeverConfig::getApiClientSecret()
         );
     }
+
+    /**
+     * @return int|null
+     */
+    public function getApiVersion()
+    {
+        return PayeverConfig::getApiVersion();
+    }
 }

@@ -61,6 +61,9 @@ class PayeverConfig
     const VAR_PLUGIN_COMMANDS = 'payever_commands';
     const KEY_PLUGIN_COMMAND_TIMESTAMP = 'payever_command_timestamp';
 
+    const VAR_PLUGIN_API_VERSION = 'payever_api_version';
+    const KEY_PLUGIN_API_VERSION = 'payeverApiVersion';
+
     const PRODUCTS_SYNC_ENABLED = 'payeverProductsSyncEnabled';
     const PRODUCTS_OUTWARD_SYNC_ENABLED = 'payeverProductsOutwardSyncEnabled';
     const PRODUCTS_SYNC_MODE = 'payeverProductsSyncMode';
@@ -236,6 +239,11 @@ class PayeverConfig
     public static function getDebugMode()
     {
         return static::get(static::VAR_CONFIG, static::KEY_DEBUG);
+    }
+
+    public static function getApiVersion()
+    {
+        return static::get(static::VAR_PLUGIN_API_VERSION, static::KEY_PLUGIN_API_VERSION);
     }
 
     public static function getCustomSandboxUrl()

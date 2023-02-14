@@ -212,6 +212,8 @@ class payever_config extends Shop_Config
      * @throws oxConnectionException
      * @throws oxSystemComponentException
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
     public function synchronize()
     {
@@ -317,6 +319,9 @@ class payever_config extends Shop_Config
                 PayeverConfig::SHIPPING_NOT_ALLOWED_METHODS => $shippingNotAllowedMethods
             ]
         );
+
+        $pluginsApiClient = PayeverApiClientProvider::getPluginsApiClient();
+        $pluginsApiClient->registerPlugin();
     }
 
     /**

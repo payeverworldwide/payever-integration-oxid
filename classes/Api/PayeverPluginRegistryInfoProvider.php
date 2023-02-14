@@ -55,6 +55,7 @@ class PayeverPluginRegistryInfoProvider implements PluginRegistryInfoProviderInt
         return [
             PluginCommandNameEnum::SET_SANDBOX_HOST,
             PluginCommandNameEnum::SET_LIVE_HOST,
+            PluginCommandNameEnum::SET_API_VERSION,
         ];
     }
 

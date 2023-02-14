@@ -37,6 +37,13 @@ class PayeverPluginCommandExecutor implements PluginCommandExecutorInterface
                     [PayeverConfig::KEY_LIVE_URL => $command->getValue()]
                 );
                 break;
+            case PluginCommandNameEnum::SET_API_VERSION:
+                oxRegistry::getConfig()->saveShopConfVar(
+                    'arr',
+                    PayeverConfig::VAR_PLUGIN_API_VERSION,
+                    [PayeverConfig::KEY_PLUGIN_API_VERSION => $command->getValue()]
+                );
+                break;
             default:
                 throw new \UnexpectedValueException(
                     sprintf(

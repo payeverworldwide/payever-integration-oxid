@@ -10,14 +10,15 @@
  */
 
 use Payever\ExternalIntegration\Core\Http\RequestEntity;
+use Payever\ExternalIntegration\Core\Enum\ChannelSet;
+use Payever\ExternalIntegration\Payments\Http\MessageEntity\ChannelEntity;
 use Payever\ExternalIntegration\Core\Lock\FileLock;
 use Payever\ExternalIntegration\Core\Lock\LockInterface;
 use Payever\ExternalIntegration\Payments\Enum\Status;
 use Payever\ExternalIntegration\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\ShippingAddressEntity;
-use Payever\ExternalIntegration\Payments\Http\RequestEntity\CreatePaymentRequest;
-use Payever\ExternalIntegration\Payments\Http\RequestEntity\SubmitPaymentRequest;
-use Payever\ExternalIntegration\Payments\Http\ResponseEntity\CreatePaymentResponse;
+use Payever\ExternalIntegration\Payments\Http\MessageEntity\CustomerAddressEntity;
+use Payever\ExternalIntegration\Payments\Http\RequestEntity\CreatePaymentV2Request;
+use Payever\ExternalIntegration\Payments\Http\ResponseEntity\CreatePaymentV2Response;
 use Payever\ExternalIntegration\Payments\Http\ResponseEntity\RetrievePaymentResponse;
 use Payever\ExternalIntegration\Plugins\Command\PluginCommandManager;
 use Payever\ExternalIntegration\Plugins\PluginsApiClient;
@@ -78,6 +79,9 @@ class payeverStandardDispatcher extends oxUBase
     /** @var oxpayment */
     private $paymentMethod;
 
+    /** @var int|null */
+    private $apiVersion;
+
     /**
      * @return string
      */
@@ -101,36 +105,16 @@ class payeverStandardDispatcher extends oxUBase
     public function getRedirectUrl()
     {
         try {
-            $isRedirectMethod = (bool) $this->getPaymentMethod()->getFieldData('oxisredirectmethod');
-            if ($isRedirectMethod) {
-                $paymentRequestEntity = $this->getSubmitPaymentRequestEntity();
-                $response = $this->getPaymentsApiClient()->submitPaymentRequest($paymentRequestEntity);
-                /** @var RetrievePaymentResponse $responseEntity */
-                $responseEntity = $response->getResponseEntity();
-                /** @var RetrievePaymentResultEntity $result */
-                $result = $responseEntity->getResult();
-                $redirectUrl = $result->getPaymentDetails()->getRedirectUrl();
-                $this->getDatabase()->execute(
-                    'UPDATE oxuserbaskets SET oxpayeverpid = ? WHERE OXID = ?',
-                    [
-                        $result->getId(),
-                        $this->getSavedBasketId(),
-                    ]
-                );
-                $this->getSession()->setVariable(self::SESS_IS_REDIRECT_METHOD, true);
-                $this->getLogger()->info('Payment successfully submitted', $responseEntity->toArray());
-            } else {
-                $paymentRequestEntity = $this->getCreatePaymentRequestEntity();
-                $response = $this->getPaymentsApiClient()->createPaymentRequest($paymentRequestEntity);
-                /** @var CreatePaymentResponse $responseEntity */
-                $responseEntity = $response->getResponseEntity();
-                $language = $this->getConfigHelper()->getLanguage()
-                    ?: substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2);
-
-                $redirectUrl = $responseEntity->getRedirectUrl();
-                $redirectUrl .= (strpos($redirectUrl, '?') === false ? '?' : '&') . '_locale=' . $language;
-                $this->getLogger()->info('Payment successfully created', $responseEntity->toArray());
-            }
+            $isRedirectMethod = (bool)$this->getPaymentMethod()->getFieldData('oxisredirectmethod');
+            $paymentRequestEntity = $this->getCreatePaymentV2RequestEntity();
+            $paymentRequestEntity->setPaymentData([
+                'force_redirect' => $isRedirectMethod,
+            ]);
+            $response = $this->getPaymentsApiClient()->createPaymentV2Request($paymentRequestEntity);
+            /** @var CreatePaymentV2Response $responseEntity */
+            $responseEntity = $response->getResponseEntity();
+            $redirectUrl = $responseEntity->getRedirectUrl();
+            $this->getLogger()->info('Payment successfully created', $responseEntity->toArray());
 
             return $redirectUrl;
         } catch (Exception $exception) {
@@ -142,50 +126,32 @@ class payeverStandardDispatcher extends oxUBase
     }
 
     /**
-     * @return SubmitPaymentRequest
-     * @throws oxSystemComponentException
+     * @return int|null
      */
-    private function getSubmitPaymentRequestEntity()
+    protected function getApiVersion()
     {
-        $requestEntity = new SubmitPaymentRequest();
-        $this->populatePaymentRequestEntity($requestEntity);
-        $basketOxid = $this->getSavedBasketId();
-        $params = [
-            'basketoxid' => $basketOxid,
-            'token' => $this->getConfigHelper()->getHash($basketOxid),
-        ];
-        $requestEntity->setPaymentData([
-            'birthdate' => $requestEntity->getBirthdate()
-                ? $requestEntity->getBirthdate()->format('Y-m-d')
-                : null,
-            'conditionsAccepted' => null,
-            'riskSessionId' => null,
-            'frontendFinishUrl' => $this->generateCallbackUrl(
-                'finish',
-                $params,
-                false
-            ),
-            'frontendCancelUrl' => $this->generateCallbackUrl(
-                'cancel',
-                $params,
-                false
-            ),
-        ]);
+        if ($this->apiVersion === null) {
+            $this->apiVersion = 1;
 
-        return $requestEntity;
+            if ($this->getConfigHelper()->getApiVersion()) {
+                $this->apiVersion = $this->getConfigHelper()->getApiVersion();
+            }
+        }
+
+        return $this->apiVersion;
     }
 
     /**
-     * @return CreatePaymentRequest
+     * @return CreatePaymentV2Request
      * @throws oxSystemComponentException
      */
-    private function getCreatePaymentRequestEntity()
+    private function getCreatePaymentV2RequestEntity()
     {
-        return $this->populatePaymentRequestEntity(new CreatePaymentRequest());
+        return $this->populatePaymentRequestEntity(new CreatePaymentV2Request());
     }
 
     /**
-     * @param RequestEntity|SubmitPaymentRequest|CreatePaymentRequest $requestEntity
+     * @param RequestEntity|CreatePaymentV2Request $requestEntity
      * @return RequestEntity
      * @throws UnexpectedValueException
      * @throws oxSystemComponentException
@@ -211,6 +177,7 @@ class payeverStandardDispatcher extends oxUBase
                 'quantity' => $item->getAmount(),
                 'thumbnail' => $item->getIconUrl(),
                 'url' => $item->getLink(),
+                'identifier' => $item->getProductId(),
             ];
         }
 
@@ -237,26 +204,36 @@ class payeverStandardDispatcher extends oxUBase
             }
         }
 
-        $shippingAddressEntity = $this->populateShippingAddressEntity($deliveryAddress);
+        $shippingAddressEntity = $this->populateAddressEntity($deliveryAddress);
+        $billingAddressEntity = $this->populateAddressEntityByUser($oUser);
         $oxCountry = $this->getCountryFactory()->create();
         $oxCountry->load($oUser->oxuser__oxcountryid->value);
-        $oxcountryIsoCode = $oxCountry->oxcountry__oxisoalpha2->value;
 
         /**
          * cut off the plugin prefix {@see PayeverConfig::PLUGIN_PREFIX}
          */
         $apiMethod = substr($oBasket->getPaymentId(), strlen(PayeverConfig::PLUGIN_PREFIX));
-        $discounts = count($oBasket->getVouchers()) ? $oBasket->getVouchers() : 0;
-        if ($discounts) {
-            /** @var oxvoucher $discount */
-            foreach ($discounts as $discount) {
+
+        // Calculate discount
+        $discount = 0;
+        $vouchers = count($oBasket->getVouchers()) ? $oBasket->getVouchers() : 0;
+        if ($vouchers) {
+            /** @var oxvoucher $voucher */
+            foreach ($vouchers as $voucher) {
                 $basketItems[] = [
                     'name' => 'Discount',
-                    'price' => $discount->dVoucherdiscount * (-1),
+                    'price' => $voucher->dVoucherdiscount * (-1),
                     'quantity' => 1,
                 ];
+
+                $discount += $voucher->dVoucherdiscount;
             }
         }
+
+        // Save discount in session
+        $oSession->oxidpayever_discount = $discount;
+        $oSession->setVariable('oxidpayever_discount', $discount);
+
         if (strpos($apiMethod, '-') && $this->getPaymentMethod()->oxpayments__oxvariants) {
             $oxvariants = json_decode($this->getPaymentMethod()->oxpayments__oxvariants->rawValue, true);
             $requestEntity
@@ -266,29 +243,24 @@ class payeverStandardDispatcher extends oxUBase
             $requestEntity
                 ->setPaymentMethod($apiMethod);
         }
+
+        $language = $this->getConfigHelper()->getLanguage()
+            ?: substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2);
+
         $requestEntity
             ->setAmount($this->getOrderHelper()->getAmountByCart($oBasket))
             ->setFee($this->getOrderHelper()->getFeeByCart($oBasket))
             ->setOrderId($this->getSavedBasketId())
             ->setCurrency($oBasket->getBasketCurrency()->name)
-            ->setFirstName($oUser->oxuser__oxfname->value)
-            ->setLastName($oUser->oxuser__oxlname->value)
             ->setPhone($oUser->oxuser__oxfon->value)
             ->setEmail($oUser->oxuser__oxusername ? $oUser->oxuser__oxusername->value : null)
-            ->setStreet(
-                $oUser->oxuser__oxstreet->value . ' ' . $oUser->oxuser__oxstreetnr->value
-            )
-            ->setCity($oUser->oxuser__oxcity->value)
-            ->setCountry($oxcountryIsoCode)
-            ->setZip($oUser->oxuser__oxzip->value)
+            ->setLocale($language)
             ->setSuccessUrl($this->generateCallbackUrl('success'))
             ->setPendingUrl($this->generateCallbackUrl('success', ['is_pending' => true]))
             ->setCancelUrl($this->generateCallbackUrl('cancel'))
             ->setFailureUrl($this->generateCallbackUrl('failure'))
             ->setNoticeUrl($this->generateCallbackUrl('notice'))
-            ->setPluginVersion($this->getConfigHelper()->getPluginVersion())
-            ->setCart($basketItems)
-            ->setShippingAddress($shippingAddressEntity);
+            ->setCart($basketItems);
 
         $birthdate = null;
         if ($oUser->oxuser__oxbirthdate) {
@@ -297,13 +269,16 @@ class payeverStandardDispatcher extends oxUBase
         if (!empty($birthdate) && $birthdate != '0000-00-00') {
             $requestEntity->setBirthdate($birthdate);
         }
-        $salutation = null;
-        if ($oUser->oxuser__oxsal) {
-            $salutation = $this->getSalutation($oUser->oxuser__oxsal->value);
-        }
-        if ($salutation) {
-            $requestEntity->setSalutation($salutation);
-        }
+
+        $channelEntity = new ChannelEntity();
+        $channelEntity
+            ->setName(ChannelSet::CHANNEL_OXID)
+            ->setSource($this->getConfigHelper()->getPluginVersion());
+        $requestEntity
+            ->setChannel($channelEntity)
+            ->setShippingAddress($shippingAddressEntity)
+            ->setBillingAddress($billingAddressEntity);
+
         $this->getLogger()
             ->info('Finished collecting order data for create payment call', $requestEntity->toArray());
 
@@ -313,16 +288,16 @@ class payeverStandardDispatcher extends oxUBase
     /**
      * @param $deliveryAddress
      *
-     * @return ShippingAddressEntity
+     * @return CustomerAddressEntity
      */
-    private function populateShippingAddressEntity($deliveryAddress)
+    private function populateAddressEntity($deliveryAddress)
     {
         $oxCountry = $this->getCountryFactory()->create();
         $oxCountry->load($deliveryAddress->oxaddress__oxcountryid->value);
         $oxcountry = $oxCountry->oxcountry__oxisoalpha2->value;
 
-        $shippingAddressEntity = new ShippingAddressEntity();
-        $shippingAddressEntity
+        $customerAddressEntity = new CustomerAddressEntity();
+        $customerAddressEntity
             ->setFirstName($deliveryAddress->oxaddress__oxfname->value)
             ->setLastName($deliveryAddress->oxaddress__oxlname->value)
             ->setCity($deliveryAddress->oxaddress__oxcity->value)
@@ -337,10 +312,44 @@ class payeverStandardDispatcher extends oxUBase
             $salutation = $this->getSalutation($deliveryAddress->oxaddress__oxsal->value);
         }
         if ($salutation) {
-            $shippingAddressEntity->setSalutation($salutation);
+            $customerAddressEntity->setSalutation($salutation);
         }
 
-        return $shippingAddressEntity;
+        return $customerAddressEntity;
+    }
+
+    /**
+     * @param $oUser
+     *
+     * @return CustomerAddressEntity
+     */
+    private function populateAddressEntityByUser($oUser)
+    {
+        $oxCountry = $this->getCountryFactory()->create();
+        $oxCountry->load($oUser->oxuser__oxcountryid->value);
+        $oxcountry = $oxCountry->oxcountry__oxisoalpha2->value;
+
+        $customerAddressEntity = new CustomerAddressEntity();
+        $customerAddressEntity
+            ->setFirstName($oUser->oxuser__oxfname->value)
+            ->setLastName($oUser->oxuser__oxlname->value)
+            ->setCity($oUser->oxuser__oxcity->value)
+            ->setZip($oUser->oxuser__oxzip->value)
+            ->setStreet(
+                $oUser->oxuser__oxstreet->value . ' ' . $oUser->oxuser__oxstreetnr->value
+            )
+            ->setCountry($oxcountry);
+
+        $salutation = null;
+        if ($oUser->oxuser__oxsal) {
+            $salutation = $this->getSalutation($oUser->oxuser__oxsal->value);
+        }
+
+        if ($salutation) {
+            $customerAddressEntity->setSalutation($salutation);
+        }
+
+        return $customerAddressEntity;
     }
 
     /**
@@ -653,7 +662,7 @@ JS;
 
             $message = strpos($paymentMethod, 'santander') !== false
                 ? 'Unfortunately, the application was not successful. '
-                    . 'Please choose another payment option to pay for your order.'
+                . 'Please choose another payment option to pay for your order.'
                 : 'The payment was not successful. Please try again or choose another payment option.';
 
             throw new oxException($message, 1);
@@ -764,6 +773,9 @@ JS;
      * @throws oxException
      *
      * @throws \Exception
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      * @SuppressWarnings(PHPMD.ElseExpression)
      */
@@ -792,6 +804,63 @@ JS;
         $oSession->oxidpayever_payment_id = $payment['paymentId'];
         $oSession->setVariable('oxidpayever_payment_id', $payment['paymentId']);
         $oOrder->load($oBasket->getOrderId());
+
+        // Verify order totals
+        $oBasket = $oOrder->getBasket();
+        if ($oBasket) {
+            $retrievePaymentResult = $this->getRetrievePaymentResultEntity($payment);
+
+            // Calculate amount
+            $basketAmount =  $this->getOrderHelper()->getAmountByCart($oBasket);
+
+            $oSession = $this->getSession();
+
+            // Calculate discounts
+            $discount = 0;
+            $vouchers = count($oBasket->getVouchers()) ? $oBasket->getVouchers() : 0;
+
+            if ($vouchers) {
+                /** @var oxvoucher $discount */
+                foreach ($vouchers as $voucher) {
+                    $discount += $voucher->dVoucherdiscount;
+                }
+            }
+
+            // Discount bug workaround
+            $savedDiscount = $this->getSession()->getVariable('oxidpayever_discount');
+            $this->getSession()->deleteVariable('oxidpayever_discount');
+            if ($discount === 0 && $savedDiscount > 0) {
+                $basketAmount -= $savedDiscount;
+
+                $message = sprintf(
+                    'Order: %s. Discount workaround is applied. Discount: %s. Order amount: %s',
+                    $oBasket->getOrderId(),
+                    $savedDiscount,
+                    $basketAmount
+                );
+
+                $this->getLogger()->warning($message);
+            }
+
+            if (round($basketAmount, 2) !== round($retrievePaymentResult->getTotal(), 2)) {
+                $message = sprintf(
+                    'Order: %s. The amount really paid (%.2F %s) is not equal to the product amount (%.2F %s).',
+                    $oBasket->getOrderId(),
+                    $retrievePaymentResult->getTotal(),
+                    $retrievePaymentResult->getCurrency(),
+                    $basketAmount,
+                    $oBasket->getBasketCurrency()->name
+                );
+
+                $oOrder->oxorder__oxfolder = new \OxidEsales\Eshop\Core\Field(
+                    'ORDERFOLDER_PROBLEMS',
+                    \OxidEsales\Eshop\Core\Field::T_RAW
+                );
+
+                $this->getLogger()->warning($message);
+            }
+        }
+
         $userPayment = oxNew('oxUserPayment');
         $userPayment->load((string)$oOrder->oxorder__oxpaymentid);
         $aParams = [

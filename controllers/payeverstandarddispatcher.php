@@ -224,6 +224,8 @@ class payeverStandardDispatcher extends oxUBase
                     'name' => 'Discount',
                     'price' => $voucher->dVoucherdiscount * (-1),
                     'quantity' => 1,
+                    'sku' => 'discount',
+                    'identifier' => 'discount'
                 ];
 
                 $discount += $voucher->dVoucherdiscount;

@@ -3,6 +3,7 @@
 [{assign var="sOxidBasePath" value=$oViewConf->getSslSelfLink()}]
 [{assign var="sPayeverCssPath" value=$oViewConf->getModuleUrl('payever', 'out/admin/src/css/payever_admin.css')}]
 <link rel="stylesheet" href="[{$sPayeverCssPath}]" type="text/css" />
+<!-- Logs: {$payever_logs_url} -->
 <div class="payever-config-header">
     <div class="payever-config-logo">
         <a href="https://payever.de/" title="payever.de" target="_new">
@@ -79,6 +80,21 @@
                                 </dt>
                                 <div class="spacer"></div>
                             </dl>
+                            
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[diagnosticMode]" value="0" />
+                                    [{ oxmultilang ident="PAYEVER_SEND_DIAGNOSTIC" }] &nbsp;
+                                    <select class="editinput" name="payever_config[diagnosticMode]">
+                                        <option value="0" [{if $payever_config.diagnosticMode == 0}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }]</option>
+                                        <option value="1" [{if $payever_config.diagnosticMode == 1}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }]</option>
+                                    </select>
+                                <dd><span>[{ oxmultilang ident="PAYEVER_SEND_DIAGNOSTIC_DESCRIPTION" }]</span></dd>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+
                             <dl>
                                 <dd>
                                     <label>[{ oxmultilang ident="PAYEVER_CLIENTID" }]</label>

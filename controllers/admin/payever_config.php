@@ -9,10 +9,10 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\ConvertedPaymentOptionEntity;
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\ListPaymentOptionsResultEntity;
-use Payever\ExternalIntegration\Payments\Http\ResponseEntity\ListPaymentOptionsResponse;
-use Payever\ExternalIntegration\Plugins\Http\ResponseEntity\PluginVersionResponseEntity;
+use Payever\Sdk\Payments\Http\MessageEntity\ConvertedPaymentOptionEntity;
+use Payever\Sdk\Payments\Http\MessageEntity\ListPaymentOptionsResultEntity;
+use Payever\Sdk\Payments\Http\ResponseEntity\ListPaymentOptionsResponse;
+use Payever\Sdk\Plugins\Http\ResponseEntity\PluginVersionResponseEntity;
 use Psr\Log\LogLevel;
 
 /**
@@ -71,6 +71,15 @@ class payever_config extends Shop_Config
      */
     public function render()
     {
+        $this->_aViewData['logsUrl'] = $this->getConfig()->getSslShopUrl() . '?' . http_build_query(
+            [
+                'cl' => 'payeverShowLogs',
+                'fnc' => 'render'
+            ],
+            '',
+            '&'
+        );
+
         $this->_aViewData['payever_config'] = PayeverConfig::get(PayeverConfig::VAR_CONFIG);
         $this->_aViewData['isset_live'] = PayeverConfig::getIsLiveKeys();
         $this->_aViewData['log_file_exists'] = file_exists(PayeverConfig::getLogFilename());

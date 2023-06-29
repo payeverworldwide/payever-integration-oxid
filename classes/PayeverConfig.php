@@ -9,12 +9,14 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Logger\FileLogger;
+use Payever\Sdk\Core\Logger\FileLogger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
-
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class PayeverConfig
 {
     const LOG_FILENAME = 'payever.log';
@@ -57,6 +59,14 @@ class PayeverConfig
     const KEY_API_SLUG = 'slug';
     const KEY_API_CLIENT_ID = 'clientId';
     const KEY_API_CLIENT_SECRET = 'clientSecrect';
+
+    const KEY_APM_SECRET_SANDBOX = 'apmSercretSandbox';
+    const KEY_APM_SECRET_LIVE = 'apmSercretLive';
+
+
+    const DIAGNOSTIC_DISABLED = 0;
+    const DIAGNOSTIC_ENABLED = 1;
+    const KEY_DIAGNOSTIC_MODE = 'diagnosticMode';
 
     const VAR_PLUGIN_COMMANDS = 'payever_commands';
     const KEY_PLUGIN_COMMAND_TIMESTAMP = 'payever_command_timestamp';
@@ -184,6 +194,21 @@ class PayeverConfig
     public static function getApiMode()
     {
         return static::get(static::VAR_CONFIG, static::KEY_API_MODE);
+    }
+
+    public static function getDiagnosticMode()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_DIAGNOSTIC_MODE);
+    }
+
+    public static function getApmSecretSandbox()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_APM_SECRET_SANDBOX);
+    }
+
+    public static function getApmSecretLive()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_APM_SECRET_LIVE);
     }
 
     public static function getBusinessUuid()
@@ -376,7 +401,7 @@ class PayeverConfig
     public static function getLogger()
     {
         if (!static::$logger) {
-            static::$logger = new FileLogger(static::getLogFilename(), static::getLoggingLevel());
+            static::$logger = new PayeverLogger(static::getLogFilename(), static::getLoggingLevel());
         }
 
         return static::$logger;

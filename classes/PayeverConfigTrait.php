@@ -29,7 +29,7 @@ trait PayeverConfigTrait
      * @return oxconfig
      * @codeCoverageIgnore
      */
-    protected function getConfig()
+    public function getConfig()
     {
         return null === $this->config
             ? $this->config = oxRegistry::getConfig()

@@ -22,7 +22,7 @@ class PayeverSubtractInventoryActionHandler extends PayeverSetInventoryActionHan
      */
     public function getSupportedAction()
     {
-        return \Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum::ACTION_SUBTRACT_INVENTORY;
+        return \Payever\Sdk\ThirdParty\Enum\ActionEnum::ACTION_SUBTRACT_INVENTORY;
     }
 
     /**

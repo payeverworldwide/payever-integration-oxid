@@ -2,7 +2,12 @@
 <OX>
 	<OXMENU id="NAVIGATION_ESHOPADMIN">
 		<MAINMENU id="PAYEVER">
-			<SUBMENU id="PAYEVER_CONFIG" cl="PAYEVER_CONFIG"></SUBMENU>
+			<SUBMENU id="PAYEVER_CONFIG" cl="PAYEVER_CONFIG" />
+		</MAINMENU>
+		<MAINMENU id="mxorders">
+			<SUBMENU id="mxdisplayorders" cl="admin_order" list="order_list">
+				<TAB id="PAYEVERORDERTAB" cl="payeverordertab" />
+			</SUBMENU>
 		</MAINMENU>
 	</OXMENU>
 </OX>

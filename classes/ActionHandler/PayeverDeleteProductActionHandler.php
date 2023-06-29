@@ -9,8 +9,8 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Http\RequestEntity;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRemovedRequestEntity;
+use Payever\Sdk\Core\Http\RequestEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRemovedRequestEntity;
 
 class PayeverDeleteProductActionHandler extends PayeverUpdateProductActionHandler
 {
@@ -19,7 +19,7 @@ class PayeverDeleteProductActionHandler extends PayeverUpdateProductActionHandle
      */
     public function getSupportedAction()
     {
-        return \Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum::ACTION_REMOVE_PRODUCT;
+        return \Payever\Sdk\ThirdParty\Enum\ActionEnum::ACTION_REMOVE_PRODUCT;
     }
 
     /**

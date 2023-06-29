@@ -9,8 +9,8 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Inventory\InventoryApiClient;
-use Payever\ExternalIntegration\Products\ProductsApiClient;
+use Payever\Sdk\Inventory\InventoryApiClient;
+use Payever\Sdk\Products\ProductsApiClient;
 
 class PayeverExportManager
 {

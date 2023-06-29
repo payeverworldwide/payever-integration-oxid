@@ -9,10 +9,10 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Http\MessageEntity\GetCurrenciesResultEntity;
-use Payever\ExternalIntegration\Core\Http\Response;
-use Payever\ExternalIntegration\Core\Http\ResponseEntity\GetCurrenciesResponse;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity;
+use Payever\Sdk\Core\Http\MessageEntity\GetCurrenciesResultEntity;
+use Payever\Sdk\Core\Http\Response;
+use Payever\Sdk\Core\Http\ResponseEntity\GetCurrenciesResponse;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRequestEntity;
 
 class PayeverPriceManager
 {

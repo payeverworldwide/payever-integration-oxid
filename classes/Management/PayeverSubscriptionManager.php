@@ -9,13 +9,13 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Enum\ChannelSet;
-use Payever\ExternalIntegration\Core\PseudoRandomStringGenerator;
-use Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum;
-use Payever\ExternalIntegration\ThirdParty\Http\MessageEntity\SubscriptionActionEntity;
-use Payever\ExternalIntegration\ThirdParty\Http\RequestEntity\SubscriptionRequestEntity;
-use Payever\ExternalIntegration\ThirdParty\Http\ResponseEntity\SubscriptionResponseEntity;
-use Payever\ExternalIntegration\ThirdParty\ThirdPartyApiClient;
+use Payever\Sdk\Core\Enum\ChannelSet;
+use Payever\Sdk\Core\PseudoRandomStringGenerator;
+use Payever\Sdk\ThirdParty\Enum\ActionEnum;
+use Payever\Sdk\ThirdParty\Http\MessageEntity\SubscriptionActionEntity;
+use Payever\Sdk\ThirdParty\Http\RequestEntity\SubscriptionRequestEntity;
+use Payever\Sdk\ThirdParty\Http\ResponseEntity\SubscriptionResponseEntity;
+use Payever\Sdk\ThirdParty\ThirdPartyApiClient;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 

@@ -50,10 +50,19 @@ class PayeverInstaller
      */
     private static function installDb()
     {
-        $Columns = ['basketid' => 'TEXT', 'panid' => 'TEXT', 'payever_notification_timestamp' => 'int'];
+        $Columns = [
+            'basketid' => 'TEXT',
+            'panid' => 'TEXT',
+            'payever_notification_timestamp' => 'int',
+        ];
+
         foreach ($Columns as $cval => $type) {
             self::addColumnIfNotExists('oxorder', $cval, ['type' => $type, 'nullable' => false]);
         }
+
+        self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERSHIPPED', ['type' => 'INT', 'nullable' => false]);
+        self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERCANCELLED', ['type' => 'INT', 'nullable' => false]);
+        self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERREFUNDED', ['type' => 'INT', 'nullable' => false]);
 
         $columns = [
             'oxacceptfee' => [
@@ -85,6 +94,8 @@ class PayeverInstaller
         self::createDefaultPayeverCategory();
         self::createSynchronizationQueueTable();
         self::addPayeverPidToUserBasket();
+        self::createLogsTable();
+        self::createPayeverActionsTable();
     }
 
     /**
@@ -159,6 +170,60 @@ class PayeverInstaller
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Created At',
                 key `PAYEVERSQ_INC_IDX` (`inc`)
             ) COMMENT 'Payever Synchronization Queue'"
+        );
+    }
+
+    /**
+     * Creates payever actions table
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function createPayeverActionsTable()
+    {
+        $oDb = oxDb::getDb();
+        $oDb->execute(
+            "CREATE TABLE IF NOT EXISTS `payeverorderaction` (
+                  `OXID` VARCHAR( 32 ) NOT NULL,
+                  `OXORDERID` VARCHAR( 32 ) NOT NULL,
+                  `PAYEVERACTIONID` VARCHAR( 32 ) NOT NULL,
+                  `AMOUNT` DOUBLE( 10, 2 ) NOT NULL,
+                  `STATE` VARCHAR( 32 ) NOT NULL,
+                  `TIMESTAMP` DATETIME NOT NULL,
+                  `TYPE` VARCHAR( 16 ) NOT NULL,
+                  `PAYEVERACTION` VARCHAR( 16 ) NOT NULL,
+                  UNIQUE KEY `OXID` (`OXID`)
+                );"
+        );
+
+        self::addColumnIfNotExists('payeverorderaction', 'TYPE', [
+            'type' => 'VARCHAR(16) DEFAULT "' . payeverorderaction::TYPE_PRODUCT . '"',
+            'nullable' => false
+        ]);
+    }
+
+    /**
+     * Creates payeverlogs table
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function createLogsTable()
+    {
+        $oDb = oxDb::getDb();
+        $oDb->execute(
+            "CREATE TABLE IF NOT EXISTS `payeverlogs` (
+  `oxid` char(32) NOT NULL COMMENT 'Id',
+  `log_id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT 'Log Id',
+  `level` varchar(64) NOT NULL COMMENT 'Level',
+  `message` varchar(255) DEFAULT NULL COMMENT 'Message',
+  `data` blob DEFAULT NULL COMMENT 'Data',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Created At',
+  PRIMARY KEY (`oxid`),
+  KEY `PAYEVER_LOGS_LOG_ID_IDX` (`log_id`),
+  KEY `PAYEVER_LOGS_LEVEL` (`level`),
+  KEY `PAYEVER_LOGS_CREATED_AT` (`created_at`)
+) COMMENT='Payever logs'"
         );
     }
 

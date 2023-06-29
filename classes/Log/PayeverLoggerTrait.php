@@ -35,7 +35,7 @@ trait PayeverLoggerTrait
     protected function getLogger()
     {
         return null === $this->logger
-            ? $this->logger = PayeverConfig::getLogger()
+            ? $this->logger = PayeverApiClientProvider::getLogger()
             : $this->logger;
     }
 }

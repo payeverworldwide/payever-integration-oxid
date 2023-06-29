@@ -9,7 +9,7 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Payments\Action\ActionDecider;
+use Payever\Sdk\Payments\Action\ActionDecider;
 
 class payeverOrderList extends payeverOrderList_parent
 {

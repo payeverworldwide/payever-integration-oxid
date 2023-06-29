@@ -19,6 +19,10 @@ class payeverOxArticle extends payeverOxArticle_parent
     /** @var bool */
     private $skipSyncHandling = false;
 
+    const FIELD_REFUNDED = 'oxpayeverrefunded';
+    const FIELD_CANCELLED = 'oxpayevercancelled';
+    const FIELD_SHIPPED = 'oxpayevershipped';
+
     /**
      * @param bool $skipSyncHandling
      * @return $this

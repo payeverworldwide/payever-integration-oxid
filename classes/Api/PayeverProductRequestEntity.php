@@ -9,7 +9,7 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity as BaseEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRequestEntity as BaseEntity;
 
 class PayeverProductRequestEntity extends BaseEntity
 {

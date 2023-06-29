@@ -19,7 +19,7 @@ class PayeverAddInventoryActionHandler extends PayeverSetInventoryActionHandler
      */
     public function getSupportedAction()
     {
-        return \Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum::ACTION_ADD_INVENTORY;
+        return \Payever\Sdk\ThirdParty\Enum\ActionEnum::ACTION_ADD_INVENTORY;
     }
 
     /**

@@ -9,9 +9,9 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Enum\ChannelSet;
-use Payever\ExternalIntegration\Plugins\Enum\PluginCommandNameEnum;
-use Payever\ExternalIntegration\Plugins\Base\PluginRegistryInfoProviderInterface;
+use Payever\Sdk\Core\Enum\ChannelSet;
+use Payever\Sdk\Plugins\Enum\PluginCommandNameEnum;
+use Payever\Sdk\Plugins\Base\PluginRegistryInfoProviderInterface;
 
 class PayeverPluginRegistryInfoProvider implements PluginRegistryInfoProviderInterface
 {

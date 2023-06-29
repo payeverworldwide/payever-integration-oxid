@@ -9,9 +9,9 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Plugins\Enum\PluginCommandNameEnum;
-use Payever\ExternalIntegration\Plugins\Command\PluginCommandExecutorInterface;
-use Payever\ExternalIntegration\Plugins\Http\MessageEntity\PluginCommandEntity;
+use Payever\Sdk\Plugins\Enum\PluginCommandNameEnum;
+use Payever\Sdk\Plugins\Command\PluginCommandExecutorInterface;
+use Payever\Sdk\Plugins\Http\MessageEntity\PluginCommandEntity;
 
 class PayeverPluginCommandExecutor implements PluginCommandExecutorInterface
 {

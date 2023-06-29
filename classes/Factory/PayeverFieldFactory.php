@@ -17,12 +17,23 @@ class PayeverFieldFactory
     /**
      * @param mixed|null $value
      * @return object|oxfield
-     * @throws oxSystemComponentException
      */
     public function create($value = null)
     {
         $field = oxNew('oxfield');
         $field->setValue($value);
+
+        return $field;
+    }
+
+    /**
+     * @param mixed|null $value
+     * @return object|oxfield
+     */
+    public function createRaw($value = null)
+    {
+        $field = oxNew('oxfield');
+        $field->setValue($value, $field::T_RAW);
 
         return $field;
     }

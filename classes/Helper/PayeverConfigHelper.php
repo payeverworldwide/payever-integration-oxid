@@ -196,4 +196,10 @@ class PayeverConfigHelper
     {
         return PayeverConfig::getApiVersion();
     }
+
+    public function setDiagnosticMode($mode)
+    {
+        PayeverConfig::setConfig(PayeverConfig::KEY_DIAGNOSTIC_MODE, $mode);
+        return PayeverConfig::getDiagnosticMode();
+    }
 }

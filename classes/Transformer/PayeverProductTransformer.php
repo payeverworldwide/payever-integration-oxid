@@ -9,9 +9,9 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Products\Enum\ProductTypeEnum;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRemovedRequestEntity;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity;
+use Payever\Sdk\Products\Enum\ProductTypeEnum;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRemovedRequestEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRequestEntity;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)

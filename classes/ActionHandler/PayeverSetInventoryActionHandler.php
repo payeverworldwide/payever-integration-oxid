@@ -9,8 +9,8 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Http\RequestEntity;
-use Payever\ExternalIntegration\Inventory\Http\MessageEntity\InventoryChangedEntity;
+use Payever\Sdk\Core\Http\RequestEntity;
+use Payever\Sdk\Inventory\Http\MessageEntity\InventoryChangedEntity;
 
 class PayeverSetInventoryActionHandler extends PayeverAbstractActionHandler
 {
@@ -27,7 +27,7 @@ class PayeverSetInventoryActionHandler extends PayeverAbstractActionHandler
      */
     public function getSupportedAction()
     {
-        return \Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum::ACTION_SET_INVENTORY;
+        return \Payever\Sdk\ThirdParty\Enum\ActionEnum::ACTION_SET_INVENTORY;
     }
 
     /**

@@ -17,6 +17,7 @@ defined('OXID_SOURCE_PATH') || define('OXID_SOURCE_PATH', '/var/www/html/source'
 
 require_once OXID_SOURCE_PATH . '/bootstrap.php';
 $pluginFiles = [
+    'classes/PayeverLogger.php',
     'classes/PayeverConfig.php',
     'classes/Log/PayeverLoggerTrait.php',
     'classes/Database/PayeverDatabaseTrait.php',

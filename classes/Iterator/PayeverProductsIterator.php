@@ -9,7 +9,7 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Products\Base\ProductsIteratorInterface;
+use Payever\Sdk\Products\Base\ProductsIteratorInterface;
 
 class PayeverProductsIterator extends \ArrayIterator implements ProductsIteratorInterface
 {

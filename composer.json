@@ -25,6 +25,17 @@
     "ext-json": "*",
     "ext-curl": "*",
     "ext-fileinfo": "*",
-    "payever/sdk-php": "4.4.0"
+    "payever/core-sdk-php": "1.1.2",
+    "payever/plugins-sdk-php": "1.2.0",
+    "payever/payments-sdk-php": "1.2.0",
+    "payever/products-sdk-php": "1.1.0"
+  },
+  "require-dev": {
+    "oxid-esales/testing-library": "^9.0"
+  },
+  "config": {
+    "allow-plugins": {
+      "oxid-esales/oxideshop-unified-namespace-generator": true
+    }
   }
 }

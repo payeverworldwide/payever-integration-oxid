@@ -9,19 +9,19 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Http\RequestEntity;
-use Payever\ExternalIntegration\Core\Enum\ChannelSet;
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\ChannelEntity;
-use Payever\ExternalIntegration\Core\Lock\FileLock;
-use Payever\ExternalIntegration\Core\Lock\LockInterface;
-use Payever\ExternalIntegration\Payments\Enum\Status;
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\CustomerAddressEntity;
-use Payever\ExternalIntegration\Payments\Http\RequestEntity\CreatePaymentV2Request;
-use Payever\ExternalIntegration\Payments\Http\ResponseEntity\CreatePaymentV2Response;
-use Payever\ExternalIntegration\Payments\Http\ResponseEntity\RetrievePaymentResponse;
-use Payever\ExternalIntegration\Plugins\Command\PluginCommandManager;
-use Payever\ExternalIntegration\Plugins\PluginsApiClient;
+use Payever\Sdk\Core\Http\RequestEntity;
+use Payever\Sdk\Core\Enum\ChannelSet;
+use Payever\Sdk\Payments\Http\MessageEntity\ChannelEntity;
+use Payever\Sdk\Core\Lock\FileLock;
+use Payever\Sdk\Core\Lock\LockInterface;
+use Payever\Sdk\Payments\Enum\Status;
+use Payever\Sdk\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
+use Payever\Sdk\Payments\Http\MessageEntity\CustomerAddressEntity;
+use Payever\Sdk\Payments\Http\RequestEntity\CreatePaymentV2Request;
+use Payever\Sdk\Payments\Http\ResponseEntity\CreatePaymentV2Response;
+use Payever\Sdk\Payments\Http\ResponseEntity\RetrievePaymentResponse;
+use Payever\Sdk\Plugins\Command\PluginCommandManager;
+use Payever\Sdk\Plugins\PluginsApiClient;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -42,6 +42,7 @@ class payeverStandardDispatcher extends oxUBase
     use PayeverPaymentsApiClientTrait;
     use PayeverPaymentMethodFactoryTrait;
     use PayeverRequestHelperTrait;
+    use PayeverFieldFactoryTrait;
 
     const STATUS_PARAM = 'sts';
 
@@ -54,6 +55,8 @@ class payeverStandardDispatcher extends oxUBase
     const HEADER_SIGNATURE = 'X-PAYEVER-SIGNATURE';
 
     const SESS_IS_REDIRECT_METHOD = 'payever_is_redirect_method';
+
+    const SESS_TEMP_BASKET = 'payever_temp_basket';
 
     /** @var LockInterface */
     private $locker;
@@ -224,7 +227,6 @@ class payeverStandardDispatcher extends oxUBase
                     'name' => 'Discount',
                     'price' => $voucher->dVoucherdiscount * (-1),
                     'quantity' => 1,
-                    'sku' => 'discount',
                     'identifier' => 'discount'
                 ];
 
@@ -232,9 +234,28 @@ class payeverStandardDispatcher extends oxUBase
             }
         }
 
+        if ($oBasket->getGiftCardCost()) {
+            $basketItems[] = [
+                'name' => 'Greeting Card',
+                'price' => $oBasket->getGiftCardCost()->getBruttoPrice(),
+                'quantity' => 1,
+                'identifier' => payeverorderaction::TYPE_GIFTCARD_COST,
+            ];
+        }
+
+        if ($oBasket->getWrappingCost()) {
+            $basketItems[] = [
+                'name' => 'Gift Wrapping',
+                'price' => $oBasket->getWrappingCost()->getBruttoPrice(),
+                'quantity' => 1,
+                'identifier' => payeverorderaction::TYPE_WRAP_COST,
+            ];
+        }
+
         // Save discount in session
         $oSession->oxidpayever_discount = $discount;
         $oSession->setVariable('oxidpayever_discount', $discount);
+        $oSession->setVariable(self::SESS_TEMP_BASKET, serialize($oBasket));
 
         if (strpos($apiMethod, '-') && $this->getPaymentMethod()->oxpayments__oxvariants) {
             $oxvariants = json_decode($this->getPaymentMethod()->oxpayments__oxvariants->rawValue, true);
@@ -854,11 +875,7 @@ JS;
                     $oBasket->getBasketCurrency()->name
                 );
 
-                $oOrder->oxorder__oxfolder = new \OxidEsales\Eshop\Core\Field(
-                    'ORDERFOLDER_PROBLEMS',
-                    \OxidEsales\Eshop\Core\Field::T_RAW
-                );
-
+                $oOrder->oxorder__oxfolder = $this->getFieldFactory()->createRaw('ORDERFOLDER_PROBLEMS');
                 $this->getLogger()->warning($message);
             }
         }
@@ -1276,13 +1293,21 @@ JS;
             }
         }
 
-        // get basket contents
-        /** @var oxBasket $oBasket */
-        $oBasket = oxNew('oxbasket');
-        $oBasket->setBasketUser($oUser);
-        $oBasket->setPayment($payment['paymentMethod']);
-        $oBasket->load();
-        $oBasket->calculateBasket(true);
+        $sBasket = $this->getSession()->getVariable(self::SESS_TEMP_BASKET);
+        $oBasket = unserialize($sBasket);
+
+        $this->getSession()->deleteVariable(self::SESS_TEMP_BASKET);
+
+        if (!$oBasket || get_class($oBasket) !== get_class(oxNew('oxbasket'))) {
+            // get basket contents
+            /** @var oxBasket $oBasket */
+            $oBasket = oxNew('oxbasket');
+            $oBasket->setBasketUser($oUser);
+            $oBasket->setPayment($payment['paymentMethod']);
+            $oBasket->load();
+            $oBasket->calculateBasket(true);
+        }
+
         if (!$oBasket->getProductsCount()) {
             // fallback to session data, which does not work for notice callbacks
             $oSession = $this->getSession();

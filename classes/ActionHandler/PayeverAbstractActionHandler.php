@@ -9,12 +9,12 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Base\MessageEntity;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRemovedRequestEntity;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity;
-use Payever\ExternalIntegration\ThirdParty\Action\ActionHandlerInterface;
-use Payever\ExternalIntegration\ThirdParty\Action\ActionPayload;
-use Payever\ExternalIntegration\ThirdParty\Action\ActionResult;
+use Payever\Sdk\Core\Base\MessageEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRemovedRequestEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRequestEntity;
+use Payever\Sdk\ThirdParty\Action\ActionHandlerInterface;
+use Payever\Sdk\ThirdParty\Action\ActionPayload;
+use Payever\Sdk\ThirdParty\Action\ActionResult;
 use Psr\Log\LoggerAwareInterface;
 
 abstract class PayeverAbstractActionHandler implements ActionHandlerInterface, LoggerAwareInterface

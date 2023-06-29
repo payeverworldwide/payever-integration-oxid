@@ -9,8 +9,8 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Authorization\OauthToken;
-use Payever\ExternalIntegration\Core\Authorization\OauthTokenList;
+use Payever\Sdk\Core\Authorization\OauthToken;
+use Payever\Sdk\Core\Authorization\OauthTokenList;
 
 class PayeverApiOauthTokenList extends OauthTokenList
 {

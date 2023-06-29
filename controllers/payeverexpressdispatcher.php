@@ -9,9 +9,9 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Payments\Http\ResponseEntity\RetrievePaymentResponse;
-use Payever\ExternalIntegration\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
-use Payever\ExternalIntegration\Payments\Enum\Status;
+use Payever\Sdk\Payments\Http\ResponseEntity\RetrievePaymentResponse;
+use Payever\Sdk\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
+use Payever\Sdk\Payments\Enum\Status;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -49,10 +49,13 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
             return 'thankyou';
         } catch (Exception $exception) {
             $this->getLocker()->releaseLock($paymentId);
-            $this->getLogger()->error([sprintf(
-                "Payment unlocked by exception: %s",
-                $exception->getMessage()
-            ), $paymentId]);
+            $this->getLogger()->error(
+                sprintf(
+                    "Payment unlocked by exception: %s",
+                    $exception->getMessage()
+                ),
+                [$paymentId]
+            );
 
             $this->addErrorToDisplay($exception->getMessage());
 
@@ -122,10 +125,13 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
             );
         } catch (Exception $exception) {
             $this->getLocker()->releaseLock($paymentId);
-            $this->getLogger()->error([sprintf(
-                "Payment unlocked by exception: %s",
-                $exception->getMessage()
-            ), $paymentId]);
+            $this->getLogger()->error(
+                sprintf(
+                    "Payment unlocked by exception: %s",
+                    $exception->getMessage()
+                ),
+                [$paymentId]
+            );
 
             header('HTTP/1.1 400 BAD REQUEST');
             echo json_encode(['result' => 'error', 'message' => $exception->getMessage()]);

@@ -9,12 +9,15 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Payments\PaymentsApiClient;
+use Payever\Sdk\Payments\PaymentsApiClient;
 
 trait PayeverPaymentsApiClientTrait
 {
     /** @var PaymentsApiClient */
     protected $paymentsApiClient;
+
+    /** @var ThirdPartyPluginsApiClient */
+    protected $thirdPartyPluginsApiClient;
 
     /**
      * @param PaymentsApiClient $paymentsApiClient
@@ -38,5 +41,16 @@ trait PayeverPaymentsApiClientTrait
         return null === $this->paymentsApiClient
             ? $this->paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient()
             : $this->paymentsApiClient;
+    }
+
+    /**
+     * @return ThirdPartyPluginsApiClient
+     * @throws \Exception
+     */
+    public function getThirdPartyPluginsApiClient()
+    {
+        return null === $this->thirdPartyPluginsApiClient
+            ? $this->thirdPartyPluginsApiClient = PayeverApiClientProvider::getThirdPartyPluginsApiClient()
+            : $this->thirdPartyPluginsApiClient;
     }
 }

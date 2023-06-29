@@ -16,7 +16,7 @@ class PayeverCreateProductActionHandler extends PayeverUpdateProductActionHandle
      */
     public function getSupportedAction()
     {
-        return \Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum::ACTION_CREATE_PRODUCT;
+        return \Payever\Sdk\ThirdParty\Enum\ActionEnum::ACTION_CREATE_PRODUCT;
     }
 
     /**

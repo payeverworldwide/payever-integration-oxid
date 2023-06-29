@@ -9,8 +9,8 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Http\RequestEntity;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity;
+use Payever\Sdk\Core\Http\RequestEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRequestEntity;
 
 class PayeverUpdateProductActionHandler extends PayeverAbstractActionHandler
 {
@@ -24,7 +24,7 @@ class PayeverUpdateProductActionHandler extends PayeverAbstractActionHandler
      */
     public function getSupportedAction()
     {
-        return \Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum::ACTION_UPDATE_PRODUCT;
+        return \Payever\Sdk\ThirdParty\Enum\ActionEnum::ACTION_UPDATE_PRODUCT;
     }
 
     /**

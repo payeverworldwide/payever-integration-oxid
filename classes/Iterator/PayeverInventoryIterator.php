@@ -9,7 +9,7 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Inventory\Base\InventoryIteratorInterface;
+use Payever\Sdk\Inventory\Base\InventoryIteratorInterface;
 
 class PayeverInventoryIterator extends \ArrayIterator implements InventoryIteratorInterface
 {

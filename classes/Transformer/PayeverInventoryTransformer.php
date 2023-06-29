@@ -9,9 +9,9 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Inventory\Http\MessageEntity\InventoryChangedEntity;
-use Payever\ExternalIntegration\Inventory\Http\RequestEntity\InventoryChangedRequestEntity;
-use Payever\ExternalIntegration\Inventory\Http\RequestEntity\InventoryCreateRequestEntity;
+use Payever\Sdk\Inventory\Http\MessageEntity\InventoryChangedEntity;
+use Payever\Sdk\Inventory\Http\RequestEntity\InventoryChangedRequestEntity;
+use Payever\Sdk\Inventory\Http\RequestEntity\InventoryCreateRequestEntity;
 
 class PayeverInventoryTransformer
 {

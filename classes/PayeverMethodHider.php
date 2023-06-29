@@ -9,7 +9,7 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Payments\Enum\PaymentMethod;
+use Payever\Sdk\Payments\Enum\PaymentMethod;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 

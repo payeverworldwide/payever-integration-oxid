@@ -9,26 +9,28 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Core\Base\ClientConfigurationInterface;
-use Payever\ExternalIntegration\Core\ClientConfiguration;
-use Payever\ExternalIntegration\Core\Enum\ChannelSet;
-use Payever\ExternalIntegration\Inventory\InventoryApiClient;
-use Payever\ExternalIntegration\Payments\PaymentsApiClient;
-use Payever\ExternalIntegration\Plugins\Command\PluginCommandExecutorInterface;
-use Payever\ExternalIntegration\Plugins\Command\PluginCommandManager;
-use Payever\ExternalIntegration\Plugins\PluginsApiClient;
-use Payever\ExternalIntegration\Products\ProductsApiClient;
-use Payever\ExternalIntegration\ThirdParty\Action\ActionHandlerPool;
-use Payever\ExternalIntegration\ThirdParty\Action\ActionResult;
-use Payever\ExternalIntegration\ThirdParty\Action\BidirectionalActionProcessor;
-use Payever\ExternalIntegration\ThirdParty\Action\InwardActionProcessor;
-use Payever\ExternalIntegration\ThirdParty\Action\OutwardActionProcessor;
-use Payever\ExternalIntegration\ThirdParty\ThirdPartyApiClient;
+use Payever\Sdk\Core\Base\ClientConfigurationInterface;
+use Payever\Sdk\Core\ClientConfiguration;
+use Payever\Sdk\Core\Enum\ChannelSet;
+use Payever\Sdk\Inventory\InventoryApiClient;
+use Payever\Sdk\Payments\Action\ActionDecider;
+use Payever\Sdk\Payments\PaymentsApiClient;
+use Payever\Sdk\Plugins\Command\PluginCommandExecutorInterface;
+use Payever\Sdk\Plugins\Command\PluginCommandManager;
+use Payever\Sdk\Plugins\PluginsApiClient;
+use Payever\Sdk\Products\ProductsApiClient;
+use Payever\Sdk\ThirdParty\Action\ActionHandlerPool;
+use Payever\Sdk\ThirdParty\Action\ActionResult;
+use Payever\Sdk\ThirdParty\Action\BidirectionalActionProcessor;
+use Payever\Sdk\ThirdParty\Action\InwardActionProcessor;
+use Payever\Sdk\ThirdParty\Action\OutwardActionProcessor;
+use Payever\Sdk\ThirdParty\ThirdPartyApiClient;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.TooManyFields)
  */
 class PayeverApiClientProvider
 {
@@ -59,6 +61,9 @@ class PayeverApiClientProvider
     /** @var ThirdPartyApiClient */
     private static $thirdPartyApiClient;
 
+    /** @var ThirdPartyPluginsApiClient */
+    private static $thirdPartyPluginsApiClient;
+
     /** @var InventoryApiClient */
     private static $inventoryApiClient;
 
@@ -73,6 +78,9 @@ class PayeverApiClientProvider
 
     /** @var OutwardActionProcessor */
     private static $outwardActionProcessor;
+
+    /** @var ActionDecider */
+    private static $actionDecider;
 
     /**
      * @return PluginsApiClient
@@ -101,7 +109,7 @@ class PayeverApiClientProvider
             static::$pluginCommandManager = new PluginCommandManager(
                 static::getPluginsApiClient(),
                 static::getPayeverPluginCommandExecutor(),
-                PayeverConfig::getLogger()
+                PayeverApiClientProvider::getLogger()
             );
         }
 
@@ -142,6 +150,24 @@ class PayeverApiClientProvider
         }
 
         return static::$thirdPartyApiClient;
+    }
+
+    /**
+     * @param bool $forceReload
+     * @return ThirdPartyPluginsApiClient
+     * @throws \Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     */
+    public static function getThirdPartyPluginsApiClient($forceReload = false)
+    {
+        if (null === static::$thirdPartyPluginsApiClient || $forceReload) {
+            static::$thirdPartyPluginsApiClient = new ThirdPartyPluginsApiClient(
+                static::getClientConfiguration($forceReload),
+                static::getOauthTokenList()
+            );
+        }
+
+        return static::$thirdPartyPluginsApiClient;
     }
 
     /**
@@ -209,7 +235,7 @@ class PayeverApiClientProvider
             static::$inwardActionProcessor = new InwardActionProcessor(
                 $actionHandlerPool,
                 new ActionResult(),
-                PayeverConfig::getLogger()
+                PayeverApiClientProvider::getLogger()
             );
         }
 
@@ -226,11 +252,25 @@ class PayeverApiClientProvider
             static::$outwardActionProcessor = new OutwardActionProcessor(
                 static::getProductsApiClient(),
                 static::getInventoryApiClient(),
-                PayeverConfig::getLogger()
+                PayeverApiClientProvider::getLogger()
             );
         }
 
         return static::$outwardActionProcessor;
+    }
+
+    /**
+     * @return ActionDecider
+     * @throws Exception
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     */
+    public static function getActionDecider()
+    {
+        if (null === static::$actionDecider) {
+            static::$actionDecider = new ActionDecider(static::getPaymentsApiClient());
+        }
+
+        return static::$actionDecider;
     }
 
     /**
@@ -285,6 +325,14 @@ class PayeverApiClientProvider
     }
 
     /**
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     */
+    public static function getLogger($reload = false)
+    {
+        return PayeverApiClientProvider::getClientConfiguration($reload)->getLogger();
+    }
+
+    /**
      * @param bool $forceReload
      * @return ClientConfiguration
      * @throws Exception
@@ -326,6 +374,8 @@ class PayeverApiClientProvider
             ->setBusinessUuid(PayeverConfig::getBusinessUuid())
             ->setClientId(PayeverConfig::getApiClientId())
             ->setClientSecret(PayeverConfig::getApiClientSecret())
+            ->setLogDiagnostic(PayeverConfig::getDiagnosticMode())
+            ->setApmSecretService(new PayeverApiApmSecretService())
             ->setLogger(PayeverConfig::getLogger());
         $sandboxUrl = PayeverConfig::getCustomSandboxUrl();
         if ($sandboxUrl) {

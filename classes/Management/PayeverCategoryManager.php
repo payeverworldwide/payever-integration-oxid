@@ -9,8 +9,8 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\Products\Http\MessageEntity\ProductCategoryEntity;
-use Payever\ExternalIntegration\Products\Http\RequestEntity\ProductRequestEntity;
+use Payever\Sdk\Products\Http\MessageEntity\ProductCategoryEntity;
+use Payever\Sdk\Products\Http\RequestEntity\ProductRequestEntity;
 
 class PayeverCategoryManager
 {

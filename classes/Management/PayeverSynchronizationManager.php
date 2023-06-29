@@ -9,9 +9,9 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\ExternalIntegration\ThirdParty\Action\BidirectionalActionProcessor;
-use Payever\ExternalIntegration\ThirdParty\Enum\ActionEnum;
-use Payever\ExternalIntegration\ThirdParty\Enum\DirectionEnum;
+use Payever\Sdk\ThirdParty\Action\BidirectionalActionProcessor;
+use Payever\Sdk\ThirdParty\Enum\ActionEnum;
+use Payever\Sdk\ThirdParty\Enum\DirectionEnum;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 
@@ -98,7 +98,7 @@ class PayeverSynchronizationManager
 
     /**
      * @param string $action
-     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload $payload
+     * @param \Payever\Sdk\Core\Base\MessageEntity|string $payload $payload
      */
     public function handleInwardAction($action, $payload)
     {
@@ -107,7 +107,7 @@ class PayeverSynchronizationManager
 
     /**
      * @param string $action
-     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload $payload
+     * @param \Payever\Sdk\Core\Base\MessageEntity|string $payload $payload
      */
     public function handleOutwardAction($action, $payload)
     {
@@ -117,7 +117,7 @@ class PayeverSynchronizationManager
     /**
      * @param string $action
      * @param string $direction
-     * @param \Payever\ExternalIntegration\Core\Base\MessageEntity|string $payload
+     * @param \Payever\Sdk\Core\Base\MessageEntity|string $payload
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function handleAction($action, $direction, $payload)

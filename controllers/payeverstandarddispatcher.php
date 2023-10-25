@@ -560,6 +560,25 @@ JS;
                     'sess_challenge' => $this->getSession()->getVariable('sess_challenge'),
                 ]
             );
+
+            if ($isNotice) {
+                $this->getLogger()->debug(
+                    'Notification payload: ' . $this->getRequestHelper()->getRequestContent()
+                );
+            }
+
+            if ($isNotice && $payeverStatus === Status::STATUS_NEW) {
+                $this->getLogger()->info('Notification processing is skipped; reason: Stalled new status');
+                // @codeCoverageIgnoreStart
+                if (!$this->dryRun) {
+                    echo json_encode(['result' => 'success', 'message' => 'Skipped stalled new status']);
+                    exit();
+                } else {
+                    return;
+                }
+                // @codeCoverageIgnoreEnd
+            }
+
             $oxidOrderStatus = $this->getInternalStatus($payeverStatus);
             $isPending = $config->getRequestParameter('is_pending');
             $isPaid = $this->isPaidStatus($oxidOrderStatus);
@@ -568,17 +587,6 @@ JS;
 
             if ($order) {
                 $this->getLogger()->debug('Order exists ' . $order->getId());
-                if ($isNotice && $payeverStatus === Status::STATUS_NEW) {
-                    $this->getLogger()->info('Notification processing is skipped; reason: Stalled new status');
-                    // @codeCoverageIgnoreStart
-                    if (!$this->dryRun) {
-                        echo json_encode(['result' => 'success', 'message' => 'Skipped stalled new status']);
-                        exit();
-                    } else {
-                        return;
-                    }
-                    // @codeCoverageIgnoreEnd
-                }
                 $notificationTimestamp = 0;
                 $rawData = $this->getRawData();
                 if ($rawData) {

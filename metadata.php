@@ -20,15 +20,15 @@ $sMetadataVersion = '1.2';
  */
 $aModule = [
     'id' => 'payever',
-    'title' => 'payever',
+    'title' => 'payever Checkout',
     'description' => [
-        'de' => 'payever Zahlungsmodul',
-        'en' => 'payever payment module',
+        'de' => 'Von Finanzierung & Rechnungs-/Ratenkauf bis hin zu Kreditkartenzahlung, PayPal und andere Wallets, lokale Zahlarten sowie Sofort-Banküberweisung auf Basis von Open-Banking-Technologie – alles ohne zusätzliche Kosten bei einfachster Integration und schnellem Onboarding.',
+        'en' => 'From Financing & Buy Now Pay Later products to Cards, PayPal and other Wallets, different local payment methods or Open Banking Payments - everything without additional costs and with an easy integration as well as fast onboarding.',
     ],
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '3.0.1',
+    'version' => '3.2.0',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
@@ -39,10 +39,14 @@ $aModule = [
         'oxpaymentlist'  => 'payever/models/payeveroxpaymentlist',
         'oxviewconfig'   => 'payever/core/payeveroxviewconfig',
         'oxarticle'      => 'payever/models/payeveroxarticle',
+        'OxidEsales\Eshop\Application\Model\User\UserUpdatableFields' => 'payever/models/user/userupdatablefields',
+        'user' => 'payever/controllers/payeverusercontroller',
+        'account_user' => 'payever/controllers/payeverusercontroller',
     ],
     'files' => [
         // classes map (OXID < 6.0 doesn't support composer autoloading)
         'DryRunTrait' => 'payever/classes/DryRunTrait.php',
+        'ExpressWidget' => 'payever/classes/ExpressWidget.php',
         'PayeverPaymentsApiClientTrait' => 'payever/classes/Api/PayeverPaymentsApiClientTrait.php',
         'PayeverProductRequestEntity' => 'payever/classes/Api/PayeverProductRequestEntity.php',
         'payever_config' => 'payever/controllers/admin/payever_config.php',
@@ -56,8 +60,11 @@ $aModule = [
         'PayeverDatabaseTrait' => 'payever/classes/Database/PayeverDatabaseTrait.php',
         'PayeverOrderActionHelper' => 'payever/classes/Helper/PayeverOrderActionHelper.php',
         'PayeverOrderActionHelperTrait' => 'payever/classes/Helper/PayeverOrderActionHelperTrait.php',
+        'PayeverPaymentActionHelper' => 'payever/classes/Helper/PayeverPaymentActionHelper.php',
+        'PayeverPaymentActionHelperTrait' => 'payever/classes/Helper/PayeverPaymentActionHelperTrait.php',
         'PayeverOrderTransactionHelper' => 'payever/classes/Helper/PayeverOrderTransactionHelper.php',
         'PayeverOrderTransactionHelperTrait' => 'payever/classes/Helper/PayeverOrderTransactionHelperTrait.php',
+        'PayeverLogProcessor' => 'payever/classes/Logger/Processor/PayeverLogProcessor.php',
         'PayeverAddressFactory' => 'payever/classes/Factory/PayeverAddressFactory.php',
         'PayeverAddressFactoryTrait' => 'payever/classes/Factory/PayeverAddressFactoryTrait.php',
         'PayeverCountryFactory' => 'payever/classes/Factory/PayeverCountryFactory.php',
@@ -89,10 +96,13 @@ $aModule = [
         'payeverproductsexport' => 'payever/controllers/admin/payeverproductsexport.php',
         'payeverStandardDispatcher' => 'payever/controllers/payeverstandarddispatcher.php',
         'payeverExpressDispatcher' => 'payever/controllers/payeverexpressdispatcher.php',
+        'payevercompanysearch' => 'payever/controllers/payevercompanysearch.php',
+        'payeverFinexpressDispatcher' => 'payever/controllers/payeverfinexpressdispatcher.php',
         'payeversynchronizationqueue' => 'payever/models/payeversynchronizationqueue.php',
         'payeversynchronizationqueuelist' => 'payever/models/payeversynchronizationqueuelist.php',
         'payeverlogs' => 'payever/models/payeverlogs.php',
         'payeverlogslist' => 'payever/models/payeverlogslist.php',
+        'payeverpaymentaction' => 'payever/models/payeverpaymentaction.php',
         'PayeverLogger' => 'payever/classes/PayeverLogger.php',
         'PayeverConfig' => 'payever/classes/PayeverConfig.php',
         'PayeverRegistry' => 'payever/classes/PayeverRegistry.php',
@@ -102,6 +112,7 @@ $aModule = [
         'PayeverPluginCommandExecutor' => 'payever/classes/Api/PayeverPluginCommandExecutor.php',
         'PayeverPluginRegistryInfoProvider' => 'payever/classes/Api/PayeverPluginRegistryInfoProvider.php',
         'PayeverShippingGoodsHandler' => 'payever/classes/Api/PayeverShippingGoodsHandler.php',
+        'PayeverCompanySearchManager' => 'payever/classes/Management/PayeverCompanySearchManager.php',
         'PayeverGenericManagerTrait' => 'payever/classes/Management/PayeverGenericManagerTrait.php',
         'PayeverCategoryManager' => 'payever/classes/Management/PayeverCategoryManager.php',
         'PayeverGalleryManager' => 'payever/classes/Management/PayeverGalleryManager.php',
@@ -134,6 +145,7 @@ $aModule = [
         'PayeverImportManager' => 'payever/classes/Management/PayeverImportManager.php',
         'payeverProductsImport' => 'payever/controllers/payeverproductsimport.php',
         'payeverShowLogs' => 'payever/controllers/payevershowlogs.php',
+        'payeverpaymentpending' => 'payever/controllers/payeverpaymentpending.php',
         'PayeverAbstractActionHandler' => 'payever/classes/ActionHandler/PayeverAbstractActionHandler.php',
         'PayeverUpdateProductActionHandler' => 'payever/classes/ActionHandler/PayeverUpdateProductActionHandler.php',
         'PayeverSetInventoryActionHandler' => 'payever/classes/ActionHandler/PayeverSetInventoryActionHandler.php',
@@ -141,6 +153,8 @@ $aModule = [
         'PayeverSubtractInventoryActionHandler' => 'payever/classes/ActionHandler/PayeverSubtractInventoryActionHandler.php',
         'PayeverCreateProductActionHandler' => 'payever/classes/ActionHandler/PayeverCreateProductActionHandler.php',
         'PayeverDeleteProductActionHandler' => 'payever/classes/ActionHandler/PayeverDeleteProductActionHandler.php',
+        'PayeverPaymentUrlBuilder' => 'payever/classes/Payment/PayeverPaymentUrlBuilder.php',
+        'PayeverPaymentV3RequestBuilder' => 'payever/classes/Payment/PayeverPaymentV3RequestBuilder.php',
         'PayeverSyncQueueConsumeCommand' => 'payever/commands/PayeverSyncQueueConsumeCommand.php',
         'PayeverAbstractModuleCommand' => 'payever/commands/PayeverAbstractModuleCommand.php',
         'PayeverModuleActivateCommand' => 'payever/commands/PayeverModuleActivateCommand.php',
@@ -160,6 +174,16 @@ $aModule = [
         'onDeactivate' => 'PayeverInstaller::onDeactivate',
     ],
     'blocks' => [
+		[
+			'template' => 'page/checkout/basket.tpl',
+			'block'    => 'checkout_basket_main',
+			'file'     => '/views/blocks/page/details/inc/productmain.tpl'
+		],
+		[
+			'template' => 'page/details/inc/productmain.tpl',
+			'block'    => 'details_productmain_tobasket',
+			'file'     => '/views/blocks/page/details/inc/productmain.tpl'
+		],
         [
             'template' => 'page/checkout/payment.tpl',
             'block' => 'select_payment',
@@ -169,6 +193,11 @@ $aModule = [
             'template' => 'page/checkout/order.tpl',
             'block' => 'checkout_order_details',
             'file' => '/views/blocks/payever_order_iframe.tpl',
+        ],
+        [
+            'template' => 'form/fieldset/user_billing.tpl',
+            'block' => 'form_user_billing_country',
+            'file' => '/views/blocks/payever_user_billing_company.tpl',
         ],
         [
             'template' => 'order_list.tpl',
@@ -205,5 +234,6 @@ $aModule = [
         'payever/order/action.tpl' => 'payever/views/admin/tpl/order/action.tpl',
         // frontend tpl
         'payever_payment_iframe.tpl' => 'payever/views/page/checkout/payment_iframe.tpl',
+        'payever_payment_pending.tpl' => 'payever/views/page/checkout/payment_pending.tpl',
     ],
 ];

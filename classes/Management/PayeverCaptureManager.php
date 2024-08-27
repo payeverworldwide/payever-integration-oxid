@@ -17,38 +17,22 @@ class PayeverCaptureManager extends PayeverOrderActionManager
     /**
      * @inheritDoc
      */
-    public function processAmount($order, $amount)
+    public function processAmount($order, $amount, $identifier = null)
     {
-        try {
-            $handler = $this->getShippingGoodsHandler();
-            $response = $handler->triggerAmountShippingGoodsPaymentRequest($order, $amount);
+        $handler = $this->getShippingGoodsHandler();
 
-            $this->actions[] = ['amount' => $amount, 'type' => payeverorderaction::TYPE_PRODUCT];
-            $this->onRequestComplete($order, $response);
-        } catch (\Exception $e) {
-            $this->onRequestFailed($order, $e->getMessage());
-        }
-
-        return $this->response;
+        return $handler->triggerAmountShippingGoodsPaymentRequest($order, $amount, $identifier);
     }
 
     /**
      * @inheritDoc
      */
-    public function processItems($order, $items)
+    public function processItems($order, $items, $identifier = null)
     {
-        try {
-            $paymentItems = $this->getPaymentItemEntities($order, $items);
+        $handler = $this->getShippingGoodsHandler();
+        $paymentItems = $this->getPaymentItemEntities($order, $items);
 
-            $handler = $this->getShippingGoodsHandler();
-            $response = $handler->triggerItemsShippingGoodsPaymentRequest($order, $paymentItems);
-
-            $this->onRequestComplete($order, $response);
-        } catch (\Exception $e) {
-            $this->onRequestFailed($order, $e->getMessage());
-        }
-
-        return $this->response;
+        return $handler->triggerItemsShippingGoodsPaymentRequest($order, $paymentItems, $identifier);
     }
 
     /**

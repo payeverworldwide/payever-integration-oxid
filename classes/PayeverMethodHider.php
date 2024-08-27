@@ -15,6 +15,8 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autol
 
 class PayeverMethodHider
 {
+    use PayeverRequestHelperTrait;
+
     const FAILED_METHODS_COOKIE_NAME  = 'payever_hidden_methods';
 
     protected static $instance;
@@ -42,6 +44,14 @@ class PayeverMethodHider
     }
 
     /**
+     * @return array
+     */
+    public function getHiddenMethods()
+    {
+        return $this->hiddenMethods;
+    }
+
+    /**
      * Intialize the default function for Payever utilities
      */
     private function __construct()
@@ -54,7 +64,7 @@ class PayeverMethodHider
      */
     public function processFailedMethod($paymentMethod)
     {
-        $paymentMethod = PayeverConfig::removeMethodPrefix($paymentMethod);
+        $paymentMethod = PayeverConfigHelper::removeMethodPrefix($paymentMethod);
 
         if (PaymentMethod::shouldHideOnReject($paymentMethod)) {
             $this->addFailedPaymentMethod($paymentMethod);
@@ -65,21 +75,44 @@ class PayeverMethodHider
      * Check if user have already failed to process with payment method
      *
      * @param string $paymentMethod
+     * @param string $variantId
      * @return bool
      */
-    public function isHiddenPaymentMethod($paymentMethod)
+    public function isHiddenPaymentMethod($paymentMethod, $variantId)
     {
-        return in_array(PayeverConfig::removeMethodPrefix($paymentMethod), $this->getHiddenMethods());
+        $methodName = PayeverConfigHelper::removeMethodPrefix($paymentMethod);
+        $hiddenForDevice = PaymentMethod::shouldHideOnCurrentDevice(
+            $methodName,
+            $this->getRequestHelper()->getServer('HTTP_USER_AGENT', '')
+        );
+
+        if ($hiddenForDevice) {
+            return true;
+        }
+
+        if (
+            $this->isCurrentAddressesDifferent()
+            && $this->isHiddenMethodOnDifferentAddress($methodName, $variantId)
+        ) {
+            return true;
+        }
+
+        return in_array($methodName, $this->hiddenMethods);
     }
 
     /**
-     * @return array
+     * @return bool
      */
-    private function getHiddenMethods()
+    private function isHiddenMethodOnDifferentAddress($paymentMethod, $variantId)
     {
-        return $this->isCurrentAddressesDifferent()
-            ? array_merge($this->hiddenMethods, $this->getShouldHideOnDifferentAddressMethods())
-            : $this->hiddenMethods;
+        $checkVariant = PayeverConfig::checkVariantForAddressEquality();
+        $hiddenMethodsOnDifferentAddress = $this->getShouldHideOnDifferentAddressMethods();
+
+        if (!$checkVariant) {
+            return in_array($paymentMethod, $hiddenMethodsOnDifferentAddress);
+        }
+
+        return in_array($variantId, $hiddenMethodsOnDifferentAddress);
     }
 
     /**

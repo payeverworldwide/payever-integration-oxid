@@ -8,9 +8,7 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-define('DS', DIRECTORY_SEPARATOR);
-
-$internalVendorAutoloadFile = __DIR__ . DS . 'vendor' . DS . 'autoload.php';
+$internalVendorAutoloadFile = __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 if (file_exists($internalVendorAutoloadFile)) {
     require_once $internalVendorAutoloadFile;

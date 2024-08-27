@@ -120,7 +120,7 @@ class PayeverOrderActionValidator
 
     /**
      * Get form error
-     *
+     * @codeCoverageIgnore
      * @return string
      */
     public function getError()
@@ -130,7 +130,7 @@ class PayeverOrderActionValidator
 
     /**
      * Get action manager (cancel|refund|shipping)
-     *
+     * @codeCoverageIgnore
      * @return PayeverOrderActionManager
      */
     public function getManager()

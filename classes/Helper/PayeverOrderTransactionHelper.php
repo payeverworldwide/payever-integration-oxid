@@ -22,6 +22,7 @@ class PayeverOrderTransactionHelper
     private static $instance = null;
 
     /**
+     * @codeCoverageIgnore
      * @return static
      */
     public static function getInstance()

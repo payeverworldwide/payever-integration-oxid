@@ -2,7 +2,7 @@
 [{$smarty.block.parent}]
 [{else}]
 
-<iframe sandbox="allow-same-origin allow-forms allow-top-navigation allow-scripts allow-popups allow-popups-to-escape-sandbox" frameborder="0" width="100%"  style="min-height: 600px" id="payever_iframe" src="[{$oView->getIframePaymentUrl()}]"></iframe>
+<iframe allow="payment" sandbox="allow-same-origin allow-forms allow-top-navigation allow-scripts allow-popups allow-popups-to-escape-sandbox" frameborder="0" width="100%"  style="min-height: 600px" id="payever_iframe" src="[{$oView->getIframePaymentUrl()}]"></iframe>
 
 <div id="basketContent" class="lineBox clear">
     [{block name="checkout_order_next_step_bottom"}]

@@ -33,40 +33,29 @@ class PayeverCancelManager extends PayeverOrderActionManager
     /**
      * @inheritDoc
      */
-    public function processAmount($order, $amount)
+    public function processAmount($order, $amount, $identifier = null)
     {
-        try {
-            //Send cancel api request
-            $paymentId = $order->getFieldData('oxtransid');
-            $response = $this->getPaymentsApiClient()->cancelPaymentRequest($paymentId, $amount);
+        //Send cancel api request
+        $paymentId = $order->getFieldData('oxtransid');
 
-            $this->actions[] = ['amount' => $amount, 'type' => payeverorderaction::TYPE_PRODUCT];
-            $this->onRequestComplete($order, $response);
-        } catch (\Exception $e) {
-            $this->onRequestFailed($order, $e->getMessage());
-        }
-
-        return $this->response;
+        return $this->getPaymentsApiClient()->cancelPaymentRequest($paymentId, $amount, $identifier);
     }
 
     /**
      * @inheritDoc
      */
-    public function processItems($order, $items)
+    public function processItems($order, $items, $identifier = null)
     {
-        try {
-            $paymentItems = $this->getPaymentItemEntities($order, $items);
+        $paymentId = $order->getFieldData('oxtransid');
+        $paymentItems = $this->getPaymentItemEntities($order, $items);
 
-            //Send cancel api request
-            $paymentId = $order->getFieldData('oxtransid');
-            $response = $this->getPaymentsApiClient()->cancelItemsPaymentRequest($paymentId, $paymentItems);
-
-            $this->onRequestComplete($order, $response);
-        } catch (\Exception $e) {
-            $this->onRequestFailed($order, $e->getMessage());
-        }
-
-        return $this->response;
+        //Send cancel api request
+        return $this->getPaymentsApiClient()->cancelItemsPaymentRequest(
+            $paymentId,
+            $paymentItems,
+            null,
+            $identifier
+        );
     }
 
     /**

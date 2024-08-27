@@ -17,6 +17,7 @@ use Payever\Sdk\Payments\Enum\Status;
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
+ * @codeCoverageIgnore
  */
 class payeverExpressDispatcher extends payeverStandardDispatcher
 {

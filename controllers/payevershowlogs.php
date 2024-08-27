@@ -22,42 +22,101 @@ class payeverShowLogs extends oxUBase
 
     /**
      * @return void
-     * @throws Exception
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.ExitExpression)
      */
     public function render()
     {
-        $apiClient = $this->getThirdPartyPluginsApiClient();
-
         try {
-            if (
-                !$apiClient->validateToken(
-                    $this->getConfigHelper()->getBusinessUuid(),
-                    $this->getRequestHelper()->getHeader('Authorization')
-                )
-            ) {
-                throw new \Exception('Access denied.');
-            }
-        } catch (\Exception $exception) {
-            header('Content-Type: application/json');
-            header('401 Unauthorized');
+            $this->validateRequest();
+            $this->send($this->getLogZipFile(false));
+        } catch (\Exception $e) {
+            header("HTTP/1.1 401 Unauthorized");
 
             //@codeCoverageIgnoreStart
-            echo json_encode(['error' => $exception->getMessage()]);
+            echo 'Error: ' . $e->getMessage();
             exit;
             //@codeCoverageIgnoreEnd
         }
+    }
 
-        $fromDate = $this->getRequestHelper()->getStringParam('fromDate');
-        if (!$fromDate) {
-            $fromDate = date('Y-m-d');
+    /**
+     * @SuppressWarnings(PHPMD.ExitExpression)
+     * @return void
+     */
+    public function shop()
+    {
+        try {
+            $this->validateRequest();
+            $this->send($this->getLogZipFile(true));
+        } catch (\Exception $e) {
+            header("HTTP/1.1 401 Unauthorized");
+
+            //@codeCoverageIgnoreStart
+            echo 'Error: ' . $e->getMessage();
+            exit;
+            //@codeCoverageIgnoreEnd
         }
-        $toDate = $this->getRequestHelper()->getStringParam('toDate');
-        if (!$toDate) {
-            $toDate = date('Y-m-d');
+    }
+
+    /**
+     * @param $zipFile
+     * @SuppressWarnings(PHPMD.ExitExpression)
+     * @return void
+     */
+    private function send($zipFile)
+    {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/zip;');
+        header('Content-Disposition: attachment; filename="' . basename($zipFile) . '";');
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+        header('Pragma: public');
+        readfile($zipFile);
+        exit();
+    }
+
+    /**
+     * @param $addSystemFlag
+     * @return ZipArchive
+     * @throws Exception
+     */
+    private function getLogZipFile($addSystemFlag)
+    {
+        $logsDirectory = OX_BASE_PATH . 'log';
+        $zipFilePath = $logsDirectory . DIRECTORY_SEPARATOR
+            . 'payever_' . (new \DateTime())->format('Y-m-d-H-i-s') . '.zip';
+
+        if (file_exists($zipFilePath)) {
+            unlink($zipFilePath);
         }
 
+        $zipArchive = new ZipArchive();
+        $zipArchive->open($zipFilePath, ZipArchive::CREATE);
+
+        $logFiles = [
+            $this->buildPayeverLogFile()
+        ];
+
+        if ($addSystemFlag) {
+            $logFiles = glob($logsDirectory . DIRECTORY_SEPARATOR . '*.log');
+        }
+
+        foreach ($logFiles as $filename) {
+            $zipArchive->addFile($filename, basename($filename));
+        }
+
+        $zipArchive->close();
+
+        return $zipFilePath;
+    }
+
+    /**
+     * @return string
+     * @throws Exception
+     */
+    private function buildPayeverLogFile()
+    {
         $logsListFactory = new PayeverLogsListFactory();
         $collection = $logsListFactory->create();
         $collection->clear();
@@ -70,37 +129,69 @@ class payeverShowLogs extends oxUBase
         $query .= ' ORDER BY `log_id`';
         $collection->selectString($query);
 
-        $result = [];
+        $logsDirectory = OX_BASE_PATH . 'log';
+        $logFile = $logsDirectory . DIRECTORY_SEPARATOR . 'payever_export.log';
+
+        if (file_exists($logFile)) {
+            unlink($logFile);
+        }
+
         $items = $collection->getArray();
+
         foreach ($items as $item) {
             /** @var payeverlogs $item */
             $data = html_entity_decode($item->getFieldData('data'));
             $createdAt = $item->getFieldData('created_at');
 
             if (
-                (new DateTime($createdAt)) > (new DateTime(date('Y-m-d 00:00:00', strtotime($fromDate)))) &&
-                (new DateTime($createdAt)) < (new DateTime(date('Y-m-d 23:59:59', strtotime($toDate))))
+                (new DateTime($createdAt)) > (new DateTime(date('Y-m-d 00:00:00', strtotime('-90 days')))) && //phpcs:ignore
+                (new DateTime($createdAt)) < (new DateTime(date('Y-m-d 23:59:59')))
             ) {
                 $context = \json_decode($data, true);
+
                 if (\json_last_error() !== JSON_ERROR_NONE) {
                     $context = $data;
                 }
 
-                $result[] = [
-                    'level' => $item->getFieldData('level'),
-                    'message' => $item->getFieldData('message'),
-                    'data' => $context,
-                    'created_at' => $createdAt
-                ];
+                file_put_contents(
+                    $logFile,
+                    sprintf(
+                        "[%s] payever.%s: %s %s []\n",
+                        $createdAt,
+                        $item->getFieldData('level'),
+                        $item->getFieldData('message'),
+                        json_encode($context)
+                    ),
+                    FILE_APPEND
+                );
             }
         }
 
-        header('Content-Type: application/json');
-        header('HTTP/1.1 200');
+        return $logFile;
+    }
 
-        //@codeCoverageIgnoreStart
-        echo \json_encode($result);
-        exit;
-        //@codeCoverageIgnoreEnd
+    /**
+     * @return $this
+     * @throws Exception
+     */
+    private function validateRequest()
+    {
+        $token = $this->getRequestHelper()->getHeader('Authorization');
+
+        if (empty($token)) {
+            $token = $this->getRequestHelper()->getStringParam('token');
+        }
+
+        if (
+            !$this->getThirdPartyPluginsApiClient()
+                ->validateToken(
+                    $this->getConfigHelper()->getBusinessUuid(),
+                    $token
+                )
+        ) {
+            throw new \Exception('Access denied.');
+        }
+
+        return $this;
     }
 }

@@ -13,6 +13,7 @@ use Payever\Sdk\Payments\Http\MessageEntity\ConvertedPaymentOptionEntity;
 use Payever\Sdk\Payments\Http\MessageEntity\ListPaymentOptionsResultEntity;
 use Payever\Sdk\Payments\Http\ResponseEntity\ListPaymentOptionsResponse;
 use Payever\Sdk\Plugins\Http\ResponseEntity\PluginVersionResponseEntity;
+use Payever\Sdk\Payments\WidgetsApiClient;
 use Psr\Log\LogLevel;
 
 /**
@@ -22,6 +23,13 @@ use Psr\Log\LogLevel;
  */
 class payever_config extends Shop_Config
 {
+    use DryRunTrait;
+    use PayeverPaymentsApiClientTrait;
+
+    const LANG_PARAM = 'editlanguage';
+
+    const DEFAULT_LANG = 1;
+
     const THUMBNAILS_PATH = 'out/pictures/%s.png';
 
     /** @var string|null */
@@ -45,11 +53,28 @@ class payever_config extends Shop_Config
     protected $_parameters = [];
 
     /**
-     * {@inheritDoc}
+     * @var \OxidEsales\Eshop\Core\Language
      */
-    public function __construct()
+    private $language;
+
+    /**
+     * @var oxpayment
+     */
+    private $oxPayment;
+
+    /**
+     * @var WidgetsApiClient
+     */
+    private $widgetsApiClient;
+
+    /**
+     * {@inheritDoc}
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     */
+    public function __construct($dryRun = false)
     {
-        parent::__construct();
+        $this->dryRun = $dryRun;
+        !$this->dryRun && parent::__construct();
         $this->subscriptionManager = new PayeverSubscriptionManager();
     }
 
@@ -81,6 +106,8 @@ class payever_config extends Shop_Config
         );
 
         $this->_aViewData['payever_config'] = PayeverConfig::get(PayeverConfig::VAR_CONFIG);
+        $this->_aViewData['payever_b2b_config'] = PayeverConfig::get(PayeverConfig::VAR_B2B_CONFIG);
+        $this->_aViewData['widgets'] = $this->getWidgetOptions();
         $this->_aViewData['isset_live'] = PayeverConfig::getIsLiveKeys();
         $this->_aViewData['log_file_exists'] = file_exists(PayeverConfig::getLogFilename());
         $this->_aViewData['payever_error'] = $this->getMerchantConfigErrorId();
@@ -88,6 +115,8 @@ class payever_config extends Shop_Config
         $this->_aViewData['payever_flash_messages'] = $this->flashMessages;
         $this->_aViewData['payever_version_info'] = $this->getVersionsList();
         $this->_aViewData['payever_new_version'] = $this->checkLatestVersion();
+        $this->_aViewData['payever_widget_active'] = ExpressWidget::isWidgetActive();
+        $this->_aViewData['payever_allow_iframe'] = PayeverConfig::ALLOW_IFRAME;
 
         if (file_exists(PayeverConfig::getLogFilename())) {
             $this->_aViewData['log_filename'] = substr(
@@ -191,17 +220,21 @@ class payever_config extends Shop_Config
         return [
             PayeverConfig::KEY_API_CLIENT_ID     => '2746_6abnuat5q10kswsk4ckk4ssokw4kgk8wow08sg0c8csggk4o00',
             PayeverConfig::KEY_API_CLIENT_SECRET => '2fjpkglmyeckg008oowckco4gscc4og4s0kogskk48k8o8wgsc',
-            PayeverConfig::KEY_API_SLUG          => 'payever',
+            PayeverConfig::KEY_API_SLUG          => '815c5953-6881-11e7-9835-52540073a0b6',
         ];
     }
 
     /**
      * @param string $thumbnailUrl
      * @param string $thumbnailName
+     * @codeCoverageIgnore
      * @return false|string
      */
     public function saveThumbnailInDirectory($thumbnailUrl, $thumbnailName)
     {
+        if ($this->dryRun) {
+            return false;
+        }
         $savePath = $this->getConfig()->getConfigParam('sShopDir') . sprintf(self::THUMBNAILS_PATH, $thumbnailName);
         $curl = curl_init($thumbnailUrl);
         $file = fopen($savePath, 'wb');
@@ -227,12 +260,12 @@ class payever_config extends Shop_Config
     public function synchronize()
     {
         $prefix = PayeverConfig::PLUGIN_PREFIX;
-        oxDb::getDb()->execute(sprintf("DELETE FROM `oxobject2payment` where `oxpaymentid` LIKE '%%%s%%'", $prefix));
-        oxDb::getDb()->execute(sprintf("DELETE FROM `oxpayments` where `oxid` LIKE '%%%s%%'", $prefix));
+        oxDb::getDb()->execute(sprintf("DELETE FROM `oxobject2payment` where `OXPAYMENTID` LIKE '%%%s%%'", $prefix));
+        oxDb::getDb()->execute(sprintf("DELETE FROM `oxpayments` where `OXID` LIKE '%%%s%%'", $prefix));
         PayeverInstaller::migrateDB();
 
         $locales = $this->getLangList();
-        $oPayment = oxNew('oxPayment');
+        $oPayment = $this->getOxPayment();
 
         try {
             $methods = $this->retrieveActiveMethods();
@@ -248,9 +281,16 @@ class payever_config extends Shop_Config
             return;
         }
 
+        $wlMethods = $this->getWLSupportedPaymentMethods();
+
         $checkAddressEqualityMethods = [];
         $shippingNotAllowedMethods = [];
+        $b2bCountries = [];
         foreach ($methods as $methodCode => $method) {
+            if ($wlMethods && !in_array(PayeverConfigHelper::removeMethodPrefix($methodCode), $wlMethods)) {
+                continue;
+            }
+
             $methodData = $method->toArray();
 
             $oPayment->load($methodCode);
@@ -284,13 +324,27 @@ class payever_config extends Shop_Config
             $oPayment->oxpayments__oxpercentfee = new oxField($method->getVariableFee(), oxField::T_RAW);
             $oPayment->oxpayments__oxfixedfee = new oxField($method->getFixedFee(), oxField::T_RAW);
             $oPayment->oxpayments__oxisredirectmethod = new oxField($method->isRedirectMethod(), oxField::T_RAW);
+            $oPayment->oxpayments__oxissubmitmethod = new oxField($method->isSubmitMethod(), oxField::T_RAW);
+            $oPayment->oxpayments__oxisb2bmethod = new oxField($method->isB2BMethod(), oxField::T_RAW);
 
             if ($method->getShippingAddressEquality()) {
-                $checkAddressEqualityMethods[] = PayeverConfig::removeMethodPrefix($methodCode);
+                $checkAddressEqualityMethods[] = $method->getVariantId();
             }
 
             if (!$method->getShippingAddressAllowed()) {
-                $shippingNotAllowedMethods[] = PayeverConfig::removeMethodPrefix($methodCode);
+                $shippingNotAllowedMethods[] = $method->getVariantId();
+            }
+
+            if ($method->isB2BMethod()) {
+                $variantOptions = $method->getVariantOptions();
+                $variantB2bCountries = $variantOptions ? $variantOptions->getCountries() : [];
+
+                // Use old method as failback
+                if (count($variantB2bCountries) === 0) {
+                    $variantB2bCountries = $method->getOptions()->getCountries();
+                }
+
+                $b2bCountries += $variantB2bCountries;
             }
 
             $thumbnailPath = $this->saveThumbnailInDirectory($method->getThumbnail1(), $oPayment->oxpayments__oxid);
@@ -316,16 +370,29 @@ class payever_config extends Shop_Config
                     $oObject2Payment->init('oxobject2payment');
                     $oObject2Payment->oxobject2payment__oxpaymentid = new oxField($sOxId);
                     $oObject2Payment->oxobject2payment__oxobjectid = new oxField($countryId);
-                    $oObject2Payment->oxobject2payment__oxtype = new oxField("oxcountry");
+                    $oObject2Payment->oxobject2payment__oxtype = new oxField('oxcountry');
                     $oObject2Payment->save();
                 }
             }
         }
 
+        $companySearchStatus = $this->getPaymentsApiClient()->isB2bSearchActive();
+        PayeverConfig::set(
+            PayeverConfig::VAR_B2B_CONFIG,
+            PayeverConfig::KEY_B2B_COUNTRIES,
+            $b2bCountries
+        );
+        PayeverConfig::set(
+            PayeverConfig::VAR_B2B_CONFIG,
+            PayeverConfig::KEY_COMPANY_SEARCH_ENABLED,
+            $companySearchStatus
+        );
+
         $this->save(
             [
                 PayeverConfig::ADDRESS_EQUALIY_METHODS => $checkAddressEqualityMethods,
-                PayeverConfig::SHIPPING_NOT_ALLOWED_METHODS => $shippingNotAllowedMethods
+                PayeverConfig::SHIPPING_NOT_ALLOWED_METHODS => $shippingNotAllowedMethods,
+                PayeverConfig::CHECK_VARIANT_FOR_ADDRESS_EQUALITY => true
             ]
         );
 
@@ -333,8 +400,19 @@ class payever_config extends Shop_Config
         $pluginsApiClient->registerPlugin();
     }
 
+    public function synchronizeWidgets()
+    {
+        try {
+            $widgets = $this->getWidgets();
+            PayeverConfig::setWidgets($widgets);
+        } catch (\Exception $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
     /**
      * Sends payever log file
+     * @codeCoverageIgnore
      */
     public function downloadLogFile()
     {
@@ -344,6 +422,7 @@ class payever_config extends Shop_Config
 
     /**
      * Sends application log file
+     * @codeCoverageIgnore
      */
     public function downloadAppLogFile()
     {
@@ -353,6 +432,7 @@ class payever_config extends Shop_Config
 
     /**
      * Clears cache
+     * @codeCoverageIgnore
      */
     public function clearCache()
     {
@@ -370,7 +450,7 @@ class payever_config extends Shop_Config
     {
         $currency = $this->getConfig()->getActShopCurrencyObject();
         $locales = $this->getLangList();
-        $paymentsApiClient = PayeverApiClientProvider::getPaymentsApiClient();
+        $paymentsApiClient = $this->getPaymentsApiClient();
         $payeverMethods = [];
 
         foreach (array_keys($locales) as $locale) {
@@ -396,10 +476,7 @@ class payever_config extends Shop_Config
             $convertedOptions = $this->convertPaymentOptionVariants($result);
             foreach ($convertedOptions as $methodCode => $method) {
                 /** @var ListPaymentOptionsResultEntity $method */
-                $originPaymentMethod = $method->getPaymentMethod();
-                $key = $method->getVariantName() ?
-                    PayeverConfig::PLUGIN_PREFIX . $methodCode :
-                    PayeverConfig::PLUGIN_PREFIX . $originPaymentMethod;
+                $key = PayeverConfig::PLUGIN_PREFIX . $methodCode;
 
                 if (!isset($payeverMethods[$key])) {
                     $payeverMethods[$key] = $method;
@@ -435,7 +512,7 @@ class payever_config extends Shop_Config
     private function getLangList()
     {
         $result = [];
-        $aLang = oxRegistry::getLang()->getLanguageArray();
+        $aLang = $this->getLanguage()->getLanguageArray();
 
         foreach ($aLang as $oLang) {
             $result[$oLang->abbr] = $oLang->id ? '_' . $oLang->id : '';
@@ -455,7 +532,7 @@ class payever_config extends Shop_Config
     public function getMerchantConfigErrorId()
     {
         $request = $_POST;
-        if ($request['fnc'] == 'synchronize') {
+        if ($request['fnc'] == 'synchronize' || $request['fnc'] == 'synchronizeWidgets') {
             if ($this->errorMessage) {
                 return 4;
             }
@@ -485,7 +562,9 @@ class payever_config extends Shop_Config
                 return $latestVersion->toArray();
             }
         } catch (\Exception $exception) {
-            PayeverConfig::getLogger()->notice(sprintf('Plugin version checking failed: %s', $exception->getMessage()));
+            PayeverConfigHelper::getLogger()->notice(
+                sprintf('Plugin version checking failed: %s', $exception->getMessage())
+            );
         }
 
         return false;
@@ -513,6 +592,7 @@ class payever_config extends Shop_Config
                 $convertedOption->setVariantName($variantName);
                 $convertedOption->setShippingAddressAllowed($variant->getShippingAddressAllowed());
                 $convertedOption->setShippingAddressEquality($variant->getShippingAddressEquality());
+                $convertedOption->setVariantOptions($variant->getOptions());
 
                 if (isset($convertedPaymentOption[$poWithVariant->getPaymentMethod()])) {
                     $key = $poIndex
@@ -532,8 +612,34 @@ class payever_config extends Shop_Config
     }
 
     /**
+     * @return array
+     */
+    private function getWLSupportedPaymentMethods()
+    {
+        $wlPlugin = $this->getWhiteLabelPlugin();
+
+        return $wlPlugin ? $wlPlugin->getSupportedMethods() : [];
+    }
+
+    /**
+     * @return \Payever\Sdk\Core\Http\ResponseEntity
+     */
+    protected function getWhiteLabelPlugin()
+    {
+        try {
+            $wlPluginApiClient = PayeverApiClientProvider::getWhiteLabelPluginApiClient();
+            return $wlPluginApiClient
+                ->getWhiteLabelPlugin(PayeverConfig::PLUGIN_CODE, PayeverConfig::SHOP_SYSTEM)
+                ->getResponseEntity();
+        } catch (\Exception $exception) {
+            return null;
+        }
+    }
+
+    /**
      * @param string $filePath
      * @SuppressWarnings(PHPMD.ExitExpression)
+     * @codeCoverageIgnore
      */
     protected function sendFile($filePath)
     {
@@ -550,6 +656,149 @@ class payever_config extends Shop_Config
         readfile($filePath);
 
         exit;
+    }
+
+    /**
+     * @return array
+     */
+    private function getWidgets()
+    {
+        $widgets = $this->getWidgetApiClient()
+            ->getWidgets()
+            ->getResponseEntity()
+            ->getResult();
+        $result = [];
+        foreach ($widgets as $widget) {
+            $payments = $widget->getPayments();
+            if (!$widget->getIsVisible() || empty($payments)) {
+                continue;
+            }
+            $widgetData = [
+                'business_id' => $widget->getBusinessId(),
+                'checkout_id' => $widget->getCheckoutId(),
+                'type' => $widget->getType(),
+                'payments' => []
+            ];
+            foreach ($payments as $paymentMethod) {
+                if ($paymentMethod->getEnabled()) {
+                    $widgetData['payments'][] = $paymentMethod->getPaymentMethod();
+                }
+            }
+            $result[$widget->getId()] = $widgetData;
+        }
+
+        return $result;
+    }
+
+    private function getWidgetOptions()
+    {
+        $lang =  $this->getConfig()->getRequestParameter(static::LANG_PARAM) ?: oxRegistry::getLang()->getTplLanguage();
+        if (!$lang) {
+            $lang = self::DEFAULT_LANG;
+        }
+        $options = [
+            ['id' => '-', 'name' => oxRegistry::getLang()->translateString('choose_widget', $lang, false)]
+        ];
+        try {
+            $widgets = PayeverConfig::getWidgets();
+            foreach ($widgets as $widgetId => $widget) {
+                $translatedPayments = [];
+                foreach ($widget['payments'] as $paymentMethod) {
+                    $translatedPayments[] = oxRegistry::getLang()->translateString($paymentMethod, $lang, false);
+                }
+                $options[] = [
+                    'id'   => $widgetId,
+                    'name' => sprintf(
+                        "%s - %s",
+                        oxRegistry::getLang()->translateString($widget['type'], $lang, false),
+                        implode(',', $translatedPayments)
+                    )
+                ];
+            }
+        } catch (\Exception $e) {
+            // skip
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param PayeverSubscriptionManager
+     * @return $this
+     */
+    public function setSubscriptionManager($payeverSubscriptionManager)
+    {
+        $this->subscriptionManager = $payeverSubscriptionManager;
+
+        return $this;
+    }
+
+    /**
+     * @return \OxidEsales\Eshop\Core\Language
+     */
+    public function getLanguage()
+    {
+        if ($this->language === null) {
+            return oxRegistry::getLang();
+        }
+
+        return $this->language;
+    }
+
+    /**
+     * @param \OxidEsales\Eshop\Core\Language
+     * @return $this
+     */
+    public function setLanguage($language)
+    {
+        $this->language = $language;
+
+        return $this;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     * @return oxpayment
+     */
+    private function getOxPayment()
+    {
+        if ($this->oxPayment === null) {
+            return oxNew('oxPayment');
+        }
+
+        return $this->oxPayment;
+    }
+
+    /**
+     * @param oxpayment
+     */
+    public function setOxPayment($oxPayment)
+    {
+        $this->oxPayment = $oxPayment;
+
+        return $this;
+    }
+
+    /**
+     * @return WidgetsApiClient
+     * @codeCoverageIgnore
+     */
+    private function getWidgetApiClient()
+    {
+        return null === $this->widgetsApiClient
+            ? $this->widgetsApiClient = PayeverApiClientProvider::getWidgetsApiClient()
+            : $this->widgetsApiClient;
+    }
+
+     /**
+     * @param WidgetsApiClient
+     * @codeCoverageIgnore
+     */
+    public function setWidgetApiClient($widgetsApiClient)
+    {
+        $this->widgetsApiClient = $widgetsApiClient;
+
+        return $this;
     }
 }
 // phpcs:enable PSR2.Classes.PropertyDeclaration.Underscore

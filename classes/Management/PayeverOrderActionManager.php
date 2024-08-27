@@ -15,24 +15,25 @@ use Payever\Sdk\Payments\Http\RequestEntity\PaymentItemEntity;
 
 /**
  * Class PayeverOrderActionManager
+ * @codeCoverageIgnore
  */
 abstract class PayeverOrderActionManager
 {
     use PayeverOrderActionHelperTrait;
+    use PayeverPaymentActionHelperTrait;
     use PayeverOrderTransactionHelperTrait;
     use PayeverLoggerTrait;
     use PayeverFieldFactoryTrait;
     use PayeverPaymentsApiClientTrait;
 
+    const TYPE_ITEM = 'item';
+    const TYPE_AMOUNT = 'amount';
+    const TYPE_TOTAL = 'full';
+
     /**
      * @var bool
      */
     public $confirmCheckbox = false;
-
-    /**
-     * @var array
-     */
-    public $response = [];
 
     /**
      * @var array
@@ -43,6 +44,38 @@ abstract class PayeverOrderActionManager
      * @var array
      */
     protected $updateArticles = [];
+
+    /**
+     * Process action request
+     *
+     * @param oxOrder $oOrder
+     * @param array $params
+     *
+     * @return array
+     */
+    public function processAction($oOrder, $params)
+    {
+        try {
+            $identifier = $this->getPaymentActionHelper()->generateIdentifier();
+            $this->getPaymentActionHelper()->addAction($oOrder->getId(), $identifier, $this->getActionType());
+            switch ($params['type']) {
+                case self::TYPE_AMOUNT:
+                case self::TYPE_TOTAL:
+                    $response = $this->processAmount($oOrder, $params['amount'], $identifier);
+                    $this->actions[] = ['amount' => $params['amount'], 'type' => payeverorderaction::TYPE_PRODUCT];
+                    break;
+                case self::TYPE_ITEM:
+                    $response = $this->processItems($oOrder, $params['items'], $identifier);
+                    break;
+                default:
+                    throw new \Exception('Invalid action type');
+            }
+
+            return $this->onRequestComplete($oOrder, $response);
+        } catch (\Exception $e) {
+            return $this->onRequestFailed($oOrder, $e->getMessage());
+        }
+    }
 
     /**
      * Add action to actions list table
@@ -152,7 +185,7 @@ abstract class PayeverOrderActionManager
      *
      * @return array
      */
-    public function getPaymentItemEntities($order, $items)
+    protected function getPaymentItemEntities($order, $items)
     {
         $paymentItems = [];
         $articles = $order->getOrderArticles(true);
@@ -181,7 +214,7 @@ abstract class PayeverOrderActionManager
 
             $this->actions[] = [
                 'amount' => $order->getFieldData('oxgiftcardcost'),
-                'type' => payeverorderaction::TYPE_GIFTCARD_COST
+                'type' => payeverorderaction::TYPE_GIFTCARD_COST,
             ];
         }
 
@@ -194,7 +227,7 @@ abstract class PayeverOrderActionManager
 
             $this->actions[] = [
                 'amount' => $order->getFieldData('oxwrapcost'),
-                'type' => payeverorderaction::TYPE_WRAP_COST
+                'type' => payeverorderaction::TYPE_WRAP_COST,
             ];
         }
 
@@ -205,9 +238,9 @@ abstract class PayeverOrderActionManager
      * @param oxOrder $order
      * @param \Payever\Sdk\Core\Http\Response $response
      *
-     * @return void
+     * @return array
      */
-    public function onRequestComplete($order, $response)
+    protected function onRequestComplete($order, $response)
     {
         $responseArray = $response->getResponseEntity()->toArray();
 
@@ -219,7 +252,7 @@ abstract class PayeverOrderActionManager
                     'actionId' => $responseArray['call']['id'],
                     'amount' => $action['amount'],
                     'state' => $responseArray['call']['status'],
-                    'type' => $action['type']
+                    'type' => $action['type'],
                 ]);
             }
         }
@@ -241,25 +274,29 @@ abstract class PayeverOrderActionManager
         $order->oxorder__oxtransstatus = $this->getFieldFactory()->createRaw($status);
         $order->save();
 
-        $this->response['success'] = $response->isSuccessful();
-        $this->response['response'] = $responseArray;
+        return [
+            'success' => $response->isSuccessful(),
+            'response' => $responseArray,
+        ];
     }
 
     /**
      * @param oxOrder $order
      * @param string $msg
      *
-     * @return void
+     * @return array
      */
-    public function onRequestFailed($order, $msg)
+    protected function onRequestFailed($order, $msg)
     {
         $this->getLogger()->error($this->getActionType() . 'PaymentRequest Error:', [
             'exception_message' => $msg,
             'paymentId' => $order->getFieldData('oxtransid'),
         ]);
 
-        $this->response['success'] = false;
-        $this->response['error'] = $msg;
+        return [
+            'success' => false,
+            'error' => $msg,
+        ];
     }
 
     /**
@@ -267,20 +304,22 @@ abstract class PayeverOrderActionManager
      *
      * @param oxOrder $order
      * @param float $amount
+     * @param string $identifier
      *
      * @return mixed
      */
-    abstract public function processAmount($order, $amount);
+    abstract public function processAmount($order, $amount, $identifier = null);
 
     /**
      * Process partial items request
      *
      * @param oxOrder $order
      * @param array $items
+     * @param string $identifier
      *
      * @return mixed
      */
-    abstract public function processItems($order, $items);
+    abstract public function processItems($order, $items, $identifier = null);
 
     /**
      * Check if the partial amount form is allowed

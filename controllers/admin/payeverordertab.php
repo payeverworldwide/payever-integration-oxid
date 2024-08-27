@@ -31,7 +31,7 @@ class payeverordertab extends oxAdminDetails
      */
     public function render()
     {
-        parent::render();
+        !$this->dryRun && parent::render();
 
         /** @var oxOrder $oOrder */
         $oOrder = $this->getOrderFactory()->create();
@@ -97,7 +97,11 @@ class payeverordertab extends oxAdminDetails
         $total = $this->getOrderTransactionHelper()->getTotal($oOrder);
 
         //Send request (ship, cancel, refund) to api
-        $response = $this->getManager($type)->processAmount($oOrder, $total);
+        $response = $this->getManager($type)->processAction($oOrder, [
+            'type' => PayeverOrderActionManager::TYPE_TOTAL,
+            'amount' => $total,
+        ]);
+
         if (isset($response['error'])) {
             $this->_aViewData['formError'][$type] = $response['error'];
         }
@@ -131,7 +135,11 @@ class payeverordertab extends oxAdminDetails
         $amount = $validator->getAmount();
 
         //Send partial amount request (ship, cancel, refund) to api
-        $response = $validator->getManager()->processAmount($oOrder, $amount);
+        $response = $validator->getManager()->processAction($oOrder, [
+            'type' => PayeverOrderActionManager::TYPE_AMOUNT,
+            'amount' => $amount,
+        ]);
+
         if (isset($response['error'])) {
             $this->_aViewData['formError'][$type] = $response['error'];
         }
@@ -164,7 +172,10 @@ class payeverordertab extends oxAdminDetails
 
         //Send partial items request (ship, cancel, refund) to api
         $items = $validator->getItems();
-        $response = $validator->getManager()->processItems($oOrder, $items);
+        $response = $validator->getManager()->processAction($oOrder, [
+            'type' => PayeverOrderActionManager::TYPE_ITEM,
+            'items' => $items,
+        ]);
 
         if (isset($response['error'])) {
             $this->_aViewData['formError'][$type] = $response['error'];
@@ -193,5 +204,16 @@ class payeverordertab extends oxAdminDetails
         return null === $this->lang
             ? $this->lang = oxregistry::getLang()
             : $this->lang;
+    }
+
+    /**
+     *
+     * @param oxLang
+     */
+    public function setLanguage($oxLang)
+    {
+        $this->lang = $oxLang;
+
+        return $this;
     }
 }

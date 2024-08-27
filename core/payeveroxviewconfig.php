@@ -11,7 +11,7 @@
 
 /**
  * Getter of Payever configuration inside views
- *
+ * @codeCoverageIgnore
  * @extend oxviewconfig
  */
 class payeverOxViewConfig extends payeverOxViewConfig_parent

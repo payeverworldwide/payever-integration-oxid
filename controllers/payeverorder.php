@@ -92,8 +92,8 @@ class payeverOrder extends payeverOrder_parent
                 if (!$redirectUrl) {
                     return 'payment';
                 }
-                $isRedirectMethod = $this->getSession()->getVariable('payever_is_redirect_method');
-                if ($isRedirectMethod || PayeverConfig::getIsRedirect()) {
+                $isRedirectMethod = $this->getSession()->getVariable(PayeverConfig::SESS_IS_REDIRECT_METHOD);
+                if ($isRedirectMethod || PayeverConfig::getIsRedirect() || !PayeverConfig::ALLOW_IFRAME) {
                     $oSession->setVariable('paymentid', $sPaymentId);
                     $oSession->setVariable('oxidpayever_payment_view_redirect_url', $redirectUrl);
 

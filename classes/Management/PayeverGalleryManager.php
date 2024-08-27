@@ -72,7 +72,7 @@ class PayeverGalleryManager
                 !in_array($imagesUuid[$key], $existingImagesUuid, true)
                 && !in_array($filename, $existingImagesNames, true)
             ) {
-                $filePath = rtrim($fileDir, '/') . DS . $filename;
+                $filePath = rtrim($fileDir, '/') . DIRECTORY_SEPARATOR . $filename;
                 if ($this->downloadImage($filePath, $url)) {
                     $fieldName = sprintf('oxarticles__oxpic%s', $imageIndex);
                     if (!isset($product->$fieldName) || false === $product->$fieldName) {

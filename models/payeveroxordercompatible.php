@@ -185,9 +185,11 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         if (!$blRecalculatingOrder) {
             $this->_markVouchers($oBasket, $oUser);
 
-            // send order by email to shop owner and current user
-            // skipping this action in case of order recalculation
-            $this->_sendOrderByEmail($oUser, $oBasket, $oUserPayment);
+            if (!isset($_GET['skipEmail'])) {
+                // send order by email to shop owner and current user
+                // skipping this action in case of order recalculation
+                $this->_sendOrderByEmail($oUser, $oBasket, $oUserPayment);
+            }
         }
 
         return self::ORDER_STATE_OK;

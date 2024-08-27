@@ -9,19 +9,24 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\Sdk\Core\Logger\FileLogger;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.ExcessivePublicCount)
+ * @codeCoverageIgnore
  */
 class PayeverConfig
 {
+    const LOCALE_STORE_VALUE = 'store';
+
     const LOG_FILENAME = 'payever.log';
 
     const PLUGIN_CODE = 'payever';
+
+    const SHOP_SYSTEM = 'oxid';
 
     const PLUGIN_PREFIX = 'oxpe_';
 
@@ -41,6 +46,7 @@ class PayeverConfig
     const KEY_CUSTOM_THIRD_PARTY_PRODUCTS_LIVE_URL = 'payeverThirdPartyProductsLiveUrl';
 
     const VAR_CONFIG = 'payever_config';
+    const VAR_WIDGET_CONFIG = 'payever_widget';
 
     const KEY_DEBUG = 'debugMode';
     const KEY_LOG_LEVEL = 'logLevel';
@@ -51,6 +57,7 @@ class PayeverConfig
 
     const KEY_LANGUAGE = 'defaultLanguage';
     const KEY_IS_REDIRECT = 'redirectToPayever';
+    const KEY_CREATE_PENDING_ORDER = 'createPendingOrder';
 
     const API_MODE_SANDBOX = 0;
     const API_MODE_LIVE = 1;
@@ -60,12 +67,16 @@ class PayeverConfig
     const KEY_API_CLIENT_ID = 'clientId';
     const KEY_API_CLIENT_SECRET = 'clientSecrect';
 
+    const KEY_FE_WIDGET_ID = 'fe_widget_id';
+    const KEY_FE_WIDGET_THEME = 'fe_widget_theme';
+    const KEY_FE_WIDGETS = 'fe_widgets';
+
+    const KEY_FE_DISPLAY_ON_CART = 'fe_show_widget_cart';
+    const KEY_FE_DISPLAY_ON_PRODUCT = 'fe_show_widget_product';
+
     const KEY_APM_SECRET_SANDBOX = 'apmSercretSandbox';
     const KEY_APM_SECRET_LIVE = 'apmSercretLive';
 
-
-    const DIAGNOSTIC_DISABLED = 0;
-    const DIAGNOSTIC_ENABLED = 1;
     const KEY_DIAGNOSTIC_MODE = 'diagnosticMode';
 
     const VAR_PLUGIN_COMMANDS = 'payever_commands';
@@ -73,6 +84,7 @@ class PayeverConfig
 
     const VAR_PLUGIN_API_VERSION = 'payever_api_version';
     const KEY_PLUGIN_API_VERSION = 'payeverApiVersion';
+    const API_VERSION_3 = '3';
 
     const PRODUCTS_SYNC_ENABLED = 'payeverProductsSyncEnabled';
     const PRODUCTS_OUTWARD_SYNC_ENABLED = 'payeverProductsOutwardSyncEnabled';
@@ -81,24 +93,26 @@ class PayeverConfig
     const PRODUCTS_SYNC_CURRENCY_RATE_SOURCE = 'payeverProductsCurrencyRateSource';
 
     const ADDRESS_EQUALIY_METHODS = 'payeverCheckAddressEqualityMethods';
+
+    const VAR_B2B_CONFIG = 'payever_b2b_config';
+    const KEY_B2B_COUNTRIES = 'payeverB2BCountries';
+    const KEY_COMPANY_SEARCH_ENABLED = 'payeverCompanySearchEnabled';
+
+    const CHECK_VARIANT_FOR_ADDRESS_EQUALITY = 'payeverCheckVariantForAddressEquality';
     const SHIPPING_NOT_ALLOWED_METHODS = 'shippingNotAllowedMethods';
 
-    const SYNC_MODE_INSTANT = 'instant';
     const SYNC_MODE_CRON = 'cron';
 
     const CURRENCY_RATE_SOURCE_OXID = 'oxid';
     const CURRENCY_RATE_SOURCE_PAYEVER = 'payever';
 
+    const SESS_IS_REDIRECT_METHOD = 'payever_is_redirect_method';
+
+    // Could be disabled for wl plugin
+    const ALLOW_IFRAME = true;
+
     /** @var oxConfig */
     private static $config;
-
-    /** @var LoggerInterface */
-    private static $logger;
-
-    private function __construct()
-    {
-        // only static context allowed
-    }
 
     /**
      * @param bool $withPrefix
@@ -191,6 +205,15 @@ class PayeverConfig
         self::set(static::VAR_CONFIG, $key, $value);
     }
 
+    /**
+     * @param array $value
+     * @return void
+     */
+    public static function setWidgets($value)
+    {
+        self::set(static::VAR_WIDGET_CONFIG, self::KEY_FE_WIDGETS, json_encode($value));
+    }
+
     public static function getApiMode()
     {
         return static::get(static::VAR_CONFIG, static::KEY_API_MODE);
@@ -226,6 +249,36 @@ class PayeverConfig
         return static::get(static::VAR_CONFIG, static::KEY_API_CLIENT_SECRET);
     }
 
+    public static function getFinanceExpressWidgetId()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_FE_WIDGET_ID);
+    }
+
+    public static function getFinanceExpressWidgetTheme()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_FE_WIDGET_THEME);
+    }
+
+    public static function getWidgets()
+    {
+        $widgets = static::get(static::VAR_WIDGET_CONFIG, static::KEY_FE_WIDGETS);
+        if (!empty($widgets)) {
+            return json_decode($widgets, true);
+        }
+
+        return [];
+    }
+
+    public static function shouldShowExpressWidgetOnCart()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_FE_DISPLAY_ON_CART);
+    }
+
+    public static function shouldShowExpressWidgetOnProduct()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_FE_DISPLAY_ON_PRODUCT);
+    }
+
     public static function getLanguage()
     {
         return static::get(static::VAR_CONFIG, static::KEY_LANGUAGE);
@@ -236,9 +289,29 @@ class PayeverConfig
         return static::get(static::VAR_CONFIG, static::KEY_IS_REDIRECT);
     }
 
+    public static function shouldCreatePendingOrder()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_CREATE_PENDING_ORDER);
+    }
+
     public static function getAddressEqualityMethods()
     {
         return static::get(static::VAR_CONFIG, static::ADDRESS_EQUALIY_METHODS);
+    }
+
+    public static function checkVariantForAddressEquality()
+    {
+        return static::get(static::VAR_CONFIG, static::CHECK_VARIANT_FOR_ADDRESS_EQUALITY);
+    }
+
+    public static function isCompanySearchEnabled()
+    {
+        return (bool) static::get(static::VAR_B2B_CONFIG, static::KEY_COMPANY_SEARCH_ENABLED);
+    }
+
+    public static function getB2BCountries()
+    {
+        return static::get(static::VAR_B2B_CONFIG, static::KEY_B2B_COUNTRIES) ?: [];
     }
 
     public static function getShippingNotAllowedMethods()
@@ -268,7 +341,7 @@ class PayeverConfig
 
     public static function getApiVersion()
     {
-        return static::get(static::VAR_PLUGIN_API_VERSION, static::KEY_PLUGIN_API_VERSION);
+        return static::get(static::VAR_CONFIG, static::KEY_PLUGIN_API_VERSION);
     }
 
     public static function getCustomSandboxUrl()
@@ -393,38 +466,5 @@ class PayeverConfig
     public static function getProductsCurrencyRateSource()
     {
         return static::get(static::VAR_CONFIG, static::PRODUCTS_SYNC_CURRENCY_RATE_SOURCE);
-    }
-
-    /**
-     * @return LoggerInterface
-     */
-    public static function getLogger()
-    {
-        if (!static::$logger) {
-            static::$logger = new PayeverLogger(static::getLogFilename(), static::getLoggingLevel());
-        }
-
-        return static::$logger;
-    }
-
-    /**
-     * @param string $paymentMethod
-     * @return bool
-     */
-    public static function isPayeverPaymentMethod($paymentMethod)
-    {
-        return strpos($paymentMethod, static::PLUGIN_PREFIX) !== false;
-    }
-
-    /**
-     * @param string $paymentMethod
-     * @return string
-     */
-    public static function removeMethodPrefix($paymentMethod)
-    {
-        return strpos($paymentMethod, PayeverConfig::PLUGIN_PREFIX) !== false
-            ? substr($paymentMethod, strlen(PayeverConfig::PLUGIN_PREFIX))
-            : $paymentMethod
-            ;
     }
 }

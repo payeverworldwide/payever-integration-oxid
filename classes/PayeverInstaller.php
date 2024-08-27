@@ -9,6 +9,9 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
+ /**
+  * @codeCoverageIgnore
+  */
 class PayeverInstaller
 {
     /**
@@ -60,6 +63,8 @@ class PayeverInstaller
             self::addColumnIfNotExists('oxorder', $cval, ['type' => $type, 'nullable' => false]);
         }
 
+        self::addColumnIfNotExists('oxuser', 'OXEXTERNALID', ['type' => 'varchar(32)', 'nullable' => true]);
+        self::addColumnIfNotExists('oxuser', 'OXVATID', ['type' => 'varchar(32)', 'nullable' => true]);
         self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERSHIPPED', ['type' => 'INT', 'nullable' => false]);
         self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERCANCELLED', ['type' => 'INT', 'nullable' => false]);
         self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERREFUNDED', ['type' => 'INT', 'nullable' => false]);
@@ -89,13 +94,22 @@ class PayeverInstaller
                 'type' => 'tinyint',
                 'nullable' => true,
             ],
+            'oxissubmitmethod' => [
+                'type' => 'tinyint',
+                'nullable' => true,
+            ],
+            'oxisb2bmethod' => [
+                'type' => 'tinyint',
+                'nullable' => true,
+            ],
         ];
         self::createColumnsForPaymentsTable($columns);
         self::createDefaultPayeverCategory();
         self::createSynchronizationQueueTable();
         self::addPayeverPidToUserBasket();
         self::createLogsTable();
-        self::createPayeverActionsTable();
+        self::createOrderActionsTable();
+        self::createPaymentActionsTable();
     }
 
     /**
@@ -174,12 +188,12 @@ class PayeverInstaller
     }
 
     /**
-     * Creates payever actions table
+     * Creates order actions table
      *
      * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
      * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
      */
-    private static function createPayeverActionsTable()
+    private static function createOrderActionsTable()
     {
         $oDb = oxDb::getDb();
         $oDb->execute(
@@ -200,6 +214,29 @@ class PayeverInstaller
             'type' => 'VARCHAR(16) DEFAULT "' . payeverorderaction::TYPE_PRODUCT . '"',
             'nullable' => false
         ]);
+    }
+
+    /**
+     * Creates payment actions table
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function createPaymentActionsTable()
+    {
+        $oDb = oxDb::getDb();
+        $oDb->execute(
+            "CREATE TABLE IF NOT EXISTS `payeverpaymentaction` (
+                  `OXID` VARCHAR( 32 ) NOT NULL,
+                  `UNIQUEIDENTIFIER` VARCHAR( 36 ) NOT NULL,
+                  `OXORDERID` VARCHAR( 32 ) NOT NULL,
+                  `ACTIONTYPE` VARCHAR( 32 ) NOT NULL,
+                  `ACTIONSOURCE` VARCHAR( 32 ) NOT NULL,
+                  `OXTIMESTAMP` timestamp NOT NULL,
+                  UNIQUE KEY `OXID` (`OXID`),
+                  UNIQUE KEY `UNIQUEIDENTIFIER` (`UNIQUEIDENTIFIER`)
+                );"
+        );
     }
 
     /**
@@ -241,7 +278,12 @@ class PayeverInstaller
      */
     public static function migrateDB()
     {
-        $columns = ['oxvariants' => ['type' => 'TEXT'], 'oxthumbnail' => ['type' => 'TEXT']];
+        $columns = [
+            'oxvariants' => ['type' => 'TEXT'],
+            'oxthumbnail' => ['type' => 'TEXT'],
+            'oxissubmitmethod' => ['type' => 'tinyint'],
+            'oxisb2bmethod' => ['type' => 'tinyint'],
+        ];
         self::createColumnsForPaymentsTable($columns);
         self::createSynchronizationQueueTable();
         self::addPayeverPidToUserBasket();

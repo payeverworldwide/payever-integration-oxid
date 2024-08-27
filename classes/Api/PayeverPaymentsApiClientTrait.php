@@ -10,7 +10,11 @@
  */
 
 use Payever\Sdk\Payments\PaymentsApiClient;
+use Payever\Sdk\Payments\ThirdPartyPluginsApiClient;
 
+/**
+ * @codeCoverageIgnore
+ */
 trait PayeverPaymentsApiClientTrait
 {
     /** @var PaymentsApiClient */
@@ -34,7 +38,6 @@ trait PayeverPaymentsApiClientTrait
     /**
      * @return PaymentsApiClient
      * @throws Exception
-     * @codeCoverageIgnore
      */
     protected function getPaymentsApiClient()
     {

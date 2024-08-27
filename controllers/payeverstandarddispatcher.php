@@ -20,6 +20,8 @@ use Payever\Sdk\Payments\Http\MessageEntity\CustomerAddressEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\CreatePaymentV2Request;
 use Payever\Sdk\Payments\Http\ResponseEntity\CreatePaymentV2Response;
 use Payever\Sdk\Payments\Http\ResponseEntity\RetrievePaymentResponse;
+use Payever\Sdk\Payments\Http\RequestEntity\NotificationRequestEntity;
+use Payever\Sdk\Payments\Notification\MessageEntity\NotificationActionResultEntity;
 use Payever\Sdk\Plugins\Command\PluginCommandManager;
 use Payever\Sdk\Plugins\PluginsApiClient;
 
@@ -43,8 +45,13 @@ class payeverStandardDispatcher extends oxUBase
     use PayeverPaymentMethodFactoryTrait;
     use PayeverRequestHelperTrait;
     use PayeverFieldFactoryTrait;
+    use PayeverPaymentActionHelperTrait;
 
     const STATUS_PARAM = 'sts';
+
+    const LANG_PARAM = 'lang';
+
+    const DEFAULT_LANG = 1;
 
     const LOCK_WAIT_SECONDS = 30;
 
@@ -57,6 +64,8 @@ class payeverStandardDispatcher extends oxUBase
     const SESS_IS_REDIRECT_METHOD = 'payever_is_redirect_method';
 
     const SESS_TEMP_BASKET = 'payever_temp_basket';
+
+    const ACTION_EXTERNAL_SOURCE = 'external';
 
     /** @var LockInterface */
     private $locker;
@@ -82,8 +91,20 @@ class payeverStandardDispatcher extends oxUBase
     /** @var oxpayment */
     private $paymentMethod;
 
-    /** @var int|null */
-    private $apiVersion;
+    /** @var oxbasket  */
+    private $oxBasket;
+
+    /** @var payeverOxOrder  */
+    private $oxOrder;
+
+    /** @var oxuser  */
+    private $oxUser;
+
+    /** @var oxuserpayment  */
+    private $oxUserPayment;
+
+    /** @var PayeverOrderActionHelper  */
+    private $payeverOrderActionHelper;
 
     /**
      * @return string
@@ -103,12 +124,20 @@ class payeverStandardDispatcher extends oxUBase
      * Creates payever payment and returns redirect URL
      *
      * @return bool|string
-     * @SuppressWarnings(PHPMD.ElseExpression)
+     *
      */
     public function getRedirectUrl()
     {
         try {
-            $isRedirectMethod = (bool)$this->getPaymentMethod()->getFieldData('oxisredirectmethod');
+            // v3 API
+            if ($this->getConfigHelper()->isApiV3()) {
+                $requestBuilder = new PayeverPaymentV3RequestBuilder();
+
+                return $requestBuilder->generatePaymentUrl();
+            }
+
+            // v2 API
+            $isRedirectMethod = (bool) $this->getPaymentMethod()->getFieldData('oxisredirectmethod');
             $paymentRequestEntity = $this->getCreatePaymentV2RequestEntity();
             $paymentRequestEntity->setPaymentData([
                 'force_redirect' => $isRedirectMethod,
@@ -126,22 +155,6 @@ class payeverStandardDispatcher extends oxUBase
 
             return false;
         }
-    }
-
-    /**
-     * @return int|null
-     */
-    protected function getApiVersion()
-    {
-        if ($this->apiVersion === null) {
-            $this->apiVersion = 1;
-
-            if ($this->getConfigHelper()->getApiVersion()) {
-                $this->apiVersion = $this->getConfigHelper()->getApiVersion();
-            }
-        }
-
-        return $this->apiVersion;
     }
 
     /**
@@ -253,9 +266,11 @@ class payeverStandardDispatcher extends oxUBase
         }
 
         // Save discount in session
-        $oSession->oxidpayever_discount = $discount;
-        $oSession->setVariable('oxidpayever_discount', $discount);
-        $oSession->setVariable(self::SESS_TEMP_BASKET, serialize($oBasket));
+        if (!$this->dryRun) {
+            $oSession->oxidpayever_discount = $discount;
+            $oSession->setVariable('oxidpayever_discount', $discount);
+            $oSession->setVariable(self::SESS_TEMP_BASKET, serialize($oBasket));
+        }
 
         if (strpos($apiMethod, '-') && $this->getPaymentMethod()->oxpayments__oxvariants) {
             $oxvariants = json_decode($this->getPaymentMethod()->oxpayments__oxvariants->rawValue, true);
@@ -270,6 +285,10 @@ class payeverStandardDispatcher extends oxUBase
         $language = $this->getConfigHelper()->getLanguage()
             ?: substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2);
 
+        if (\PayeverConfig::LOCALE_STORE_VALUE === $language) {
+            $language = \OxidEsales\Eshop\Core\Registry::getLang()->getLanguageAbbr();
+        }
+
         $requestEntity
             ->setAmount($this->getOrderHelper()->getAmountByCart($oBasket))
             ->setFee($this->getOrderHelper()->getFeeByCart($oBasket))
@@ -279,7 +298,7 @@ class payeverStandardDispatcher extends oxUBase
             ->setEmail($oUser->oxuser__oxusername ? $oUser->oxuser__oxusername->value : null)
             ->setLocale($language)
             ->setSuccessUrl($this->generateCallbackUrl('success'))
-            ->setPendingUrl($this->generateCallbackUrl('success', ['is_pending' => true]))
+            ->setPendingUrl($this->generateCallbackUrl('pending'))
             ->setCancelUrl($this->generateCallbackUrl('cancel'))
             ->setFailureUrl($this->generateCallbackUrl('failure'))
             ->setNoticeUrl($this->generateCallbackUrl('notice'))
@@ -453,14 +472,15 @@ JS;
      * @return string
      * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
-    private function generateCallbackUrl($status, $params = [], $appendPlaceholders = true)
+    public function generateCallbackUrl($status, $params = [], $appendPlaceholders = true)
     {
         $shopUrl = $this->getConfig()->getSslShopUrl();
         $urlData = [
             'cl' => 'payeverStandardDispatcher',
             'fnc' => 'payeverGatewayReturn',
             self::STATUS_PARAM => $status,
-            'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5')
+            'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+            self::LANG_PARAM => oxRegistry::getLang()->getTplLanguage()
         ];
         if ($appendPlaceholders) {
             $urlData['payment_id'] = '--PAYMENT-ID--';
@@ -481,7 +501,7 @@ JS;
     private function isIframePayeverPayment()
     {
         return !$this->getConfigHelper()->getIsRedirect()
-            && !$this->getSession()->getVariable(self::SESS_IS_REDIRECT_METHOD);
+            && !$this->getSession()->getVariable(PayeverConfig::SESS_IS_REDIRECT_METHOD);
     }
 
     /**
@@ -511,14 +531,38 @@ JS;
             }
             $this->getLogger()->debug($message);
         }
-        $sts = $config->getRequestParameter(static::STATUS_PARAM);
+        $sts = $config->getRequestParameter(PayeverPaymentUrlBuilder::STATUS_PARAM);
 
         $this->getLogger()->info(sprintf('Handling callback type: %s, paymentId: %s', $sts, $paymentId), $_GET);
         $fetchDest = $this->getRequestHelper()->getHeader('sec-fetch-dest');
         $this->getLogger()->debug(sprintf('Hit with fetch dest: %s', $fetchDest));
 
         if ($sts == 'cancel') {
-            return $this->processCancel('', $fetchDest);
+            $lang = $config->getRequestParameter(static::LANG_PARAM) ?: oxRegistry::getLang()->getTplLanguage();
+            if (!$lang) {
+                $lang = self::DEFAULT_LANG;
+            }
+            $message = oxRegistry::getLang()->translateString(
+                'payeverPaymentCancel',
+                $lang,
+                false
+            );
+            if ($message === 'payeverPaymentCancel') {
+                $message = 'The payment was cancelled. Please try again or choose another payment option.';
+            }
+            $this->redirectToPaymentPageWithError($message);
+        }
+
+        $createPendingOrder = PayeverConfig::shouldCreatePendingOrder();
+        if (!$createPendingOrder && $sts == 'pending') {
+            $urlData = [
+                'cl' => 'payeverpaymentpending',
+                'payment_id' => $paymentId,
+                'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+            ];
+
+            $sUrl = $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlData);
+            $this->getUtils()->redirect($sUrl, false);
         }
 
         $_POST['sDeliveryAddressMD5'] = $config->getRequestParameter('sDeliveryAddressMD5');
@@ -541,7 +585,6 @@ JS;
         $this->getLocker()->acquireLock($paymentId, static::LOCK_WAIT_SECONDS);
 
         $this->getLogger()->info('Locked', $payment);
-
         try {
             $retrievePaymentResult = $this->getRetrievePaymentResultEntity($payment);
             $paymentDetails = $retrievePaymentResult->getPaymentDetails();
@@ -551,6 +594,28 @@ JS;
             $payment['panId'] = isset($paymentDetails['usage_text']) ? $paymentDetails['usage_text'] : null;
             $payment['restoreBasketInSession'] = $fetchDest != 'iframe';
             $payeverStatus = $retrievePaymentResult->getStatus();
+            if ($sts == 'failure') {
+                $messageType = 'payeverPaymentFailed';
+                if ($payeverStatus == Status::STATUS_DECLINED) {
+                    $messageType = 'payeverPaymentDeclined';
+                }
+                $lang = $config->getRequestParameter(static::LANG_PARAM) ?: oxRegistry::getLang()->getTplLanguage();
+                if (!$lang) {
+                    $lang = self::DEFAULT_LANG;
+                }
+                $message = oxRegistry::getLang()->translateString(
+                    $messageType,
+                    $lang,
+                    false
+                );
+                if ($message === 'payeverPaymentFailed') {
+                    $message = 'The payment has failed. Please choose another payment option, or try again later.';
+                }
+                if ($message === 'payeverPaymentDeclined') {
+                    $message = 'Unfortunately the payment was declined, please choose another payment option.';
+                }
+                $this->redirectToPaymentPageWithError($message);
+            }
             $isNotice = $payment['paymentSts'] == 'notice';
             $this->getLogger()->debug(
                 'Processing payever status',
@@ -560,36 +625,39 @@ JS;
                     'sess_challenge' => $this->getSession()->getVariable('sess_challenge'),
                 ]
             );
-
-            if ($isNotice) {
-                $this->getLogger()->debug(
-                    'Notification payload: ' . $this->getRequestHelper()->getRequestContent()
-                );
-            }
-
-            if ($isNotice && $payeverStatus === Status::STATUS_NEW) {
-                $this->getLogger()->info('Notification processing is skipped; reason: Stalled new status');
-                // @codeCoverageIgnoreStart
-                if (!$this->dryRun) {
-                    echo json_encode(['result' => 'success', 'message' => 'Skipped stalled new status']);
-                    exit();
-                } else {
-                    return;
-                }
-                // @codeCoverageIgnoreEnd
-            }
-
             $oxidOrderStatus = $this->getInternalStatus($payeverStatus);
-            $isPending = $config->getRequestParameter('is_pending');
+            $isPending = $sts === 'pending';
             $isPaid = $this->isPaidStatus($oxidOrderStatus);
 
             $order = $this->getOrderByPaymentId($paymentId);
-
             if ($order) {
-                $this->getLogger()->debug('Order exists ' . $order->getId());
+                if ($isNotice && $payeverStatus === Status::STATUS_NEW) {
+                    $this->getLogger()->info('Notification processing is skipped; reason: Stalled new status');
+                    // @codeCoverageIgnoreStart
+                    if (!$this->dryRun) {
+                        echo json_encode(['result' => 'success', 'message' => 'Skipped stalled new status']);
+                        exit();
+                    } else {
+                        return;
+                    }
+                    // @codeCoverageIgnoreEnd
+                }
                 $notificationTimestamp = 0;
                 $rawData = $this->getRawData();
                 if ($rawData) {
+                    if (isset($rawData['data']['action'])) {
+                        $processedNotice = $this->getPaymentActionHelper()->isActionExists(
+                            $order->getId(),
+                            $rawData['data']['action']['unique_identifier'],
+                            $rawData['data']['action']['source']
+                        );
+
+                        if ($processedNotice) {
+                            $payment['errorMessage'] = 'Notification rejected: notification already processed';
+                            return $this->rejectPayment($payment, false);
+                        }
+                    }
+
                     $notificationTimestamp = !empty($rawData['created_at'])
                         ? strtotime($rawData['created_at'])
                         : $notificationTimestamp;
@@ -628,9 +696,85 @@ JS;
                     ),
                     $payment
                 );
+
+                if ($rawData && isset($rawData['data']['action'])) {
+                    $this->getPaymentActionHelper()->addAction(
+                        $order->getId(),
+                        $rawData['data']['action']['unique_identifier'],
+                        $rawData['data']['action']['type']
+                    );
+                }
+
+                $notificationRequestEntity = $this->getNotificationRequestEntity(
+                    $this->getRequestHelper()->getRequestContent()
+                );
+                $notificationPayment = $notificationRequestEntity->getPayment();
+                /** @var null|NotificationActionResultEntity $action */
+                $action = $notificationRequestEntity->getAction();
                 // @codeCoverageIgnoreStart
                 if (!$this->dryRun) {
                     if ($isNotice) {
+                        $this->getLogger()->info('[Notification]: start processing notification...');
+                        if (
+                            $notificationPayment->getCaptureAmount() &&
+                            empty($notificationPayment->getCapturedItems())
+                        ) {
+                            $this->getLogger()->info('[Notification]: Start capturing by amount...');
+                            $this->processAmount(
+                                $notificationPayment->toArray(),
+                                $order,
+                                'shipping_goods',
+                                $action
+                            );
+                        }
+
+                        if (
+                            $notificationPayment->getRefundAmount() &&
+                            empty($notificationPayment->getRefundedItems())
+                        ) {
+                            $this->getLogger()->info('[Notification]: Start refunding by amount ...');
+                            $this->processAmount(
+                                $notificationPayment->toArray(),
+                                $order,
+                                'refund',
+                                $action
+                            );
+                        }
+
+                        if ($notificationPayment->getCancelAmount()) {
+                            $this->getLogger()->info('[Notification]: Start canceling by amount ...');
+                            $this->processAmount(
+                                $notificationPayment->toArray(),
+                                $order,
+                                'cancel',
+                                $action
+                            );
+                        }
+
+                        // processing actions by item
+                        if (
+                            !empty($notificationPayment->getCapturedItems()) &&
+                            $notificationPayment->getCaptureAmount()
+                        ) {
+                            $this->getLogger()->info('[Notification]: Start capturing items ...');
+                            $this->processItems(
+                                $notificationPayment->getCapturedItems(),
+                                $order->getId(),
+                                'capture'
+                            );
+                        }
+
+                        if (
+                            !empty($notificationPayment->getRefundedItems()) &&
+                            $notificationPayment->getRefundAmount()
+                        ) {
+                            $this->getLogger()->info('[Notification]: Start refunding items ...');
+                            $this->processItems(
+                                $notificationPayment->getRefundedItems(),
+                                $order->getId(),
+                                'refund'
+                            );
+                        }
                         echo json_encode(['result' => 'success', 'message' => 'Order is updated']);
                     } else {
                         $this->getLogger()->debug('Prepare session before redirect');
@@ -652,12 +796,6 @@ JS;
             }
 
             if ($isPaid) {
-                if ($isPending) {
-                    $this->addErrorToDisplay(
-                        'Thank you, your order has been received. '
-                        . 'You will receive an update once your request has been processed.'
-                    );
-                }
                 $orderStateId = $this->processSuccess($payment, $oxidOrderStatus, $isPending); // exit
 
                 $this->getLocker()->releaseLock($payment['paymentId']);
@@ -673,8 +811,19 @@ JS;
                         $payeverStatus !== Status::STATUS_NEW && $this->getSession()->deleteVariable('sess_challenge');
                         echo json_encode(['result' => 'success', 'message' => 'Order is ' . $orderAction]);
                     } else {
-                        $sUrl = $this->getConfig()
-                                ->getSslShopUrl() . '?cl=payeverStandardDispatcher&fnc=redirectToThankYou';
+                        $sUrl = $this->getConfig()->getSslShopUrl();
+                        $sUrl .= '?cl=payeverStandardDispatcher&fnc=redirectToThankYou';
+
+                        if ($sts == 'pending') {
+                            $urlData = [
+                                'cl' => 'payeverpaymentpending',
+                                'payment_id' => $paymentId,
+                                'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+                            ];
+
+                            $sUrl = $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlData);
+                        }
+
                         $this->webRedirect($sUrl, $fetchDest);
                     }
                     exit();
@@ -704,10 +853,89 @@ JS;
             );
 
             $payment['errorMessage'] = $exception->getMessage();
-            $this->addErrorToDisplay($exception->getMessage());
 
             return $this->rejectPayment($payment, $exception->getCode() < 1);
         }
+    }
+
+    private function processItems($items, $orderId, $action)
+    {
+        $field = "";
+        switch ($action) {
+            case 'capture':
+                $field = 'OXPAYEVERSHIPPED';
+                break;
+            case 'refund':
+                $field = 'OXPAYEVERREFUNDED';
+                break;
+            case 'cancel':
+                $field = 'OXPAYEVERCANCELLED';
+                break;
+            default:
+                throw new InvalidArgumentException(
+                    '[Notification]: action not defined: ' . $action
+                );
+        }
+        $dbConnection = $this->getDatabase();
+        foreach ($items as $item) {
+            $qty = $item['quantity'];
+            $identifier = $item['identifier'];
+            $sql = "UPDATE oxorderarticles SET `{$field}` = {$qty} 
+                       WHERE OXORDERID = '{$orderId}' AND OXARTID = '{$identifier}'";
+            $dbConnection->execute($sql);
+        }
+    }
+
+    /**
+     * @param $paymentData
+     * @param $order
+     * @param $action
+     * @param null|NotificationActionResultEntity $notificationAction
+     * @return void
+     */
+    private function processAmount($paymentData, $order, $action, $notificationAction = null)
+    {
+        if ($notificationAction && $notificationAction->getSource() === self::ACTION_EXTERNAL_SOURCE) {
+            $this->getLogger()->info('[Notification]: external notification skipped.');
+
+            return;
+        }
+
+        $orderId = $order->getId();
+        switch ($action) {
+            case 'shipping_goods':
+                $amount = $paymentData['capture_amount'];
+                break;
+            case 'refund':
+                $amount = $paymentData['refund_amount'];
+                break;
+            case 'cancel':
+                $amount = $paymentData['cancel_amount'];
+                break;
+            default:
+                throw new InvalidArgumentException(
+                    '[Notification]: action not allowed: ' . $action
+                );
+        }
+
+        // check action in history to prevent duplication
+        $orderActionHelper = $this->getPayeverOrderActionHelper();
+        $orderActionHelper->addAction([
+            'orderId' => $orderId,
+            'actionId' => $paymentData['id'],
+            'amount' => $amount,
+            'state' => 'success',
+            'type' => 'product'
+        ], $action);
+
+        // Change order status
+        $order->oxorder__oxtransstatus = $this->getFieldFactory()->createRaw(
+            str_replace('STATUS_', '', $paymentData['status'])
+        );
+        $order->save();
+        $this->getLogger()->info(
+            '[Notification]: Processed amount for order. Amount: ' . $amount . ' - OrderId: ' . $orderId
+        );
     }
 
     /**
@@ -815,7 +1043,7 @@ JS;
         list($oUser, $oBasket) = $this->ensureUserAndBasketLoaded($payment);
 
         /** @var payeverOxOrder $oOrder */
-        $oOrder = oxNew('oxorder');
+        $oOrder = $this->getOxOrder();
         //finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
         if ($oOrder instanceof payeverOxOrderCompatible) {
             $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, false);
@@ -842,7 +1070,7 @@ JS;
             $retrievePaymentResult = $this->getRetrievePaymentResultEntity($payment);
 
             // Calculate amount
-            $basketAmount =  $this->getOrderHelper()->getAmountByCart($oBasket);
+            $basketAmount = $this->getOrderHelper()->getAmountByCart($oBasket);
 
             $oSession = $this->getSession();
 
@@ -888,8 +1116,8 @@ JS;
             }
         }
 
-        $userPayment = oxNew('oxUserPayment');
-        $userPayment->load((string)$oOrder->oxorder__oxpaymentid);
+        $userPayment = $this->getOxUserPayment();
+        $userPayment->load((string) $oOrder->oxorder__oxpaymentid);
         $aParams = [
             'oxuserpayments__oxpspayever_transaction_id' => $payment['paymentId'],
             'oxuserpayments__oxpaymentsid' => $payment['paymentMethod'],
@@ -945,7 +1173,7 @@ JS;
             if ($payment['paymentSts'] == 'notice') {
                 echo json_encode(['result' => 'error', 'message' => $payment['errorMessage']]);
             } else {
-                $this->processCancel($payment['errorMessage']);
+                $this->redirectToPaymentPageWithError($payment['errorMessage']);
             }
             exit();
         }
@@ -953,28 +1181,14 @@ JS;
     }
 
     /**
-     * @param string $message
-     * @param string $fetchDest
-     *
-     * @return void
+     * @codeCoverageIgnore
      */
-    private function processCancel($message = '', $fetchDest = '')
+    private function redirectToPaymentPageWithError($message)
     {
-        $message = $message ?: 'Payment was cancelled';
-
         $this->getLogger()->info(sprintf('Canceling payment with message: %s', $message));
-
         $this->addErrorToDisplay($message);
-        $this->redirectToCart($fetchDest);
-    }
-
-    /**
-     * @return void
-     */
-    protected function redirectToCart($fetchDest)
-    {
-        $sUrl = $this->getConfig()->getSslShopUrl() . '?cl=payment';
-        !$this->dryRun && $this->webRedirect($sUrl, $fetchDest);
+        $sUrl = $this->getConfig()->getSslShopUrl() . "?cl=payment";
+        !$this->dryRun && $this->webRedirect($sUrl, '');
     }
 
     /**
@@ -1077,6 +1291,11 @@ JS;
         }
 
         return $retrievePaymentResult;
+    }
+
+    private function getNotificationRequestEntity($payload)
+    {
+        return new NotificationRequestEntity(json_decode($payload, true));
     }
 
     /**
@@ -1289,7 +1508,7 @@ JS;
         $restoreBasketInSession = !empty($payment['restoreBasketInSession']) && $payment['restoreBasketInSession'];
         $oUser = $this->getUser();
         if (!$oUser) {
-            $oUser = oxNew('oxuser');
+            $oUser = $this->getOxUser();
             $userId = $this->getUserByBasketId($payment['basketId']);
             $oUser->load($userId);
         }
@@ -1304,9 +1523,12 @@ JS;
         $sBasket = $this->getSession()->getVariable(self::SESS_TEMP_BASKET);
         $oBasket = unserialize($sBasket);
 
-        $this->getSession()->deleteVariable(self::SESS_TEMP_BASKET);
+        if ($this->dryRun) {
+            $oBasket = $this->getOxBasket();
+        }
 
-        if (!$oBasket || get_class($oBasket) !== get_class(oxNew('oxbasket'))) {
+        $this->getSession()->deleteVariable(self::SESS_TEMP_BASKET);
+        if (!$oBasket instanceof oxbasket) {
             // get basket contents
             /** @var oxBasket $oBasket */
             $oBasket = oxNew('oxbasket');
@@ -1341,5 +1563,119 @@ JS;
         }
 
         return [$oUser, $oBasket];
+    }
+
+    /**
+     * @codeCoverageIgnore
+     * @return oxbasket
+     */
+    protected function getOxBasket()
+    {
+        if ($this->oxBasket === null) {
+            return oxNew('oxbasket');
+        }
+
+        return $this->oxBasket;
+    }
+
+    /**
+     * @param oxbasket
+     */
+    public function setOxBasket($oxbasket)
+    {
+        $this->oxBasket = $oxbasket;
+
+        return $this;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     */
+    protected function getOxOrder()
+    {
+        if ($this->oxOrder === null) {
+            return oxNew('oxorder');
+        }
+
+        return $this->oxOrder;
+    }
+
+    /**
+     * @param payeverOxOrder
+     */
+    public function setOxOrder($oxorder)
+    {
+        $this->oxOrder = $oxorder;
+
+        return $this;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     * @return oxuser
+     */
+    protected function getOxUser()
+    {
+        if ($this->oxUser === null) {
+            return oxNew('oxuser');
+        }
+
+        return $this->oxUser;
+    }
+
+    /**
+     * @param oxuser
+     */
+    public function setOxUser($oxuser)
+    {
+        $this->oxUser = $oxuser;
+
+        return $this;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     * @return oxuserpayment
+     */
+    protected function getOxUserPayment()
+    {
+        if ($this->oxUserPayment === null) {
+            return oxNew('oxUserPayment');
+        }
+
+        return $this->oxUserPayment;
+    }
+
+    /**
+     * @param oxuserpayment
+     */
+    public function setOxUserPayment($oxUserPayment)
+    {
+        $this->oxUserPayment = $oxUserPayment;
+
+        return $this;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     * @return PayeverOrderActionHelper
+     */
+    protected function getPayeverOrderActionHelper()
+    {
+        if ($this->payeverOrderActionHelper === null) {
+            $this->payeverOrderActionHelper = new PayeverOrderActionHelper();
+        }
+
+        return $this->payeverOrderActionHelper;
+    }
+
+    /**
+     * @param PayeverOrderActionHelper
+     */
+    public function setPayeverOrderActionHelper($payeverOrderActionHelper)
+    {
+        $this->payeverOrderActionHelper = $payeverOrderActionHelper;
+
+        return $this;
     }
 }

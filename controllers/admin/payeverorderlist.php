@@ -18,6 +18,7 @@ class payeverOrderList extends payeverOrderList_parent
     use PayeverLoggerTrait;
     use PayeverOrderFactoryTrait;
     use PayeverPaymentsApiClientTrait;
+    use PayeverPaymentActionHelperTrait;
 
     /**
      * {@inheritDoc}
@@ -48,13 +49,29 @@ class payeverOrderList extends payeverOrderList_parent
             $actionDecider = new ActionDecider($this->getPaymentsApiClient());
 
             try {
+                $identifier = $this->getPaymentActionHelper()->generateIdentifier();
                 if ($actionDecider->isRefundAllowed($paymentId, false)) {
+                    $this->getPaymentActionHelper()->addAction(
+                        $oOrder->getId(),
+                        $identifier,
+                        ActionDecider::ACTION_REFUND
+                    );
                     $this->getPaymentsApiClient()->refundPaymentRequest(
                         $paymentId,
-                        $oOrder->getTotalOrderSum()
+                        $oOrder->getTotalOrderSum(),
+                        $identifier
                     );
                 } elseif ($actionDecider->isCancelAllowed($paymentId)) {
-                    $this->getPaymentsApiClient()->cancelPaymentRequest($paymentId);
+                    $this->getPaymentActionHelper()->addAction(
+                        $oOrder->getId(),
+                        $identifier,
+                        ActionDecider::ACTION_CANCEL
+                    );
+                    $this->getPaymentsApiClient()->cancelPaymentRequest(
+                        $paymentId,
+                        null,
+                        $identifier
+                    );
                 }
             } catch (Exception $exception) {
                 $this->getLogger()->error(

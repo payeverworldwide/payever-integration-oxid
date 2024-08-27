@@ -29,6 +29,7 @@ class PayeverShippingGoodsHandler
     use PayeverPaymentsApiClientTrait;
     use PayeverFieldFactoryTrait;
     use PayeverOrderActionHelperTrait;
+    use PayeverPaymentActionHelperTrait;
 
     const REQUEST_TYPE_AMOUNT = 'amount';
     const REQUEST_TYPE_ITEMS = 'items';
@@ -143,7 +144,15 @@ class PayeverShippingGoodsHandler
                 $shippingGoodsRequest->setAmount($order->oxorder__oxtotalordersum->value - $sentAmount);
             }
 
-            $result = $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest);
+            // Add payment action identifier
+            $identifier = $this->getPaymentActionHelper()->generateIdentifier();
+            $this->getPaymentActionHelper()->addAction(
+                $order->getId(),
+                $identifier,
+                ActionDecider::ACTION_SHIPPING_GOODS
+            );
+
+            $result = $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest, $identifier);
 
             //Change order status
             if ($result->isSuccessful()) {
@@ -177,44 +186,51 @@ class PayeverShippingGoodsHandler
     /**
      * @param Order|oxorder $order
      * @param array $paymentItems
+     * @param string $identifier
      *
      * @return \Payever\Sdk\Core\Http\Response
+     * @throws Exception
      */
-    public function triggerItemsShippingGoodsPaymentRequest($order, $paymentItems)
+    public function triggerItemsShippingGoodsPaymentRequest($order, $paymentItems, $identifier = null)
     {
         //Create shipping goods request entity
         $shippingGoodsRequest = $this->createShippingGoodsPaymentRequest($order);
         $shippingGoodsRequest->setPaymentItems($paymentItems);
 
         //Send shipping api request
-        return $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest);
+        return $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest, $identifier);
     }
 
     /**
      *
      * @param Order|oxorder $order
      * @param float|int $amount
+     * @param string $identifier
      *
      * @return \Payever\Sdk\Core\Http\Response
+     * @throws Exception
      */
-    public function triggerAmountShippingGoodsPaymentRequest($order, $amount)
+    public function triggerAmountShippingGoodsPaymentRequest($order, $amount, $identifier = null)
     {
         //Create shipping goods request entity
         $shippingGoodsRequest = $this->createShippingGoodsPaymentRequest($order);
         $shippingGoodsRequest->setAmount($amount);
 
         //Send shipping api request
-        return $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest);
+        return $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest, $identifier);
     }
 
     /**
      * Send request to api with shipping entities
      *
      * @param Order|oxorder $order
+     * @param ShippingGoodsPaymentRequest $shippingGoodsRequest
+     * @param string $identifier
      *
      * @return \Payever\Sdk\Core\Http\Response
+     * @throws Exception
      */
-    protected function sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest)
+    protected function sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest, $identifier = null)
     {
         //Check if shipping is allowed
         $paymentId = $order->getFieldData('oxtransid');
@@ -223,7 +239,11 @@ class PayeverShippingGoodsHandler
         }
 
         //Send shipping api request
-        $result = $this->getPaymentsApiClient()->shippingGoodsPaymentRequest($paymentId, $shippingGoodsRequest);
+        $result = $this->getPaymentsApiClient()->shippingGoodsPaymentRequest(
+            $paymentId,
+            $shippingGoodsRequest,
+            $identifier
+        );
 
         $this->getLogger()->debug('ShippingGoodsPaymentRequest has been sent');
 

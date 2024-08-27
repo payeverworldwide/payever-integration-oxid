@@ -13,10 +13,22 @@
  * PayeverConfig non-static wrapper
  * @codeCoverageIgnore
  */
+
+use Monolog\Handler\StreamHandler;
+use Psr\Log\LoggerInterface;
+
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
+
 class PayeverConfigHelper
 {
+    const LOGGER_NAME = 'payever';
+
+    /** @var LoggerInterface */
+    private static $logger;
+
     /**
      * @retrun void
+     * @codeCoverageIgnore
      */
     public function reset()
     {
@@ -148,7 +160,7 @@ class PayeverConfigHelper
      */
     public function getOxidVersionInt()
     {
-        return PayeverConfig::getOxidVersionInt();
+        return (int) PayeverConfig::getOxidVersionInt();
     }
 
     /**
@@ -168,15 +180,6 @@ class PayeverConfigHelper
     }
 
     /**
-     * @param string $paymentMethod
-     * @return bool
-     */
-    public function isPayeverPaymentMethod($paymentMethod)
-    {
-        return PayeverConfig::isPayeverPaymentMethod($paymentMethod);
-    }
-
-    /**
      * @param string $key
      * @return false|string
      */
@@ -190,16 +193,86 @@ class PayeverConfigHelper
     }
 
     /**
-     * @return int|null
+     * @return string
      */
     public function getApiVersion()
     {
-        return PayeverConfig::getApiVersion();
+        return PayeverConfig::getApiVersion() ?: PayeverConfig::API_VERSION_3;
     }
 
+    /**
+     * @return array
+     */
+    public function getB2BCountries()
+    {
+        return PayeverConfig::getB2BCountries() ?: [];
+    }
+
+    /**
+     * @return bool
+     */
+    public function isCompanySearchAvailable()
+    {
+        return (bool) PayeverConfig::isCompanySearchEnabled();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isApiV3()
+    {
+        return $this->getApiVersion() === PayeverConfig::API_VERSION_3;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     */
     public function setDiagnosticMode($mode)
     {
         PayeverConfig::setConfig(PayeverConfig::KEY_DIAGNOSTIC_MODE, $mode);
         return PayeverConfig::getDiagnosticMode();
+    }
+
+    /**
+     * @return LoggerInterface
+     */
+    public static function getLogger()
+    {
+        if (!static::$logger) {
+            static::$logger = new \Monolog\Logger(self::LOGGER_NAME);
+            static::$logger->pushHandler(
+                new StreamHandler(
+                    PayeverConfig::getLogFilename(),
+                    PayeverConfig::getLoggingLevel()
+                )
+            );
+
+            static::$logger->pushProcessor(
+                new PayeverLogProcessor()
+            );
+        }
+
+        return static::$logger;
+    }
+
+    /**
+     * @param string $paymentMethod
+     * @return bool
+     */
+    public function isPayeverPaymentMethod($paymentMethod)
+    {
+        return strpos($paymentMethod, PayeverConfig::PLUGIN_PREFIX) !== false;
+    }
+
+    /**
+     * @param string $paymentMethod
+     * @return string
+     */
+    public static function removeMethodPrefix($paymentMethod)
+    {
+        return strpos($paymentMethod, PayeverConfig::PLUGIN_PREFIX) !== false
+            ? substr($paymentMethod, strlen(PayeverConfig::PLUGIN_PREFIX))
+            : $paymentMethod
+            ;
     }
 }

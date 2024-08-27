@@ -1,10 +1,8 @@
 <?php
 
-use Payever\Sdk\Core\Logger\FileLogger;
-
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
 
-class PayeverLogger extends FileLogger
+class PayeverLogger
 {
     /**
      * @param string $level
@@ -13,8 +11,6 @@ class PayeverLogger extends FileLogger
      */
     public function log($level, $message, array $context = [])
     {
-        parent::log($level, $message, $context);
-
         $logsFactory = new PayeverLogsFactory();
         $logs = $logsFactory->create();
 
@@ -28,7 +24,7 @@ class PayeverLogger extends FileLogger
         try {
             $logs->save();
         } catch (\Exception $e) {
-            parent::log($level, $e->getMessage(), $context);
+            // Silence is golden
         }
     }
 }

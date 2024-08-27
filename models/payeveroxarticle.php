@@ -64,7 +64,7 @@ class payeverOxArticle extends payeverOxArticle_parent
         $controller = !empty($_GET['cl']) ? $_GET['cl'] : null;
         $controllerAction = !empty($_GET['fnc']) ? $_GET['fnc'] : null;
         if ('payeverProductsImport' === $controller && 'import' === $controllerAction) {
-            PayeverConfig::getLogger()->debug('Skip triggering of outward action during import');
+            PayeverConfigHelper::getLogger()->debug('Skip triggering of outward action during import');
             return;
         }
         $newQty = $this->getFieldData('oxstock');

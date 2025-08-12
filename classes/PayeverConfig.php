@@ -170,7 +170,11 @@ class PayeverConfig
 
         $data = static::$config->getShopConfVar($varName);
 
-        return $keyName ? (isset($data[$keyName]) ? $data[$keyName] : null) : $data;
+        if ($keyName !== null) {
+            return isset($data[$keyName]) ? $data[$keyName] : null;
+        }
+
+        return $data;
     }
 
     /**
@@ -316,7 +320,7 @@ class PayeverConfig
 
     public static function getShippingNotAllowedMethods()
     {
-        return static::get(static::VAR_CONFIG, static::SHIPPING_NOT_ALLOWED_METHODS);
+        return (array) static::get(static::VAR_CONFIG, static::SHIPPING_NOT_ALLOWED_METHODS);
     }
 
     public static function getDisplayDescription()

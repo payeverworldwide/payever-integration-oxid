@@ -13,6 +13,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 
 use Payever\Sdk\Core\Http\MessageEntity\ResultEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\CompanySearch\AddressEntity;
+use Payever\Sdk\Payments\Http\RequestEntity\CompanySearch\CompanyCustomEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\CompanySearch\CompanyEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\CompanySearchRequest;
 use Payever\Sdk\Payments\Http\ResponseEntity\CompanySearchResponse;
@@ -46,6 +47,40 @@ class PayeverCompanySearchManager
 
         $response = $this->getPaymentsApiClient()
             ->searchCompany($companySearchRequestEntity);
+
+        /** @var CompanySearchResponse $responseEntity */
+        $responseEntity = $response->getResponseEntity();
+
+        return $responseEntity->getResult();
+    }
+
+    /**
+     * @param string $companyIdentifier
+     * @param string $type
+     * @param string $country
+     * @return ResultEntity
+     *
+     * @throws Exception
+     */
+    public function getCompanyById($companyIdentifier, $type, $country)
+    {
+        $companyCustomEntity = new CompanyCustomEntity();
+        $companyCustomEntity
+            ->setValue($companyIdentifier)
+            ->setType($type);
+
+        $companySearchEntity = new CompanyEntity();
+        $companySearchEntity->setCustom($companyCustomEntity);
+
+        $addressEntity = new AddressEntity();
+        $addressEntity->setCountry($country);
+
+        $companySearchRequest = new CompanySearchRequest();
+        $companySearchRequest->setCompany($companySearchEntity);
+        $companySearchRequest->setAddress($addressEntity);
+
+        $response = $this->getPaymentsApiClient()
+            ->searchCompany($companySearchRequest);
 
         /** @var CompanySearchResponse $responseEntity */
         $responseEntity = $response->getResponseEntity();

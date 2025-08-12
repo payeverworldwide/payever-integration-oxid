@@ -10,33 +10,35 @@
 	}
 })(function($, window, document, undefined) {
 	"use strict";
-	var pluginName = "countrySelect", id = 1, // give each instance its own ID for namespaced event handling
-	defaults = {
-		// Default country
-		defaultCountry: "de",
-		// Position the selected flag inside or outside of the input
-		defaultStyling: "inside",
-		// don't display these countries
-		excludeCountries: [],
-		// Display only these countries
-		onlyCountries: [],
-		// The countries at the top of the list. Defaults to United States and United Kingdom
-		preferredCountries: [ "de", "nl" ],
-		// localized country names e.g. { 'de': 'Deutschland' }
-		localizedCountries: null,
-		// Set the dropdown's width to be the same as the input. This is automatically enabled for small screens.
-		responsiveDropdown: ($(window).width() < 768 ? true : false),
-	}, keys = {
-		UP: 38,
-		DOWN: 40,
-		ENTER: 13,
-		ESC: 27,
-		BACKSPACE: 8,
-		PLUS: 43,
-		SPACE: 32,
-		A: 65,
-		Z: 90
-	}, windowLoaded = false;
+
+	let allCountries;
+	let pluginName = "countrySelect", id = 1, // give each instance its own ID for namespaced event handling
+		defaults = {
+			// Default country
+			defaultCountry: "de",
+			// Position the selected flag inside or outside of the input
+			defaultStyling: "inside",
+			// don't display these countries
+			excludeCountries: [],
+			// Display only these countries
+			onlyCountries: [],
+			// The countries at the top of the list. Defaults to United States and United Kingdom
+			preferredCountries: ["de", "nl"],
+			// localized country names e.g. { 'de': 'Deutschland' }
+			localizedCountries: null,
+			// Set the dropdown's width to be the same as the input. This is automatically enabled for small screens.
+			responsiveDropdown: ($(window).width() < 768 ? true : false),
+		}, keys = {
+			UP: 38,
+			DOWN: 40,
+			ENTER: 13,
+			ESC: 27,
+			BACKSPACE: 8,
+			PLUS: 43,
+			SPACE: 32,
+			A: 65,
+			Z: 90
+		}, windowLoaded = false;
 	// keep track of if the window.load event has fired as impossible to check after the fact
 	$(window).on('load', function() {
 		windowLoaded = true;
@@ -88,21 +90,21 @@
 		},
 		// process onlyCountries array if present
 		_setInstanceCountryData: function() {
-			var that = this;
+			const that = this;
 			if (this.options.onlyCountries.length) {
-				var newCountries = [];
+				const newCountries = [];
 				$.each(this.options.onlyCountries, function(i, countryCode) {
-					var countryData = that._getCountryData(countryCode, true);
+					const countryData = that._getCountryData(countryCode, true);
 					if (countryData) {
 						newCountries.push(countryData);
 					}
 				});
 				this.countries = newCountries;
 			} else if (this.options.excludeCountries.length) {
-                var lowerCaseExcludeCountries = this.options.excludeCountries.map(function(country) {
-                    return country.toLowerCase();
-                });
-                this.countries = allCountries.filter(function(country) {
+				const lowerCaseExcludeCountries = this.options.excludeCountries.map(function (country) {
+					return country.toLowerCase();
+				});
+				this.countries = allCountries.filter(function(country) {
                     return lowerCaseExcludeCountries.indexOf(country.iso2) === -1;
                 });
             } else {
@@ -112,10 +114,10 @@
 		// Process preferred countries - iterate through the preferences,
 		// fetching the country data for each one
 		_setPreferredCountries: function() {
-			var that = this;
+			const that = this;
 			this.preferredCountries = [];
 			$.each(this.options.preferredCountries, function(i, countryCode) {
-				var countryData = that._getCountryData(countryCode, false);
+				const countryData = that._getCountryData(countryCode, false);
 				if (countryData) {
 					that.preferredCountries.push(countryData);
 				}
@@ -139,18 +141,18 @@
 			// Country input
 			this.countryInput = $(this.element);
 			// containers (mostly for positioning)
-			var mainClass = "country-select";
+			let mainClass = "country-select";
 			if (this.options.defaultStyling) {
 				mainClass += " " + this.options.defaultStyling;
 			}
 			this.countryInput.wrap($("<div>", {
 				"class": mainClass
 			}));
-			var flagsContainer = $("<div>", {
+			const flagsContainer = $("<div>", {
 				"class": "flag-dropdown"
 			}).insertAfter(this.countryInput);
 			// currently selected flag (displayed to left of input)
-			var selectedFlag = $("<div>", {
+			const selectedFlag = $("<div>", {
 				"class": "selected-flag"
 			}).appendTo(flagsContainer);
 			this.selectedFlagInner = $("<div>", {
@@ -183,7 +185,7 @@
 			if (this.options.responsiveDropdown) {
 				$(window).resize(function() {
 					$('.country-select').each(function() {
-						var dropdownWidth = this.offsetWidth;
+						const dropdownWidth = this.offsetWidth;
 						$(this).find('.country-list').css("width", dropdownWidth + "px");
 					});
 				}).resize();
@@ -196,7 +198,7 @@
 		_appendListItems: function(countries, className) {
 			// Generate DOM elements as a large temp string, so that there is only
 			// one DOM insert event
-			var tmp = "";
+			let tmp = "";
 			// for each country
 			$.each(countries, function(i, c) {
 				// open the list item
@@ -212,19 +214,19 @@
 		},
 		// set the initial state of the input value and the selected flag
 		_setInitialState: function() {
-			var flagIsSet = false;
+			let flagIsSet = false;
 			// If the input is pre-populated, then just update the selected flag
 			if (this.countryInput.val()) {
 				flagIsSet = this._updateFlagFromInputVal();
 			}
 			// If the country code input is pre-populated, update the name and the selected flag
-			var selectedCode = this.countryCodeInput.val();
+			const selectedCode = this.countryCodeInput.val();
 			if (selectedCode) {
 				this.selectCountry(selectedCode);
 			}
 			if (!flagIsSet) {
 				// flag is not set, so set to the default country
-				var defaultCountry;
+				let defaultCountry;
 				// check the defaultCountry option, else fall back to the first in the list
 				if (this.options.defaultCountry) {
 					defaultCountry = this._getCountryData(this.options.defaultCountry, false);
@@ -240,7 +242,7 @@
 		},
 		// initialise the main event listeners: input keyup, and click selected flag
 		_initListeners: function() {
-			var that = this;
+			const that = this;
 			// Update flag on keyup.
 			// Use keyup instead of keypress because we want to update on backspace
 			// and instead of keydown because the value hasn't updated when that
@@ -252,7 +254,7 @@
 			// 	that._updateFlagFromInputVal();
 			// });
 			// toggle country dropdown on click
-			var selectedFlag = this.selectedFlagInner.parent();
+			const selectedFlag = this.selectedFlagInner.parent();
 			selectedFlag.on("click" + this.ns, function(e) {
 				// only intercept this event if we're opening the dropdown
 				// else let it bubble up to the top ("click-off-to-close" listener)
@@ -283,7 +285,7 @@
 		},
 		// perform the geo ip lookup
 		_loadAutoCountry: function() {
-			var that = this;
+			const that = this;
 
 			// 3 options:
 			// 1) already loaded (we're done)
@@ -311,10 +313,10 @@
 		// Focus input and put the cursor at the end
 		_focus: function() {
 			this.countryInput.focus();
-			var input = this.countryInput[0];
+			const input = this.countryInput[0];
 			// works for Chrome, FF, Safari, IE9+
 			if (input.setSelectionRange) {
-				var len = this.countryInput.val().length;
+				const len = this.countryInput.val().length;
 				input.setSelectionRange(len, len);
 			}
 		},
@@ -322,7 +324,7 @@
 		_showDropdown: function() {
 			this._setDropdownPosition();
 			// update highlighting and scroll to active list item
-			var activeListItem = this.countryList.children(".active");
+			const activeListItem = this.countryList.children(".active");
 			this._highlightListItem(activeListItem);
 			// show it
 			this.countryList.removeClass("hide");
@@ -334,15 +336,16 @@
 		},
 		// decide where to position dropdown (depends on position within viewport, and scroll)
 		_setDropdownPosition: function() {
-			var inputTop = this.countryInput.offset().top, windowTop = $(window).scrollTop(),
-			dropdownFitsBelow = inputTop + this.countryInput.outerHeight() + this.dropdownHeight < windowTop + $(window).height(), dropdownFitsAbove = inputTop - this.dropdownHeight > windowTop;
+			const inputTop = this.countryInput.offset().top, windowTop = $(window).scrollTop(),
+				dropdownFitsBelow = inputTop + this.countryInput.outerHeight() + this.dropdownHeight < windowTop + $(window).height(),
+				dropdownFitsAbove = inputTop - this.dropdownHeight > windowTop;
 			// dropdownHeight - 1 for border
-			var cssTop = !dropdownFitsBelow && dropdownFitsAbove ? "-" + (this.dropdownHeight - 1) + "px" : "";
+			const cssTop = !dropdownFitsBelow && dropdownFitsAbove ? "-" + (this.dropdownHeight - 1) + "px" : "";
 			this.countryList.css("top", cssTop);
 		},
 		// we only bind dropdown listeners when the dropdown is open
 		_bindDropdownListeners: function() {
-			var that = this;
+			const that = this;
 			// when mouse over a list item, just highlight that one
 			// we add the class "highlight", so if they hit "enter" we know which one to select
 			this.countryList.on("mouseover" + this.ns, ".country", function(e) {
@@ -355,7 +358,7 @@
 			// click off to close
 			// (except when this initial opening click is bubbling up)
 			// we cannot just stopPropagation as it may be needed to close another instance
-			var isOpening = true;
+			let isOpening = true;
 			$("html").on("click" + this.ns, function(e) {
 				e.preventDefault();
 				if (!isOpening) {
@@ -391,8 +394,8 @@
 		},
 		// Highlight the next/prev item in the list (and ensure it is visible)
 		_handleUpDownKey: function(key) {
-			var current = this.countryList.children(".highlight").first();
-			var next = key == keys.UP ? current.prev() : current.next();
+			const current = this.countryList.children(".highlight").first();
+			let next = key == keys.UP ? current.prev() : current.next();
 			if (next.length) {
 				// skip the divider
 				if (next.hasClass("divider")) {
@@ -404,18 +407,18 @@
 		},
 		// select the currently highlighted item
 		_handleEnterKey: function() {
-			var currentCountry = this.countryList.children(".highlight").first();
+			const currentCountry = this.countryList.children(".highlight").first();
 			if (currentCountry.length) {
 				this._selectListItem(currentCountry);
 			}
 		},
 		_filterCountries: function(letters) {
-			var countries = this.countryListItems.filter(function() {
+			const countries = this.countryListItems.filter(function () {
 				return $(this).text().toUpperCase().indexOf(letters) === 0 && !$(this).hasClass("preferred");
 			});
 			if (countries.length) {
 				// if one is already highlighted, then we want the next one
-				var highlightedCountry = countries.filter(".highlight").first(), listItem;
+				let highlightedCountry = countries.filter(".highlight").first(), listItem;
 				if (highlightedCountry && highlightedCountry.next() && highlightedCountry.next().text().toUpperCase().indexOf(letters) === 0) {
 					listItem = highlightedCountry.next();
 				} else {
@@ -428,15 +431,16 @@
 		},
 		// Update the selected flag using the input's current value
 		_updateFlagFromInputVal: function() {
-			var that = this;
+			let i;
+			const that = this;
 			// try and extract valid country from input
-			var value = this.countryInput.val().replace(/(?=[() ])/g, '\\');
+			const value = this.countryInput.val().replace(/(?=[() ])/g, '\\');
 			if (value) {
-				var countryCodes = [];
-				var matcher = new RegExp(value, "i");
+				const countryCodes = [];
+				const matcher = new RegExp(value, "i");
 				// Check for ISO codes only
 				if(value.length <= 2) {
-					for (var i = 0; i < this.countries.length; i++) {
+					for (i = 0; i < this.countries.length; i++) {
 						if (this.countries[i].iso2.match(matcher)) {
 							countryCodes.push(this.countries[i].iso2);
 						}
@@ -444,14 +448,14 @@
 				}
 				// If no previous matches / larger than 2 chars, then search country name
 				if(countryCodes.length == 0) {
-					for (var i = 0; i < this.countries.length; i++) {
+					for (i = 0; i < this.countries.length; i++) {
 						if (this.countries[i].name.match(matcher)) {
 							countryCodes.push(this.countries[i].iso2);
 						}
 					}
 				}
 				// Check if one of the matching countries is already selected
-				var alreadySelected = false;
+				let alreadySelected = false;
 				$.each(countryCodes, function(i, c) {
 					if (that.selectedFlagInner.hasClass(c)) {
 						alreadySelected = true;
@@ -475,8 +479,8 @@
 		// find the country data for the given country code
 		// the ignoreOnlyCountriesOption is only used during init() while parsing the onlyCountries array
 		_getCountryData: function(countryCode, ignoreOnlyCountriesOption) {
-			var countryList = ignoreOnlyCountriesOption ? allCountries : this.countries;
-			for (var i = 0; i < countryList.length; i++) {
+			const countryList = ignoreOnlyCountriesOption ? allCountries : this.countries;
+			for (let i = 0; i < countryList.length; i++) {
 				if (countryList[i].iso2 == countryCode) {
 					return countryList[i];
 				}
@@ -490,17 +494,17 @@
 			}
 			this.selectedFlagInner.attr("class", "flag " + countryCode);
 			// update the title attribute
-			var countryData = this._getCountryData(countryCode);
+			const countryData = this._getCountryData(countryCode);
 			this.selectedFlagInner.parent().attr("title", countryData.name);
 			// update the active list item
-			var listItem = this.countryListItems.children(".flag." + countryCode).first().parent();
+			const listItem = this.countryListItems.children(".flag." + countryCode).first().parent();
 			this.countryListItems.removeClass("active");
 			listItem.addClass("active");
 		},
 		// called when the user selects a list item from the dropdown
 		_selectListItem: function(listItem) {
 			// update selected flag and active list item
-			var countryCode = listItem.attr("data-country-code");
+			const countryCode = listItem.attr("data-country-code");
 			this._selectFlag(countryCode);
 			this._closeDropdown();
 			// update input value
@@ -527,13 +531,17 @@
 			if (!element || !element.offset()) {
 				return;
 			}
-			var container = this.countryList, containerHeight = container.height(), containerTop = container.offset().top, containerBottom = containerTop + containerHeight, elementHeight = element.outerHeight(), elementTop = element.offset().top, elementBottom = elementTop + elementHeight, newScrollTop = elementTop - containerTop + container.scrollTop();
+			const container = this.countryList, containerHeight = container.height(),
+				containerTop = container.offset().top, containerBottom = containerTop + containerHeight,
+				elementHeight = element.outerHeight(), elementTop = element.offset().top,
+				elementBottom = elementTop + elementHeight,
+				newScrollTop = elementTop - containerTop + container.scrollTop();
 			if (elementTop < containerTop) {
 				// scroll up
 				container.scrollTop(newScrollTop);
 			} else if (elementBottom > containerBottom) {
 				// scroll down
-				var heightDifference = containerHeight - elementHeight;
+				const heightDifference = containerHeight - elementHeight;
 				container.scrollTop(newScrollTop - heightDifference);
 			}
 		},
@@ -561,7 +569,7 @@
 		getSelectedCountryData: function() {
 			// rely on the fact that we only set 2 classes on the selected flag element:
 			// the first is "flag" and the second is the 2-char country code
-			var countryCode = this.selectedFlagInner.attr("class").split(" ")[1];
+			const countryCode = this.selectedFlagInner.attr("class").split(" ")[1];
 			return this._getCountryData(countryCode);
 		},
 		// update the selected flag
@@ -584,14 +592,14 @@
 			this.countryInput.off(this.ns);
 			this.selectedFlagInner.parent().off(this.ns);
 			// remove markup
-			var container = this.countryInput.parent();
+			const container = this.countryInput.parent();
 			container.before(this.countryInput).remove();
 		}
 	};
 	// adapted to allow public functions
 	// using https://github.com/jquery-boilerplate/jquery-boilerplate/wiki/Extending-jQuery-Boilerplate
 	$.fn[pluginName] = function(options) {
-		var args = arguments;
+		const args = arguments;
 		// Is the first parameter an object (options), or was omitted,
 		// instantiate a new instance of the plugin.
 		if (options === undefined || typeof options === "object") {
@@ -605,9 +613,9 @@
 			// with an underscore or "contains" the `init`-function,
 			// treat this as a call to a public method.
 			// Cache the method call to make it possible to return a value
-			var returns;
+			let returns;
 			this.each(function() {
-				var instance = $.data(this, "plugin_" + pluginName);
+				const instance = $.data(this, "plugin_" + pluginName);
 				// Tests that there's already a plugin-instance
 				// and checks that the requested public method exists
 				if (instance instanceof Plugin && typeof instance[options] === "function") {
@@ -644,7 +652,7 @@
 	// Note: using single char property names to keep filesize down
 	// n = name
 	// i = iso2 (2-char country code)
-	var allCountries = $.each([ {
+	allCountries = $.each([{
 		n: "Afghanistan (‫افغانستان‬‎)",
 		i: "af"
 	}, {
@@ -1394,7 +1402,7 @@
 	}, {
 		n: "Zimbabwe",
 		i: "zw"
-	} ], function(i, c) {
+	}], function (i, c) {
 		c.name = c.n;
 		c.iso2 = c.i;
 		delete c.n;

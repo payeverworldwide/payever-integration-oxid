@@ -1,9 +1,20 @@
 <?php
 
 /**
- * Class PayeverRefundManager
+ * PHP version 5.4 and 7
+ *
+ * @package     Payever\OXID
+ * @author      payever GmbH <service@payever.de>
+ * @copyright   2017-2021 payever GmbH
+ * @license     MIT <https://opensource.org/licenses/MIT>
  */
-class PayeverRefundManager extends PayeverOrderActionManager
+
+use Payever\Sdk\Payments\Action\ActionDeciderInterface;
+
+/**
+ * Class PayeverFormRefund
+ */
+class PayeverFormRefund extends PayeverFormBase
 {
     /**
      * @var bool
@@ -28,33 +39,6 @@ class PayeverRefundManager extends PayeverOrderActionManager
         }
 
         return $actions;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function processAmount($order, $amount, $identifier = null)
-    {
-        $paymentId = $order->getFieldData('oxtransid');
-
-        return $this->getPaymentsApiClient()->refundPaymentRequest($paymentId, $amount, $identifier);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function processItems($order, $items, $identifier = null)
-    {
-        $paymentId = $order->getFieldData('oxtransid');
-        $paymentItems = $this->getPaymentItemEntities($order, $items);
-
-        //Send cancel api request
-        return $this->getPaymentsApiClient()->refundItemsPaymentRequest(
-            $paymentId,
-            $paymentItems,
-            null,
-            $identifier
-        );
     }
 
     /**
@@ -145,7 +129,7 @@ class PayeverRefundManager extends PayeverOrderActionManager
      */
     public function getActionType()
     {
-        return payeverorderaction::ACTION_REFUND;
+        return ActionDeciderInterface::ACTION_REFUND;
     }
 
     /**

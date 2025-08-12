@@ -11,7 +11,6 @@
 
 use Payever\Sdk\Core\Http\MessageEntity\ResultEntity;
 use Payever\Sdk\Payments\Enum\Status;
-use Payever\Stub\BehatExtension\Context\ConfigTrait;
 
 /**
  * Class PayeverPaymentUrlBuilder
@@ -56,7 +55,6 @@ class PayeverPaymentUrlBuilder
      */
     public function createRedirectUrl($result)
     {
-        $status = null;
         $params = ['payment_id' => $result->getId()];
 
         switch ($result->getStatus()) {
@@ -76,6 +74,8 @@ class PayeverPaymentUrlBuilder
             case Status::STATUS_FAILED:
                 $status = self::STATUS_FAILURE;
                 break;
+            default:
+                throw new \InvalidArgumentException('Invalid status');
         }
 
         return $this->generateCallbackUrl($status, $params);

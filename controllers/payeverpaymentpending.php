@@ -22,6 +22,11 @@ class payeverpaymentpending extends oxUBase
     use PayeverPaymentsApiClientTrait;
 
     /**
+     * Prefix for Santander methods
+     */
+    const SANTANDER_PREFIX = 'santander';
+
+    /**
      * class template.
      *
      * @var string
@@ -63,6 +68,7 @@ class payeverpaymentpending extends oxUBase
         $this->_aViewData['oLang'] = $oLang;
         $this->_aViewData['iLang'] = $oLang->getTplLanguage();
         $this->_aViewData['checkStatusLink'] = $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlParams);
+        $this->_aViewData['isLoanTransaction'] = $this->isSantanderMethod();
 
         return $this->_sThisTemplate;
     }
@@ -78,7 +84,7 @@ class payeverpaymentpending extends oxUBase
                 ->getResponseEntity()
                 ->getResult();
 
-            $dispatcher = oxNew('payeverStandardDispatcher');
+            $dispatcher = oxNew('PayeverPaymentManager');
 
             switch ($result->getStatus()) {
                 case Status::STATUS_PAID:
@@ -91,6 +97,8 @@ class payeverpaymentpending extends oxUBase
                 case Status::STATUS_CANCELLED:
                     $data['redirect_url'] = $dispatcher->generateCallbackUrl('cancel', ['payment_id' => $paymentId]);
                     break;
+                default:
+                    $data['in_progress'] = true;
             }
         } catch (\Exception $e) {
             $data['error'] = $e->getMessage();
@@ -127,5 +135,25 @@ class payeverpaymentpending extends oxUBase
         $aPaths[] = $aPath;
 
         return $aPaths;
+    }
+
+    /**
+     * @return bool
+     */
+    private function isSantanderMethod()
+    {
+        $paymentId = $this->getConfig()->getRequestParameter('payment_id');
+
+        try {
+            $result = $this->getPaymentsApiClient()
+                ->retrievePaymentRequest($paymentId)
+                ->getResponseEntity()
+                ->getResult();
+            $method = $result->getPaymentType();
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        return strpos($method, self::SANTANDER_PREFIX) !== false;
     }
 }

@@ -13,6 +13,7 @@
  * Getting dynamic values and params for Payever payment types
  *
  * @extend oxBaseClass
+ * @codeCoverageIgnore
  */
 class payeverShowLogs extends oxUBase
 {
@@ -189,7 +190,7 @@ class payeverShowLogs extends oxUBase
                     $token
                 )
         ) {
-            throw new \Exception('Access denied.');
+            throw new \BadMethodCallException('Access denied.');
         }
 
         return $this;

@@ -11,6 +11,7 @@
 
 /**
  * Class payevercompanysearch
+ * @codeCoverageIgnore
  */
 class payevercompanysearch extends oxUBase
 {
@@ -42,29 +43,40 @@ class payevercompanysearch extends oxUBase
                     continue;
                 }
 
-                $item = [
-                    'label' => $company->getName(),
-                    'value' => $company->getId(),
-                    'phone' => $company->getPhoneNumber(),
-                    'vatid' => $company->getVatId()
-                ];
+                $companyArray = $company->toArray();
+                // Add fields for autocomplete
+                $companyArray['label'] = $company->getName();
+                $companyArray['value'] = $company->getId();
 
-                $address = $company->getAddress();
-                if ($address) {
-                    $item['city'] = $address->getCity();
-                    $item['postcode'] = $address->getPostCode();
-                    $item['street'] = $address->getStreetName();
-                    $item['streetNumber'] = $address->getStreetNumber();
-                    $item['address'] = trim(
-                        $address->getStreetNumber() . ' ' .
-                        $address->getStreetName() . ', ' .
-                        $address->getCity() . ' ' .
-                        $address->getPostCode()
-                    );
-                }
-
-                $result[] = $item;
+                $result[] = $companyArray;
             }
+        } catch (\Exception $e) {
+            $this->getLogger()->warning($e->getMessage());
+        }
+
+        $result = json_encode($result);
+        headers_sent() || header('Content-Type: application/json');
+        echo $result;
+        exit;
+    }
+
+    /**
+     * @SuppressWarnings(PHPMD.ExitExpression)
+     *
+     * @return void
+     * @throws Exception
+     */
+    public function retrieve()
+    {
+        $value = $this->getConfig()->getRequestParameter('value');
+        $type = $this->getConfig()->getRequestParameter('type');
+        $country = $this->getConfig()->getRequestParameter('country');
+
+        $result = [];
+        try {
+            $searchManager = new PayeverCompanySearchManager();
+            $searchResult = $searchManager->getCompanyById($value, $type, $country);
+            $result = $searchResult->toArray();
         } catch (\Exception $e) {
             $this->getLogger()->warning($e->getMessage());
         }

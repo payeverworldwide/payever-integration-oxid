@@ -36,8 +36,8 @@ class PayeverPaymentActionHelper
         $oDb = $this->getDatabase();
 
         $sSql = "SELECT * FROM {$this->getPaymentAction()->getCoreTableName()}
-            WHERE OXORDERID = {$oDb->quote($orderId)} 
-            AND UNIQUEIDENTIFIER = {$oDb->quote($identifier)} 
+            WHERE OXORDERID = {$oDb->quote($orderId)}
+            AND UNIQUEIDENTIFIER = {$oDb->quote($identifier)}
             AND ACTIONSOURCE = {$oDb->quote($source)}
             LIMIT 1";
 
@@ -55,7 +55,7 @@ class PayeverPaymentActionHelper
      */
     public function addAction($orderId, $identifier, $type)
     {
-        $sQuery = "INSERT {$this->getPaymentAction()->getCoreTableName()} SET 
+        $sQuery = "INSERT {$this->getPaymentAction()->getCoreTableName()} SET
             OXID = REPLACE(UUID( ) , '-', '' ),
             OXORDERID = {$this->getDatabase()->quote($orderId)},
             UNIQUEIDENTIFIER = {$this->getDatabase()->quote($identifier)},

@@ -20,9 +20,9 @@ class PayeverOrderHelper
     public function getAmountByCart($cart)
     {
         $version = $this->getConfigHelper()->getOxidVersionInt();
-        $paymentCost = $version > 47
-            ? ($cart->getPaymentCost() instanceof oxprice ? $cart->getPaymentCost()->getPrice() : 0)
-            : ($cart->getCosts('oxpayment') instanceof oxprice ? $cart->getCosts('oxpayment')->getPrice() : 0);
+
+        $oxCost = $version > 47 ? $cart->getPaymentCost() : $cart->getCosts('oxpayment');
+        $paymentCost = $oxCost instanceof oxprice ? $oxCost->getPrice() : 0;
 
         return (float) ($cart->getPrice()->getPrice() - $paymentCost);
     }

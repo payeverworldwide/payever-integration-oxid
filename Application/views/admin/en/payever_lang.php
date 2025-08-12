@@ -21,4 +21,4 @@
  * Compatibility with OXID 6.x
  */
 
-require __DIR__ . '/../../../../views/admin/en/payever_lang.php';
+require_once __DIR__ . '/../../../../views/admin/en/payever_lang.php';

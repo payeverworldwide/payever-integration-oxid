@@ -82,13 +82,16 @@
                         </div>
                     </div>
                     <div class="order-tab-form">
-                        [{include file='payever/order/action.tpl' manager=$oView->getCaptureManager()}]
+                        [{include file='payever/order/action_capture.tpl' form=$oView->getForm('shipping_goods')}]
                     </div>
                     <div class="order-tab-form">
-                        [{include file='payever/order/action.tpl' manager=$oView->getCancelManager()}]
+                        [{include file='payever/order/action_cancel.tpl' form=$oView->getForm('cancel')}]
                     </div>
                     <div class="order-tab-form">
-                        [{include file='payever/order/action.tpl' manager=$oView->getRefundManager()}]
+                        [{include file='payever/order/action_refund.tpl' form=$oView->getForm('refund')}]
+                    </div>
+                    <div class="order-tab-form">
+                        [{include file='payever/order/action_claim.tpl' form=$oView->getForm('claim')}]
                     </div>
                 </div>
             [{else}]

@@ -1,9 +1,20 @@
 <?php
 
 /**
- * Class PayeverCancelManager
+ * PHP version 5.4 and 7
+ *
+ * @package     Payever\OXID
+ * @author      payever GmbH <service@payever.de>
+ * @copyright   2017-2021 payever GmbH
+ * @license     MIT <https://opensource.org/licenses/MIT>
  */
-class PayeverCancelManager extends PayeverOrderActionManager
+
+use Payever\Sdk\Payments\Action\ActionDeciderInterface;
+
+/**
+ * Class PayeverFormCancel
+ */
+class PayeverFormCancel extends PayeverFormBase
 {
     /**
      * Check if action is allowed in payever api
@@ -11,6 +22,7 @@ class PayeverCancelManager extends PayeverOrderActionManager
      * @param oxOrder $order
      *
      * @return array
+     * @throws oxConnectionException
      */
     public function isActionAllowed($order, $actionType = null)
     {
@@ -28,34 +40,6 @@ class PayeverCancelManager extends PayeverOrderActionManager
         }
 
         return $actions;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function processAmount($order, $amount, $identifier = null)
-    {
-        //Send cancel api request
-        $paymentId = $order->getFieldData('oxtransid');
-
-        return $this->getPaymentsApiClient()->cancelPaymentRequest($paymentId, $amount, $identifier);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function processItems($order, $items, $identifier = null)
-    {
-        $paymentId = $order->getFieldData('oxtransid');
-        $paymentItems = $this->getPaymentItemEntities($order, $items);
-
-        //Send cancel api request
-        return $this->getPaymentsApiClient()->cancelItemsPaymentRequest(
-            $paymentId,
-            $paymentItems,
-            null,
-            $identifier
-        );
     }
 
     /**
@@ -130,7 +114,7 @@ class PayeverCancelManager extends PayeverOrderActionManager
      */
     public function getActionType()
     {
-        return payeverorderaction::ACTION_CANCEL;
+        return ActionDeciderInterface::ACTION_CANCEL;
     }
 
     /**

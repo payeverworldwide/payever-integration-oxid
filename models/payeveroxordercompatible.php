@@ -57,10 +57,8 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
      * @extend finalizeOrder
      *
      * @throws \Exception
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
-     * @SuppressWarnings(PHPMD.ElseExpression)
-     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function finalizeOrder(
@@ -127,6 +125,26 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
             }
         }
 
+        return $this->finalizeOrderPostProcessing($oBasket, $blRecalculatingOrder, $oUser, $oUserPayment);
+    }
+
+    /**
+     * Overrides standard oxid finalizeOrder method
+     *
+     * @param OxidEsales\EshopCommunity\Application\Model\Basket $oBasket Shopping basket object
+     * @param bool $blRecalculatingOrder Order recalculation
+     * @param oxUser $oUser Current user object
+     * @param oxUserPayment $oUserPayment
+     *
+     * @return integer
+     *
+     * @throws \Exception
+     *
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     */
+    private function finalizeOrderPostProcessing($oBasket, $blRecalculatingOrder, $oUser, $oUserPayment)
+    {
         if (!$this->oxorder__oxordernr->value) {
             $this->_setNumber();
         } else {

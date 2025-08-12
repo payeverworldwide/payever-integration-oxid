@@ -53,13 +53,13 @@ class PayeverInstaller
      */
     private static function installDb()
     {
-        $Columns = [
+        $columns = [
             'basketid' => 'TEXT',
             'panid' => 'TEXT',
             'payever_notification_timestamp' => 'int',
         ];
 
-        foreach ($Columns as $cval => $type) {
+        foreach ($columns as $cval => $type) {
             self::addColumnIfNotExists('oxorder', $cval, ['type' => $type, 'nullable' => false]);
         }
 
@@ -102,6 +102,10 @@ class PayeverInstaller
                 'type' => 'tinyint',
                 'nullable' => true,
             ],
+            'oxpaymentissuer' => [
+                'type' => 'TEXT',
+                'nullable' => true,
+            ],
         ];
         self::createColumnsForPaymentsTable($columns);
         self::createDefaultPayeverCategory();
@@ -126,11 +130,11 @@ class PayeverInstaller
             $updateViews = ['oxv_oxpayments', 'oxv_oxpayments_de', 'oxv_oxpayments_en'];
 
             foreach ($updateViews as $viewName) {
-                $viewExistsSql = "SELECT * FROM INFORMATION_SCHEMA.TABLES 
-                                  WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' 
+                $viewExistsSql = "SELECT * FROM INFORMATION_SCHEMA.TABLES
+                                  WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "'
                                         AND TABLE_NAME = '{$viewName}'";
-                $columnExistsSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
-                         WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "' 
+                $columnExistsSql = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+                         WHERE TABLE_SCHEMA = '" . $oConfig->getConfigParam('dbName') . "'
                                AND TABLE_NAME = '{$viewName}' AND COLUMN_NAME = '{$cval}'";
                 $columnResult = $oDb->getAll($columnExistsSql);
 
@@ -379,8 +383,8 @@ class PayeverInstaller
         $sTempFolderPath = oxRegistry::getConfig()->getConfigParam('sCompileDir');
 
         if (
-            !empty($sClearFolderPath) and
-            (strpos($sClearFolderPath, $sTempFolderPath) !== false) and
+            !empty($sClearFolderPath) &&
+            (strpos($sClearFolderPath, $sTempFolderPath) !== false) &&
             is_dir($sClearFolderPath)
         ) {
             // User argument folder path to delete from
@@ -397,10 +401,10 @@ class PayeverInstaller
             while (false !== ($sFileName = readdir($hDir))) {
                 $sFilePath = $sFolderPath . '/' . $sFileName;
 
-                if (!in_array($sFileName, ['.', '..', '.htaccess']) and is_file($sFilePath)) {
+                if (!in_array($sFileName, ['.', '..', '.htaccess']) && is_file($sFilePath)) {
                     // Delete a file if it is allowed to delete
                     is_writable($sFilePath) && unlink($sFilePath);
-                } elseif ($sFileName == 'smarty' and is_dir($sFilePath)) {
+                } elseif ($sFileName == 'smarty' && is_dir($sFilePath)) {
                     // Recursive call to clean Smarty temp
                     self::cleanTmp($sFilePath);
                 }

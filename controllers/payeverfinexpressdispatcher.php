@@ -13,10 +13,6 @@ use Payever\Sdk\Payments\Http\ResponseEntity\RetrievePaymentResponse;
 use Payever\Sdk\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
 use Payever\Sdk\Payments\Enum\Status;
 use OxidEsales\Eshop\Application\Model\Country;
-use OxidEsales\Eshop\Application\Model\User;
-use OxidEsales\Eshop\Core\Registry;
-use OxidEsales\Eshop\Application\Model\DeliverySetList;
-use OxidEsales\Eshop\Application\Model\DeliveryList;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -27,19 +23,20 @@ use OxidEsales\Eshop\Application\Model\DeliveryList;
  */
 class payeverFinexpressDispatcher extends payeverStandardDispatcher
 {
-    const STATUS_PARAM = 'sts';
+    use PayeverFileLockTrait;
+    use PayeverDisplayHelperTrait;
+    use PayeverCountryFactoryTrait;
+    use PayeverPaymentsApiClientTrait;
+    use PayeverOrderHelperTrait;
+    use PayeverFieldFactoryTrait;
+    use PayeverOxUserTrait;
+    use PayeverOxUserPaymentTrait;
+    use PayeverOxOrderTrait;
+    use PayeverOxBasketTrait;
+    use PayeverOxArticleTrait;
+    use PayeverOxDeliveryListTrait;
 
     const LOCK_WAIT_SECONDS = 30;
-
-    /** @var DeliverySetList */
-    private $oxDeliverySetList;
-
-    /** @var DeliveryList */
-    private $oxDeliveryList;
-
-    /** @var oxarticle */
-    private $oxArticle;
-
 
     public function payeverWidgetQuoteCallback()
     {
@@ -48,14 +45,9 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         $this->getLogger()->debug($request);
         $data = json_decode($request, true);
 
-        $oHeader = oxNew(\OxidEsales\Eshop\Core\Header::class);
         if (isset($data['shippingMethod'])) {
             $this->getLogger()->info('quoteAction: Selected shippingMethod: ' . $data['shippingMethod']);
-            $oHeader->setHeader('HTTP/1.1 200');
-            $oHeader->setHeader('Content-Type: application/json; charset=utf-8');
-            !$this->dryRun && $oHeader->sendHeader();
-            echo json_encode([]);
-            $this->dryRun || die();
+            $this->sendJsonResponse([]);
             return;
         }
 
@@ -101,20 +93,10 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
                 }
             }
 
-            $oHeader->setHeader('HTTP/1.1 200');
-            $oHeader->setHeader('Content-Type: application/json; charset=utf-8');
-            !$this->dryRun && $oHeader->sendHeader();
-            echo json_encode(['shippingMethods' => $result]);
-            $this->dryRun || die();
-            return;
+            $this->sendJsonResponse(['shippingMethods' => $result]);
         } catch (Exception $exception) {
-            $oHeader->setHeader('HTTP/1.1 400 BAD REQUEST');
-            $oHeader->setHeader('Content-Type: application/json; charset=utf-8');
-            !$this->dryRun && $oHeader->sendHeader();
             $this->getLogger()->critical('quoteAction: ' . $exception->getMessage());
-            echo json_encode(['error' => $exception->getMessage()]);
-            $this->dryRun || die();
-            return;
+            $this->sendJsonResponse(['error' => $exception->getMessage()], 400);
         }
     }
 
@@ -158,7 +140,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
                 [$paymentId]
             );
 
-            $this->addErrorToDisplay($exception->getMessage());
+            $this->getDisplayHelper()->addErrorToDisplay($exception->getMessage());
             $this->redirectToCancel('cart_');
         }
     }
@@ -180,7 +162,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
 
         /** @var RetrievePaymentResultEntity $retrievePaymentResult */
         $retrievePaymentResult = $this->getRetrievePaymentResultEntity($paymentId);
-        $this->addErrorToDisplay('The payment hasn\'t been successful');
+        $this->getDisplayHelper()->addErrorToDisplay('The payment hasn\'t been successful');
         $this->redirectToCancel($retrievePaymentResult->getReference());
     }
 
@@ -198,7 +180,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
 
         /** @var RetrievePaymentResultEntity $retrievePaymentResult */
         $retrievePaymentResult = $this->getRetrievePaymentResultEntity($paymentId);
-        $this->addErrorToDisplay('Payment has been cancelled');
+        $this->getDisplayHelper()->addErrorToDisplay('Payment has been cancelled');
         $this->redirectToCancel($retrievePaymentResult->getReference());
     }
 
@@ -215,8 +197,6 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         $this->getLocker()->acquireLock($paymentId, static::LOCK_WAIT_SECONDS);
         $this->getLogger()->info('Locked', [$paymentId]);
 
-        $oHeader = oxNew(\OxidEsales\Eshop\Core\Header::class);
-
         try {
             /** @var RetrievePaymentResultEntity $retrievePaymentResult */
             $retrievePaymentResult = $this->getRetrievePaymentResultEntity($paymentId);
@@ -227,16 +207,11 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
             );
             $this->getLocker()->releaseLock($paymentId);
 
-            $oHeader->setHeader('HTTP/1.1 200');
-            $oHeader->setHeader('Content-Type: application/json; charset=utf-8');
-            !$this->dryRun && $oHeader->sendHeader();
-            echo json_encode(
-                [
-                    'result'   => 'success',
-                    'message'  => 'Order has been processed',
-                    'order_id' => $order->getId(),
-                ]
-            );
+            $this->sendJsonResponse([
+                'result'   => 'success',
+                'message'  => 'Order has been processed',
+                'order_id' => $order->getId(),
+            ]);
         } catch (Exception $exception) {
             $this->getLocker()->releaseLock($paymentId);
             $this->getLogger()->error(
@@ -247,18 +222,12 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
                 [$paymentId]
             );
 
-            $oHeader->setHeader('HTTP/1.1 400 BAD REQUEST');
-            $oHeader->setHeader('Content-Type: application/json; charset=utf-8');
-            !$this->dryRun && $oHeader->sendHeader();
-            echo json_encode(['result' => 'error', 'message' => $exception->getMessage()]);
+            $this->sendJsonResponse(['result' => 'error', 'message' => $exception->getMessage()], 400);
         }
-
-        $this->dryRun || die();
     }
 
     /**
      * @param $paymentId
-     * @param $sts
      *
      * @return RetrievePaymentResultEntity
      * @throws Exception
@@ -273,13 +242,10 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     }
 
     /**
-     * @param $productId
+     * @param $cartItems
      * @param $oUser
      *
      * @return object|oxBasket
-     * @throws \OxidEsales\Eshop\Core\Exception\ArticleInputException
-     * @throws \OxidEsales\Eshop\Core\Exception\NoArticleException
-     * @throws \OxidEsales\Eshop\Core\Exception\OutOfStockException
      */
     private function createBasket($cartItems, $oUser)
     {
@@ -288,7 +254,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         foreach ($cartItems as $artNum => $qty) {
             $productId = $this->getProductByNumber($artNum)->getId();
             if (!$productId) {
-                throw new Exception('Unable to load product');
+                throw new \UnexpectedValueException('Unable to load product');
             }
             $oxBasket->addToBasket($productId, $qty);
         }
@@ -364,14 +330,19 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     {
         switch ($salutation) {
             case 'MR_SALUATATION':
-                return 'mr';
+                $salutationText = 'mr';
+                break;
             case 'MRS_SALUATATION':
-                return 'mrs';
+                $salutationText = 'mrs';
+                break;
             case 'MS_SALUATATION':
-                return 'ms';
+                $salutationText = 'ms';
+                break;
             default:
-                return '';
+                $salutationText = '';
         }
+
+        return $salutationText;
     }
 
     /**
@@ -414,7 +385,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
      */
     private function processOrder($retrievePaymentResult, $isPending = false)
     {
-        $oOrder = $this->getOrderByPaymentId($retrievePaymentResult->getId());
+        $oOrder = $this->getGatewayManager()->getOrderByPaymentId($retrievePaymentResult->getId());
         if ($oOrder) {
             $this->getLogger()->debug('Order exists ' . $oOrder->getId());
             return $oOrder;
@@ -426,8 +397,8 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         }
 
         $paymentMethod  = PayeverConfig::PLUGIN_PREFIX . $retrievePaymentResult->getPaymentType();
-        $oxidOrderStatus = $this->getInternalStatus($retrievePaymentResult->getStatus());
-        $isPaid = $this->isPaidStatus($oxidOrderStatus);
+        $oxidOrderStatus = $this->getGatewayManager()->getInternalStatus($retrievePaymentResult->getStatus());
+        $isPaid = $this->getGatewayManager()->isPaidStatus($oxidOrderStatus);
 
         // Create User
         $oUser = $this->createUser($retrievePaymentResult);
@@ -577,6 +548,11 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         }
     }
 
+    /**
+     * @param string $reference
+     *
+     * @return void
+     */
     private function redirectToCancel($reference)
     {
         if (strpos($reference, 'prod_') !== false) {
@@ -592,71 +568,23 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     }
 
     /**
-     * @codeCoverageIgnore
-     * @return DeliveryList
+     * @param array $data
+     * @param int $code
+     * @return void
      */
-    private function getOxDeliveryList()
+    private function sendJsonResponse($data, $code = 200)
     {
-        if ($this->oxDeliveryList === null) {
-            return oxNew(DeliveryList::class);
+        $http = 'HTTP/1.1 200';
+        if ($code === 400) {
+            $http = 'HTTP/1.1 400 BAD REQUEST';
         }
 
-        return $this->oxDeliveryList;
-    }
+        $oHeader = oxNew(\OxidEsales\Eshop\Core\Header::class);
+        $oHeader->setHeader($http);
+        $oHeader->setHeader('Content-Type: application/json; charset=utf-8');
+        !$this->dryRun && $oHeader->sendHeader();
 
-    /**
-     * @param DeliveryList
-     */
-    public function setOxDeliveryList($oxDeliveryList)
-    {
-        $this->oxDeliveryList = $oxDeliveryList;
-
-        return $this;
-    }
-
-    /**
-     * @codeCoverageIgnore
-     * @return DeliverySetList
-     */
-    private function getOxDeliverySetList()
-    {
-        if ($this->oxDeliverySetList === null) {
-            return oxNew(DeliverySetList::class);
-        }
-
-        return $this->oxDeliverySetList;
-    }
-
-    /**
-     * @param DeliverySetList
-     */
-    public function setOxDeliverySetList($oxDeliverySetList)
-    {
-        $this->oxDeliverySetList = $oxDeliverySetList;
-
-        return $this;
-    }
-
-    /**
-     * @codeCoverageIgnore
-     * @return oxarticle
-     */
-    private function getOxArticle()
-    {
-        if ($this->oxArticle === null) {
-            return oxNew('oxarticle');
-        }
-
-        return $this->oxArticle;
-    }
-
-    /**
-     * @param oxarticle
-     */
-    public function setOxArticle($oxArticle)
-    {
-        $this->oxArticle = $oxArticle;
-
-        return $this;
+        echo json_encode($data);
+        $this->dryRun || die();
     }
 }

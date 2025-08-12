@@ -5,64 +5,44 @@
     height: 50px;
     vertical-align: middle;
 }
-
 .payever-loader {
     position: absolute;
     top: 50%;
     left: 50%;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
-    -webkit-animation-delay: 0.485s;
-    animation-delay: 0.485s;
-}
-.payever-loader:after,
-.payever-loader:before {
-    background: rgba(0, 0, 0, 0.75);
-    -webkit-animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite
-    normal both;
-    animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite normal
-    both;
-    z-index: 1000;
-    border-radius: 50%;
-}
-.payever-loader {
     width:10px;
     height: 10px;
     background: rgba(0, 0, 0, 0.75);
-    -webkit-animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite
-    normal both;
-    animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite normal
-    both;
+    -webkit-animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite normal both;
+    animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite normal both;
     z-index: 1000;
     border-radius: 50%;
     -webkit-animation-delay: 0.485s;
     animation-delay: 0.485s;
-}
-.payever-loader:after,
-.payever-loader:before {
-    content: "";
-    position: absolute;
-    top: 0;
-}
-.payever-loader:after,
-.payever-loader:after {
-    -webkit-animation-delay: 0.97s;
-    animation-delay: 0.97s;
-}
-.payever-loader:after,
-.payever-loader:before {
-    width: 10px;
-    height: 10px;
-}
-.payever-loader {
     margin-top: -5px;
     margin-left: -5px;
 }
+.payever-loader:after,
 .payever-loader:before {
-    left: -14px;
+    background: rgba(0, 0, 0, 0.75);
+    -webkit-animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite normal both;
+    animation: loader-black 1.455s cubic-bezier(0.4, 0, 1, 1) 0s infinite normal both;
+    z-index: 1000;
+    border-radius: 50%;
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 10px;
 }
 .payever-loader:after {
+    -webkit-animation-delay: 0.97s;
+    animation-delay: 0.97s;
     left: 14px;
+}
+.payever-loader:before {
+    left: -14px;
 }
 
 @-webkit-keyframes loader-black {

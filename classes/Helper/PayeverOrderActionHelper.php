@@ -26,7 +26,7 @@ class PayeverOrderActionHelper
      */
     public function addAction($data, $action)
     {
-        $sQuery = "INSERT {$this->getPaymentAction()->getCoreTableName()} SET 
+        $sQuery = "INSERT {$this->getPaymentAction()->getCoreTableName()} SET
             OXID = REPLACE(UUID( ) , '-', '' ),
             OXORDERID = {$this->getDatabase()->quote($data['orderId'])},
             PAYEVERACTIONID = {$this->getDatabase()->quote($data['actionId'])},
@@ -54,8 +54,8 @@ class PayeverOrderActionHelper
         $oDb = $this->getDatabase();
 
         $sSql = "SELECT * FROM {$this->getPaymentAction()->getCoreTableName()}
-            WHERE OXORDERID = {$oDb->quote($orderId)} 
-            AND PAYEVERACTION = {$oDb->quote($action)} 
+            WHERE OXORDERID = {$oDb->quote($orderId)}
+            AND PAYEVERACTION = {$oDb->quote($action)}
             AND TYPE = {$oDb->quote(payeverorderaction::TYPE_PRODUCT)}
             ORDER BY TIMESTAMP";
 
@@ -78,8 +78,8 @@ class PayeverOrderActionHelper
         $oDb = $this->getDatabase();
 
         $sSql = "SELECT * FROM {$this->getPaymentAction()->getCoreTableName()}
-            WHERE OXORDERID = {$oDb->quote($orderId)} 
-            AND PAYEVERACTION = {$oDb->quote($action)} 
+            WHERE OXORDERID = {$oDb->quote($orderId)}
+            AND PAYEVERACTION = {$oDb->quote($action)}
             AND TYPE = {$oDb->quote($type)}
             LIMIT 1";
 

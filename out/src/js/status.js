@@ -24,7 +24,7 @@ window.PayeverPendingStatusChecker = {
             }
 
             if (xhr.status === 200) {
-                var response = (function (raw) {
+                const response = (function (raw) {
                     try {
                         return JSON.parse(raw);
                     } catch (e) {

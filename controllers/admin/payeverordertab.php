@@ -10,10 +10,10 @@ class payeverordertab extends oxAdminDetails
     use PayeverConfigHelperTrait;
     use PayeverOrderFactoryTrait;
     use PayeverOrderTransactionHelperTrait;
-    use PayeverOrderActionManagerTrait;
-
-    /** @var oxLang */
-    protected $lang;
+    use PayeverActionFormTrait;
+    use PayeverActionRequestTrait;
+    use PayeverActionProcessorTrait;
+    use PayeverLangTrait;
 
     /**
      * {@inheritDoc}
@@ -33,27 +33,27 @@ class payeverordertab extends oxAdminDetails
     {
         !$this->dryRun && parent::render();
 
-        /** @var oxOrder $oOrder */
-        $oOrder = $this->getOrderFactory()->create();
+        /** @var oxOrder $oxOrder */
+        $oxOrder = $this->getOrderFactory()->create();
         $oCurrency = $this->getConfig()->getActShopCurrencyObject();
 
         $sId = $this->getEditObjectId();
-        if ((int)$sId !== -1 && $sId !== null && $oOrder->load($sId)) {
-            $isPayeverOrder = $this->isPayeverOrder($oOrder);
+        if ((int)$sId !== -1 && $sId !== null && $oxOrder->load($sId)) {
+            $isPayeverOrder = $this->isPayeverOrder($oxOrder);
 
-            $this->_aViewData['edit'] = $oOrder;
-            $this->_aViewData['aProductVats'] = $oOrder->getProductVats();
-            $this->_aViewData['orderArticles'] = $oOrder->getOrderArticles();
-            $this->_aViewData['giftCard'] = $oOrder->getGiftCard();
-            $this->_aViewData['paymentType'] = $oOrder->getPaymentType();
+            $this->_aViewData['edit'] = $oxOrder;
+            $this->_aViewData['aProductVats'] = $oxOrder->getProductVats();
+            $this->_aViewData['orderArticles'] = $oxOrder->getOrderArticles();
+            $this->_aViewData['giftCard'] = $oxOrder->getGiftCard();
+            $this->_aViewData['paymentType'] = $oxOrder->getPaymentType();
             $this->_aViewData['isPayeverOrder'] = $isPayeverOrder;
-            $this->_aViewData['deliveryType'] = $oOrder->getDelSet();
+            $this->_aViewData['deliveryType'] = $oxOrder->getDelSet();
 
             if ($isPayeverOrder) {
-                $this->_aViewData['transaction'] = $this->getOrderTransactionHelper()->getTransaction($oOrder, true);
+                $this->_aViewData['transaction'] = $this->getOrderTransactionHelper()->getTransaction($oxOrder, true);
             }
 
-            $sTsProtectedCosts = $oOrder->getFieldData('oxtsprotectcosts');
+            $sTsProtectedCosts = $oxOrder->getFieldData('oxtsprotectcosts');
             if ($sTsProtectedCosts) {
                 $this->_aViewData['tsprotectcosts'] = $this->getLanguage()->formatCurrency(
                     $sTsProtectedCosts,
@@ -63,14 +63,14 @@ class payeverordertab extends oxAdminDetails
         }
 
         // orders today
-        $dSum = $oOrder->getOrderSum(true);
+        $dSum = $oxOrder->getOrderSum(true);
         $this->_aViewData['ordersum'] = $this->getLanguage()->formatCurrency($dSum, $oCurrency);
-        $this->_aViewData['ordercnt'] = $oOrder->getOrderCnt(true);
+        $this->_aViewData['ordercnt'] = $oxOrder->getOrderCnt(true);
 
         // ALL orders
-        $dSum = $oOrder->getOrderSum();
+        $dSum = $oxOrder->getOrderSum();
         $this->_aViewData['ordertotalsum'] = $this->getLanguage()->formatCurrency($dSum, $oCurrency);
-        $this->_aViewData['ordertotalcnt'] = $oOrder->getOrderCnt();
+        $this->_aViewData['ordertotalcnt'] = $oxOrder->getOrderCnt();
         $this->_aViewData['afolder'] = $this->getConfig()->getConfigParam('aOrderfolder');
         $this->_aViewData['currency'] = $oCurrency;
 
@@ -78,107 +78,29 @@ class payeverordertab extends oxAdminDetails
     }
 
     /**
-     * Send order action request to Payever
-     *
      * @return void
-     * @throws Exception
+     * @throws oxSystemComponentException
      */
-    public function processTotal()
+    public function processAction()
     {
         $sId = $this->getEditObjectId();
 
-        /** @var oxOrder $oOrder */
-        $oOrder = $this->getOrderFactory()->create();
-        if (!$oOrder->load($sId)) {
+        /** @var oxOrder $oxOrder */
+        $oxOrder = $this->getOrderFactory()->create();
+        if (!$oxOrder->load($sId)) {
             return;
         }
 
-        $type = $this->getConfig()->getRequestParameter('actionType');
-        $total = $this->getOrderTransactionHelper()->getTotal($oOrder);
+        $action = $this->getActionRequest()->getAction();
+        $type = $this->getActionRequest()->getType();
 
-        //Send request (ship, cancel, refund) to api
-        $response = $this->getManager($type)->processAction($oOrder, [
-            'type' => PayeverOrderActionManager::TYPE_TOTAL,
-            'amount' => $total,
-        ]);
-
-        if (isset($response['error'])) {
-            $this->_aViewData['formError'][$type] = $response['error'];
-        }
-    }
-
-    /**
-     * Send partial amount request to Payever
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function processAmount()
-    {
-        $sId = $this->getEditObjectId();
-
-        /** @var oxOrder $oOrder */
-        $oOrder = $this->getOrderFactory()->create();
-        if (!$oOrder->load($sId)) {
-            return;
-        }
-
-        $type = $this->getConfig()->getRequestParameter('actionType');
-
-        $validator = $this->getValidator($type);
-        if (!$validator->validateAmount($oOrder)) {
-            $this->_aViewData['formError'][$type] = $this->getLanguage()->translateString($validator->getError());
-
-            return;
-        }
-
-        $amount = $validator->getAmount();
-
-        //Send partial amount request (ship, cancel, refund) to api
-        $response = $validator->getManager()->processAction($oOrder, [
-            'type' => PayeverOrderActionManager::TYPE_AMOUNT,
-            'amount' => $amount,
-        ]);
-
-        if (isset($response['error'])) {
-            $this->_aViewData['formError'][$type] = $response['error'];
-        }
-    }
-
-    /**
-     * Send partial items request to Payever
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function processItems()
-    {
-        $sId = $this->getEditObjectId();
-
-        /** @var oxOrder $oOrder */
-        $oOrder = $this->getOrderFactory()->create();
-        if (!$oOrder->load($sId)) {
-            return;
-        }
-
-        $type = $this->getConfig()->getRequestParameter('actionType');
-
-        $validator = $this->getValidator($type);
-        if (!$validator->validateItems()) {
-            $this->_aViewData['formError'][$type] = $this->getLanguage()->translateString($validator->getError());
-
-            return;
-        }
-
-        //Send partial items request (ship, cancel, refund) to api
-        $items = $validator->getItems();
-        $response = $validator->getManager()->processAction($oOrder, [
-            'type' => PayeverOrderActionManager::TYPE_ITEM,
-            'items' => $items,
-        ]);
-
-        if (isset($response['error'])) {
-            $this->_aViewData['formError'][$type] = $response['error'];
+        try {
+            if ($this->getValidator($action)->validate($oxOrder, $type)) {
+                //Send partial amount request (ship, cancel, refund) to api
+                $this->getActionProcessor()->processAction($oxOrder, $action);
+            }
+        } catch (\Exception $e) {
+            $this->_aViewData['formError'][$action] = $this->getLanguage()->translateString($e->getMessage());
         }
     }
 
@@ -192,28 +114,5 @@ class payeverordertab extends oxAdminDetails
         $paymentMethod = $order->getFieldData('oxpaymenttype');
 
         return $this->getConfigHelper()->isPayeverPaymentMethod($paymentMethod);
-    }
-
-    /**
-     * Returns the language object.
-     *
-     * @return oxLang
-     */
-    protected function getLanguage()
-    {
-        return null === $this->lang
-            ? $this->lang = oxregistry::getLang()
-            : $this->lang;
-    }
-
-    /**
-     *
-     * @param oxLang
-     */
-    public function setLanguage($oxLang)
-    {
-        $this->lang = $oxLang;
-
-        return $this;
     }
 }

@@ -42,13 +42,13 @@ class PayeverModuleDeactivateCommand extends PayeverAbstractModuleCommand
                 $output->writeln('The payever module is deactivated');
                 return;
             }
-            throw new \RuntimeException('Couldn\'t deactivate payever module');
+            throw new \BadMethodCallException('Couldn\'t deactivate payever module');
         } elseif (method_exists($this->getModule(), 'deactivate')) {
             // old oxid versions
             $this->getModule()->deactivate();
             return;
         }
-        throw new \RuntimeException('Unable deto activate payever module');
+        throw new \BadMethodCallException('Unable deto activate payever module');
         // @codeCoverageIgnoreEnd
     }
 }

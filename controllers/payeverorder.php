@@ -66,13 +66,14 @@ class payeverOrder extends payeverOrder_parent
     {
         $sessPayeverPaymentView = $this->getSession()->getVariable('oxidpayever_payment_view_type');
 
-        if ($sessPayeverPaymentView == 'iframe') {
-            return true;
-        }
-
-        return false;
+        return $sessPayeverPaymentView === 'iframe';
     }
 
+    /**
+     * @param $iSuccess
+     * @return string
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     */
     public function getNextStep($iSuccess)
     {
         $nextStep = parent::_getNextStep($iSuccess);
@@ -92,17 +93,17 @@ class payeverOrder extends payeverOrder_parent
                 if (!$redirectUrl) {
                     return 'payment';
                 }
+
                 $isRedirectMethod = $this->getSession()->getVariable(PayeverConfig::SESS_IS_REDIRECT_METHOD);
                 if ($isRedirectMethod || PayeverConfig::getIsRedirect() || !PayeverConfig::ALLOW_IFRAME) {
                     $oSession->setVariable('paymentid', $sPaymentId);
                     $oSession->setVariable('oxidpayever_payment_view_redirect_url', $redirectUrl);
-
-                    return 'payeverStandardDispatcher?fnc=processPayment';
+                    $nextStep = 'payeverStandardDispatcher?fnc=processPayment';
+                } else {
+                    $oSession->setVariable('oxidpayever_payment_view_type', 'iframe');
+                    $oSession->setVariable('oxidpayever_payment_view_iframe_url', $redirectUrl);
+                    $nextStep = 'order';
                 }
-                $oSession->setVariable('oxidpayever_payment_view_type', 'iframe');
-                $oSession->setVariable('oxidpayever_payment_view_iframe_url', $redirectUrl);
-
-                return 'order';
             }
         }
 

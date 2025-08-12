@@ -21,7 +21,12 @@ use Payever\Sdk\Payments\Enum\Status;
  */
 class payeverExpressDispatcher extends payeverStandardDispatcher
 {
-    const STATUS_PARAM = 'sts';
+    use PayeverFileLockTrait;
+    use PayeverDisplayHelperTrait;
+    use PayeverCountryFactoryTrait;
+    use PayeverPaymentsApiClientTrait;
+    use PayeverOrderHelperTrait;
+
     const LOCK_WAIT_SECONDS = 30;
 
     public function payeverWidgetSuccess()
@@ -58,7 +63,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
                 [$paymentId]
             );
 
-            $this->addErrorToDisplay($exception->getMessage());
+            $this->getDisplayHelper()->addErrorToDisplay($exception->getMessage());
 
             $this->getUtils()->redirect($product->getLink(), false);
         }
@@ -80,7 +85,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
         $retrievePaymentResult = $this->getRetrievePaymentResultEntity($paymentId);
         $product = $this->getProductByNumber($retrievePaymentResult->getReference());
 
-        $this->addErrorToDisplay('The payment hasn\'t been successful');
+        $this->getDisplayHelper()->addErrorToDisplay('The payment hasn\'t been successful');
 
         $this->getUtils()->redirect($product->getLink(), false);
     }
@@ -89,7 +94,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     {
         $message = 'Payment has been cancelled';
         $this->getLogger()->info(sprintf("Canceling Finance Express payment with message: %s", $message));
-        $this->addErrorToDisplay($message);
+        $this->getDisplayHelper()->addErrorToDisplay($message);
 
         $this->_redirectToCart();
     }
@@ -121,7 +126,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
                 [
                     'result' => 'success',
                     'message' => 'Order has been processed',
-                    'order_id' => $oOrder->getId()
+                    'order_id' => $oOrder->getId(),
                 ]
             );
         } catch (Exception $exception) {
@@ -239,14 +244,19 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     {
         switch ($salutation) {
             case 'MR_SALUATATION':
-                return 'mr';
+                $salutationText = 'mr';
+                break;
             case 'MRS_SALUATATION':
-                return 'mrs';
+                $salutationText = 'mrs';
+                break;
             case 'MS_SALUATATION':
-                return 'ms';
+                $salutationText = 'ms';
+                break;
             default:
-                return '';
+                $salutationText = '';
         }
+
+        return $salutationText;
     }
 
     /**
@@ -270,7 +280,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     }
 
     /**
-     * @param $retrievePaymentResult
+     * @param RetrievePaymentResultEntity $retrievePaymentResult
      * @param $product
      * @param bool $isPending
      * @param bool $isNotice
@@ -281,119 +291,26 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @throws oxConnectionException
      * @throws oxException
      * @throws oxSystemComponentException
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-     * @SuppressWarnings(PHPMD.ElseExpression)
-     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      * @SuppressWarnings(PHPMD.ExitExpression)
-     * @SuppressWarnings(PHPMD.NPathComplexity)
      * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
      */
     private function processOrder($retrievePaymentResult, $product, $isPending = false, $isNotice = false)
     {
-        $paymentDetails = $retrievePaymentResult->getPaymentDetails();
-        $paymentMethod = PayeverConfig::PLUGIN_PREFIX . $retrievePaymentResult->getPaymentType();
-
-        $oxidOrderStatus = $this->getInternalStatus($retrievePaymentResult->getStatus());
-        $isPaid = $this->isPaidStatus($oxidOrderStatus);
-
-        $oUser = $this->createUser($retrievePaymentResult);
+        $oxidOrderStatus = $this->getGatewayManager()->getInternalStatus($retrievePaymentResult->getStatus());
 
         $oSession = $this->getSession();
 
         $oSession->oxidpayever_payment_id = $retrievePaymentResult->getId();
         $oSession->setVariable('oxidpayever_payment_id', $retrievePaymentResult->getId());
-        $oOrder = $this->getOrderByPaymentId($retrievePaymentResult->getId());
+        $oOrder = $this->getGatewayManager()->getOrderByPaymentId($retrievePaymentResult->getId());
         $notificationTimestamp = 0;
 
-        if (!$oOrder) {
-            $isSuccessfulPayment = $this->isSuccessfulPaymentStatus($retrievePaymentResult->getStatus());
-            if (!$isSuccessfulPayment) {
-                throw new oxException('The payment hasn\'t been successful');
-            }
-
-            /** @var payeverOxOrder $oOrder */
-            $oOrder = oxNew('oxorder');
-
-            $oBasket = $this->createBasket($product->getId(), $oUser);
-            $basketAmount = (float) $this->getOrderHelper()->getAmountByCart($oBasket);
-            if ($basketAmount != (float) $retrievePaymentResult->getTotal()) {
-                $message = sprintf(
-                    'The amount really paid (%.2F %s) is not equal to the product amount (%.2F %s).',
-                    $retrievePaymentResult->getTotal(),
-                    $retrievePaymentResult->getCurrency(),
-                    $basketAmount,
-                    $oBasket->getBasketCurrency()->name
-                );
-
-                throw new oxException($message);
-            }
-
-            $this->prepareDeliveryAddress($oUser);
-            $oBasket->setPayment($paymentMethod);
-
-            //finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
-            if ($oOrder instanceof payeverOxOrderCompatible) {
-                $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, true);
-            } else {
-                $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, true, $oxidOrderStatus);
-            }
-
-            // performing special actions after user finishes order (assignment to special user groups)
-            $oUser->onOrderExecute($oBasket, $orderStateId);
-
-            if (!in_array($orderStateId, [oxOrder::ORDER_STATE_OK, oxOrder::ORDER_STATE_ORDEREXISTS])) {
-                throw new oxException('Bad order.');
-            }
-
-            $oOrder->load($oBasket->getOrderId());
-            $userPayment = oxNew('oxUserPayment');
-            $userPayment->load((string)$oOrder->oxorder__oxpaymentid);
-
-            $aParams = [
-                'oxuserpayments__oxpspayever_transaction_id' => $retrievePaymentResult->getId(),
-                'oxuserpayments__oxpaymentsid' => $paymentMethod,
-            ];
-            $userPayment->assign($aParams);
-            $userPayment->save();
-
-            $oParams = [
-                'oxorder__basketid' => $oUser->getBasket('savedbasket')->getId(),
-                'oxorder__oxpaymenttype' => $paymentMethod,
-                'oxorder__oxtransid' => $retrievePaymentResult->getId(),
-                'oxorder__panid' => isset($paymentDetails['usage_text']) ? $paymentDetails['usage_text'] : null,
-            ];
-
-            if ($isPaid && !$isPending) {
-                $oParams['oxorder__oxpaid'] = date("Y-m-d H:i:s", time());
-            }
-
-            if (!$isNotice) {
-                $this->getLogger()->debug('Prepare session before redirect');
-                $this->getSession()->setVariable('sess_challenge', $oBasket->getOrderId());
-
-                $basketName = $this->getConfig()->getConfigParam('blMallSharedBasket') == 0
-                    ? $this->getConfig()->getShopId() . '_basket'
-                    : 'basket';
-
-                $this->getLogger()->debug('Saved serialized basket to session');
-                $this->getSession()->setBasket($oBasket);
-                $this->getSession()->setVariable($basketName, serialize($oBasket));
-            }
-        } else {
-            $this->getLogger()->debug('Order exists ' . $oOrder->getId());
-            $oParams = ['oxorder__oxtransstatus' => $oxidOrderStatus];
-
-            $hasPaidDate = $oOrder->oxorder__oxpaid
-                && $oOrder->oxorder__oxpaid->rawValue
-                && $oOrder->oxorder__oxpaid->rawValue != '0000-00-00 00:00:00';
-
-            if (!$hasPaidDate && $isPaid && !$isPending) {
-                $oParams['oxorder__oxpaid'] = date("Y-m-d H:i:s", time());
-            }
-        }
+        list($oOrder, $oParams) = !$oOrder
+            ? $this->handleNewOrder($retrievePaymentResult, $product, $oxidOrderStatus, $isPending, $isNotice)
+            : $this->handleExistingOrder($oOrder, $oxidOrderStatus, $isPending);
 
         if ($isNotice) {
-            $rawData = $this->getRawData();
+            $rawData = $this->getGatewayManager()->getRawData();
             if ($rawData) {
                 $notificationTimestamp = !empty($rawData['created_at'])
                     ? strtotime($rawData['created_at'])
@@ -403,7 +320,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
                     echo json_encode(
                         [
                             'result' => 'error',
-                            'message' => 'Notification rejected: newer notification already processed'
+                            'message' => 'Notification rejected: newer notification already processed',
                         ]
                     );
 
@@ -420,6 +337,128 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
         $oOrder->save();
 
         return $oOrder;
+    }
+
+    /**
+     * @param RetrievePaymentResultEntity $retrievePaymentResult
+     * @param $product
+     * @param $oxidOrderStatus
+     * @param $isPending
+     * @param $isNotice
+     * @return array
+     * @throws oxException
+     * @throws oxSystemComponentException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
+    protected function handleNewOrder($retrievePaymentResult, $product, $oxidOrderStatus, $isPending, $isNotice)
+    {
+        $isPaid = $this->getGatewayManager()->isPaidStatus($oxidOrderStatus);
+        $paymentMethod = PayeverConfig::PLUGIN_PREFIX . $retrievePaymentResult->getPaymentType();
+
+        $oUser = $this->createUser($retrievePaymentResult);
+        $paymentDetails = $retrievePaymentResult->getPaymentDetails();
+
+        $isSuccessfulPayment = $this->isSuccessfulPaymentStatus($retrievePaymentResult->getStatus());
+        if (!$isSuccessfulPayment) {
+            throw new oxException('The payment hasn\'t been successful');
+        }
+
+        /** @var payeverOxOrder $oOrder */
+        $oOrder = oxNew('oxorder');
+
+        $oBasket = $this->createBasket($product->getId(), $oUser);
+        $basketAmount = (float) $this->getOrderHelper()->getAmountByCart($oBasket);
+        if ($basketAmount != (float) $retrievePaymentResult->getTotal()) {
+            $message = sprintf(
+                'The amount really paid (%.2F %s) is not equal to the product amount (%.2F %s).',
+                $retrievePaymentResult->getTotal(),
+                $retrievePaymentResult->getCurrency(),
+                $basketAmount,
+                $oBasket->getBasketCurrency()->name
+            );
+
+            throw new oxException($message);
+        }
+
+        $this->prepareDeliveryAddress($oUser);
+        $oBasket->setPayment($paymentMethod);
+
+        //finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
+        if ($oOrder instanceof payeverOxOrderCompatible) {
+            $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, true);
+        } else {
+            $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, true, $oxidOrderStatus);
+        }
+
+        // performing special actions after user finishes order (assignment to special user groups)
+        $oUser->onOrderExecute($oBasket, $orderStateId);
+
+        if (!in_array($orderStateId, [oxOrder::ORDER_STATE_OK, oxOrder::ORDER_STATE_ORDEREXISTS])) {
+            throw new oxException('Bad order.');
+        }
+
+        $oOrder->load($oBasket->getOrderId());
+        $userPayment = oxNew('oxUserPayment');
+        $userPayment->load((string)$oOrder->oxorder__oxpaymentid);
+
+        $aParams = [
+            'oxuserpayments__oxpspayever_transaction_id' => $retrievePaymentResult->getId(),
+            'oxuserpayments__oxpaymentsid' => $paymentMethod,
+        ];
+        $userPayment->assign($aParams);
+        $userPayment->save();
+
+        $oParams = [
+            'oxorder__basketid' => $oUser->getBasket('savedbasket')->getId(),
+            'oxorder__oxpaymenttype' => $paymentMethod,
+            'oxorder__oxtransid' => $retrievePaymentResult->getId(),
+            'oxorder__panid' => isset($paymentDetails['usage_text']) ? $paymentDetails['usage_text'] : null,
+        ];
+
+        if ($isPaid && !$isPending) {
+            $oParams['oxorder__oxpaid'] = date("Y-m-d H:i:s", time());
+        }
+
+        if (!$isNotice) {
+            $this->getLogger()->debug('Prepare session before redirect');
+            $this->getSession()->setVariable('sess_challenge', $oBasket->getOrderId());
+
+            $basketName = $this->getConfig()->getConfigParam('blMallSharedBasket') == 0
+                ? $this->getConfig()->getShopId() . '_basket'
+                : 'basket';
+
+            $this->getLogger()->debug('Saved serialized basket to session');
+            $this->getSession()->setBasket($oBasket);
+            $this->getSession()->setVariable($basketName, serialize($oBasket));
+        }
+
+        return [$oOrder, $oParams];
+    }
+
+    /**
+     * @param $oOrder
+     * @param $oxidOrderStatus
+     * @param $isPending
+     * @return array
+     */
+    protected function handleExistingOrder($oOrder, $oxidOrderStatus, $isPending)
+    {
+        $isPaid = $this->getGatewayManager()->isPaidStatus($oxidOrderStatus);
+
+        $this->getLogger()->debug('Order exists ' . $oOrder->getId());
+        $oParams = ['oxorder__oxtransstatus' => $oxidOrderStatus];
+
+        $hasPaidDate = $oOrder->oxorder__oxpaid
+            && $oOrder->oxorder__oxpaid->rawValue
+            && $oOrder->oxorder__oxpaid->rawValue != '0000-00-00 00:00:00';
+
+        if (!$hasPaidDate && $isPaid && !$isPending) {
+            $oParams['oxorder__oxpaid'] = date("Y-m-d H:i:s", time());
+        }
+
+        return [$oOrder, $oParams];
     }
 
     /**

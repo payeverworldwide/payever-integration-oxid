@@ -117,6 +117,38 @@ class payeverOxOrder extends payeverOxOrder_parent
             }
         }
 
+        return $this->finalizeOrderPostProcessing(
+            $oBasket,
+            $blRecalculatingOrder,
+            $oUser,
+            $oUserPayment,
+            $oxidOrderStatus
+        );
+    }
+
+    /**
+     * Overrides standard oxid finalizeOrder method
+     *
+     * @param oxBasket $oBasket Shopping basket object
+     * @param bool $blRecalculatingOrder Order recalculation
+     * @param oxUser $oUser Current user object
+     * @param oxUserPayment $oUserPayment
+     * @param string $oxidOrderStatus
+     *
+     * @return integer
+     *
+     * @throws \Exception
+     *
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.ElseExpression)
+     */
+    private function finalizeOrderPostProcessing(
+        $oBasket,
+        $blRecalculatingOrder,
+        $oUser,
+        $oUserPayment,
+        $oxidOrderStatus
+    ) {
         if (!$this->oxorder__oxordernr->value) {
             $this->_setNumber();
         } else {

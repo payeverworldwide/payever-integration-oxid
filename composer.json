@@ -27,7 +27,7 @@
     "ext-fileinfo": "*",
     "payever/core-sdk-php": "2.1.0",
     "payever/plugins-sdk-php": "2.0.0",
-    "payever/payments-sdk-php": "2.4.0",
+    "payever/payments-sdk-php": "2.6.3",
     "payever/products-sdk-php": "2.0.0",
     "monolog/monolog": "^v1.23.0"
   },

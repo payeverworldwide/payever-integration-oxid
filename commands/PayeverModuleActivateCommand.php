@@ -42,13 +42,13 @@ class PayeverModuleActivateCommand extends PayeverAbstractModuleCommand
                 $output->writeln('The payever module is activated');
                 return;
             }
-            throw new \RuntimeException('Couldn\'t activate payever module');
+            throw new \BadMethodCallException('Couldn\'t activate payever module');
         } elseif (method_exists($this->getModule(), 'activate')) {
             // old oxid versions
             $this->getModule()->activate();
             return;
         }
-        throw new \RuntimeException('Unable to activate payever module');
+        throw new \BadMethodCallException('Unable to activate payever module');
         // @codeCoverageIgnoreEnd
     }
 }

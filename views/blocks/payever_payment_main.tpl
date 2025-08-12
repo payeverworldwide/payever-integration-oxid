@@ -35,3 +35,16 @@
         </td>
     </tr>
 [{/if}]
+[{if $edit and $edit->isSubmitMethod()}]
+    <tr>
+        <td class="edittext">
+            [{ oxmultilang ident="PAYEVER_PAYMENT_IS_SUBMIT_METHOD" }]
+        </td>
+        <td class="edittext">
+            <select name="editval[oxpayments__oxissubmitmethod]" class="editinput">
+                <option value="0" [{ if 0 == $edit->oxpayments__oxissubmitmethod->value}]SELECTED[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }]</option>
+                <option value="1" [{ if 1 == $edit->oxpayments__oxissubmitmethod->value}]SELECTED[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }]</option>
+            </select>
+        </td>
+    </tr>
+[{/if}]

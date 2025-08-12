@@ -6,8 +6,41 @@ This repository contains payever payments module for [OXID e-commerce platform](
 
 Currently, this module is compatible with OXID-eShop Community Edition starting from **4.7.X** version and up.
 
-
 ## Installation
+
+## Local shop setup
+- official docs https://docs.oxid-esales.com/developer/en/6.0/getting_started/installation/eshop_installation.html
+- demo data https://github.com/OXID-eSales/oxideshop-demodata-installer
+
+## Local plugin install
+- https://docs.oxid-esales.com/developer/en/6.2/development/modules_components_themes/project/module_configuration/modules_installation.html
+- use admin interface see guide. Plugin location `<shop_dir>/source/modules`
+
+
+# Testing
+### Behat
+Before running behat tests make sure that you have:
+
+- ran `composer install`
+- set proper `behat.yml` config values (see `behat.yml.dist`)
+- started selenium2 server ([download](https://www.seleniumhq.org/download/)) `java -jar /path/to/selenuim-standalone.jar`
+- `chromedriver` is available in your `PATH` env variable ([download](http://chromedriver.chromium.org/downloads) or `brew install chromedriver` for Mac OS)
+- install `chrome` https://googlechromelabs.github.io/chrome-for-testing/#stable
+- `chromedriver` is available in your `PATH` env variable ([download](http://chromedriver.chromium.org/downloads) or `brew install chromedriver` for Mac OS)
+- Important: `chromedriver` must be same version as `chrome` browser version
+- selenium run in background `java -jar /<path>/selenium-server-standalone-x.xx.x.jar -Dwebdriver.chrome.driver=/<path>/chromedriver  > /dev/null 2>&1 &`
+- payever stub server run `./vendor/payever/plugins-stub/bin/stub-server localhost:9090`
+- behat test run `./vendor/behat/behat/bin/behat --config behat.yml`
+
+### Unittest
+- simple unittest `./vendor/bin/phpunit -c phpunit.xml`
+- HTML codecov report (xdebug php module require) `php -d xdebug.mode=coverage ./vendor/bin/phpunit -c ./phpunit.xml --coverage-html /var/www/html/clover`
+
+### Phpmd https://phpmd.org/documentation/
+- `./vendor/bin/phpmd ./src/payever text ./phpmd.xml`
+
+### Phpcs
+- `./vendor/bin/phpcs --standard=./phpcs.xml ./src/payever`
 
 ### Option 1: Download from OXID exchange
 

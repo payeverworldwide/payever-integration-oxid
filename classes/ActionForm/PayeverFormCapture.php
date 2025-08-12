@@ -9,32 +9,13 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-class PayeverCaptureManager extends PayeverOrderActionManager
+use Payever\Sdk\Payments\Action\ActionDeciderInterface;
+
+/**
+ * Class PayeverFormCapture
+ */
+class PayeverFormCapture extends PayeverFormBase
 {
-    /** @var PayeverShippingGoodsHandler */
-    protected $shippingGoodsHandler;
-
-    /**
-     * @inheritDoc
-     */
-    public function processAmount($order, $amount, $identifier = null)
-    {
-        $handler = $this->getShippingGoodsHandler();
-
-        return $handler->triggerAmountShippingGoodsPaymentRequest($order, $amount, $identifier);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function processItems($order, $items, $identifier = null)
-    {
-        $handler = $this->getShippingGoodsHandler();
-        $paymentItems = $this->getPaymentItemEntities($order, $items);
-
-        return $handler->triggerItemsShippingGoodsPaymentRequest($order, $paymentItems, $identifier);
-    }
-
     /**
      * @inheritDoc
      */
@@ -110,7 +91,7 @@ class PayeverCaptureManager extends PayeverOrderActionManager
      */
     public function getActionType()
     {
-        return payeverorderaction::ACTION_SHIPPING_GOODS;
+        return ActionDeciderInterface::ACTION_SHIPPING_GOODS;
     }
 
     /**
@@ -119,29 +100,5 @@ class PayeverCaptureManager extends PayeverOrderActionManager
     public function getActionField()
     {
         return payeverOxArticle::FIELD_SHIPPED;
-    }
-
-    /**
-     * @param PayeverShippingGoodsHandler $shippingGoodsHandler
-     *
-     * @return $this
-     */
-    public function setShippingGoodsHandler($shippingGoodsHandler)
-    {
-        $this->shippingGoodsHandler = $shippingGoodsHandler;
-
-        return $this;
-    }
-
-    /**
-     * @return PayeverShippingGoodsHandler
-     *
-     * @codeCoverageIgnore
-     */
-    protected function getShippingGoodsHandler()
-    {
-        return null === $this->shippingGoodsHandler
-            ? $this->shippingGoodsHandler = new PayeverShippingGoodsHandler()
-            : $this->shippingGoodsHandler;
     }
 }

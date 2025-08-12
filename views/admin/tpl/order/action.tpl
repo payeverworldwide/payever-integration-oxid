@@ -1,7 +1,7 @@
-[{assign var='actionType' value=$manager->getActionType()}]
-[{assign var='actionAllowed' value=$manager->isActionAllowed($edit)}]
-[{assign var='actionLang' value=$actionType|upper}]
-[{assign var='articleQntField' value=$manager->getActionField()}]
+[{assign var='action' value=$form->getaction()}]
+[{assign var='actionAllowed' value=$form->isActionAllowed($edit)}]
+[{assign var='actionLang' value=$action|upper}]
+[{assign var='articleQntField' value=$form->getActionField()}]
 
 <div class="form-block form-template">
     <div class="form-block-label">
@@ -9,18 +9,18 @@
     </div>
     [{if $actionAllowed.enabled}]
         [{if $actionAllowed.partialAllowed}]
-            [{if $manager->partialItemsFormAllowed($edit)}]
-                <form class="partial-items-form" id="[{$actionType}]-items-form" action="[{$oViewConf->getSelfLink()}]" method="post">
+            [{if $form->partialItemsFormAllowed($edit)}]
+                <form class="partial-items-form" id="[{$action}]-items-form" action="[{$oViewConf->getSelfLink()}]" method="post">
                     [{$oViewConf->getHiddenSid()}]
                     <input type="hidden" name="cl" value="payeverordertab">
                     <input type="hidden" name="fnc" value="processItems">
                     <input type="hidden" name="oxid" value="[{$oxid}]">
-                    <input type="hidden" name="actionType" value="[{$actionType}]">
+                    <input type="hidden" name="action" value="[{$action}]">
                     <input type="hidden" name="editval[oxorder__oxid]" value="[{$oxid}]">
                     <table cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
                         [{foreach from=$orderArticles item=listitem}]
 
-                            [{assign var='availableQnt' value=$manager->getArticleAvailableQnt($listitem)}]
+                            [{assign var='availableQnt' value=$form->getArticleAvailableQnt($listitem)}]
 
                             [{assign var='completed' value=false}]
                             [{if $listitem->getFieldData($articleQntField) >= $availableQnt}]
@@ -55,7 +55,7 @@
                                             <span style="color: green">&#10004;</span>
                                         [{else}]
                                             <input type="number"
-                                                   id="[{$actionType}]-items-qnt-[{$listitem->oxorderarticles__oxartnum->value}]"
+                                                   id="[{$action}]-items-qnt-[{$listitem->oxorderarticles__oxartnum->value}]"
                                                    name="itemQnt[[{$listitem->getId()}]]"
                                                    class="editinput order-item-qnt"
                                                    size="3"
@@ -89,7 +89,7 @@
                                            name="itemActive[wrapcost]"
                                            class="edittext order-item-checkbox"
                                            checked="checked"
-                                           [{if $manager->isWrapCostSent($edit)}]disabled[{/if}]
+                                           [{if $form->isWrapCostSent($edit)}]disabled[{/if}]
                                            value="1"
                                     >
                                 </td>
@@ -113,7 +113,7 @@
                                            name="itemActive[giftcardcost]"
                                            class="edittext order-item-checkbox"
                                            checked="checked"
-                                           [{if $manager->isGiftCardCostSent($edit)}]disabled[{/if}]
+                                           [{if $form->isGiftCardCostSent($edit)}]disabled[{/if}]
                                            value="1"
                                     >
                                 </td>
@@ -144,16 +144,16 @@
                 <hr/>
             [{/if}]
 
-            [{assign var='totalAmount' value=$manager->getTotalAmount($edit)}]
-            [{assign var='sentAmount' value=$manager->getSentAmount($edit)}]
-            [{assign var='actionsList' value=$manager->getActions($edit)}]
-            [{if $manager->partialAmountFormAllowed($edit)}]
-                <form class="partial-amount-form" id="[{$actionType}]-amount-form" action="[{$oViewConf->getSelfLink()}]" method="post">
+            [{assign var='totalAmount' value=$form->getTotalAmount($edit)}]
+            [{assign var='sentAmount' value=$form->getSentAmount($edit)}]
+            [{assign var='actionsList' value=$form->getActions($edit)}]
+            [{if $form->partialAmountFormAllowed($edit)}]
+                <form class="partial-amount-form" id="[{$action}]-amount-form" action="[{$oViewConf->getSelfLink()}]" method="post">
                     [{$oViewConf->getHiddenSid()}]
                     <input type="hidden" name="cl" value="payeverordertab">
                     <input type="hidden" name="fnc" value="processAmount">
                     <input type="hidden" name="oxid" value="[{$oxid}]">
-                    <input type="hidden" name="actionType" value="[{$actionType}]">
+                    <input type="hidden" name="action" value="[{$action}]">
                     <input type="hidden" name="editval[oxorder__oxid]" value="[{$oxid}]">
                     <input type="hidden" name="total" class="order-total" value="[{$totalAmount-$sentAmount}]">
                     <table style="width: 100%; text-align: right">
@@ -162,19 +162,19 @@
                             <td style="padding: 2px 7px;width: 100px;white-space: nowrap">
                                 <input type="number"
                                        name="amount"
-                                       id="[{$actionType}]-amount"
+                                       id="[{$action}]-amount"
                                        style="padding: 3px;"
                                        class="editinput order-item-amount"
                                        size="3"
                                        step="0.01"
                                        min="0.01"
-                                       [{if $manager->prefillAmountAllowed($edit)}]value="[{$totalAmount-$sentAmount}]"[{/if}]
+                                       [{if $form->prefillAmountAllowed($edit)}]value="[{$totalAmount-$sentAmount}]"[{/if}]
                                        max="[{$totalAmount-$sentAmount}]"
                                 >
                                 [{$edit->oxorder__oxcurrency->value}]
                             </td>
                         </tr>
-                        [{if $manager->confirmCheckbox}]
+                        [{if $form->confirmCheckbox}]
                             <tr>
                                 <td style="padding: 2px 7px">
                                     [{oxmultilang ident="PAYEVER_CONFIRM_`$actionLang`"}]:
@@ -204,25 +204,25 @@
                 <span id="sentAmount">[{$sentAmount}]</span>
                 [{$edit->oxorder__oxcurrency->value}]
             </div>
-            [{if isset($formError[$actionType])}]
+            [{if isset($formError[$action])}]
                 <div style="text-align: right;padding: 0 8px;color:red;">
-                    [{$formError[$actionType]}]
+                    [{$formError[$action]}]
                 </div>
             [{/if}]
             <div style="padding: 2px 7px">
-                <input type="button" name="[{$actionType}]-submit-btn" class="form-submit-btn" style="padding: 3px;" value="[{oxmultilang ident="PAYEVER_ORDER_PROCESS_`$actionLang`"}]">
+                <input type="button" name="[{$action}]-submit-btn" class="form-submit-btn" style="padding: 3px;" value="[{oxmultilang ident="PAYEVER_ORDER_PROCESS_`$actionLang`"}]">
             </div>
         [{else}]
-            <form id="[{$actionType}]-total-form" class="total-form" action="[{$oViewConf->getSelfLink()}]" method="post">
+            <form id="[{$action}]-total-form" class="total-form" action="[{$oViewConf->getSelfLink()}]" method="post">
                 [{$oViewConf->getHiddenSid()}]
                 <input type="hidden" name="cl" value="payeverordertab">
                 <input type="hidden" name="fnc" value="processTotal">
                 <input type="hidden" name="oxid" value="[{$oxid}]">
-                <input type="hidden" name="actionType" value="[{$actionType}]">
+                <input type="hidden" name="action" value="[{$action}]">
                 <input type="hidden" name="editval[oxorder__oxid]" value="[{$oxid}]">
-                [{if isset($formError[$actionType])}]
+                [{if isset($formError[$action])}]
                     <div class="edittext red" style="color:red;">
-                        [{$formError[$actionType]}]
+                        [{$formError[$action]}]
                     </div>
                 [{/if}]
                 <div>

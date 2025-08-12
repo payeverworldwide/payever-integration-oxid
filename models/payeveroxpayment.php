@@ -54,4 +54,12 @@ class payeverOxPayment extends payeverOxPayment_parent
     {
         return null !== $this->oxpayments__oxisredirectmethod->value;
     }
+
+    /**
+     * @return bool
+     */
+    public function isSubmitMethod()
+    {
+        return null !== $this->oxpayments__oxissubmitmethod->value;
+    }
 }

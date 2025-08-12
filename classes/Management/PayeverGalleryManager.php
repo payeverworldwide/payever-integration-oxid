@@ -36,9 +36,6 @@ class PayeverGalleryManager
     /**
      * @param oxarticle $product
      * @param ProductRequestEntity $requestEntity
-     * @throws oxSystemComponentException
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function appendGallery($product, ProductRequestEntity $requestEntity)
     {
@@ -57,6 +54,7 @@ class PayeverGalleryManager
         $filesToProcess = [];
         $imageIndex = count($existingImages) + 1;
         $fileDir = $this->getConfig()->getConfigParam('sCompileDir');
+
         foreach ($imagesUrl as $key => $url) {
             if ($imageIndex > 7) {
                 break;
@@ -64,28 +62,21 @@ class PayeverGalleryManager
             if (empty($imagesName[$key])) {
                 continue;
             }
-            $filename = $imagesName[$key];
-            if (strpos($filename, '.') === false) {
-                $filename .= '.png';
-            }
-            if (
-                !in_array($imagesUuid[$key], $existingImagesUuid, true)
-                && !in_array($filename, $existingImagesNames, true)
-            ) {
+
+            $filename = $this->getValidFilename($imagesName[$key]);
+            if ($this->isNewImage($filename, $imagesUuid[$key], $existingImagesUuid, $existingImagesNames)) {
                 $filePath = rtrim($fileDir, '/') . DIRECTORY_SEPARATOR . $filename;
+
                 if ($this->downloadImage($filePath, $url)) {
                     $fieldName = sprintf('oxarticles__oxpic%s', $imageIndex);
-                    if (!isset($product->$fieldName) || false === $product->$fieldName) {
-                        $product->assign([$fieldName => $fieldName]);
-                    }
-                    $keyName = sprintf('M%s@%s', $imageIndex, $fieldName);
-                    $filesToProcess['error'][$keyName] = 0;
-                    $filesToProcess['name'][$keyName] = $filename;
-                    $filesToProcess['size'][$keyName] = $this->skipFs ? 0 : filesize($filePath);
-                    $filesToProcess['tmp_name'][$keyName] = $filePath;
-                    $filesToProcess['type'][$keyName] = $this->skipFs || !function_exists('mime_content_type')
-                        ? 'image/jpg'
-                        : mime_content_type($filePath);
+                    $this->populateFilesToProcess(
+                        $filesToProcess,
+                        $product,
+                        $imageIndex,
+                        $fieldName,
+                        $filename,
+                        $filePath
+                    );
                     $imageIndex++;
                 }
             }
@@ -161,5 +152,55 @@ class PayeverGalleryManager
         return null === $this->fileUtil
             ? $this->fileUtil = oxRegistry::get('oxUtilsFile')
             : $this->fileUtil;
+    }
+
+    /**
+     * @param string $filename
+     * @return string
+     */
+    private function getValidFilename($filename)
+    {
+        if (strpos($filename, '.') === false) {
+            $filename .= '.png';
+        }
+        return $filename;
+    }
+
+    /**
+     * @param string $filename
+     * @param string $imageUuid
+     * @param array $existingUuids
+     * @param array $existingNames
+     * @return bool
+     */
+    private function isNewImage($filename, $imageUuid, $existingUuids, $existingNames)
+    {
+        return !in_array($imageUuid, $existingUuids, true)
+            && !in_array($filename, $existingNames, true);
+    }
+
+    /**
+     * @param array $filesToProcess
+     * @param $product
+     * @param int $imageIndex
+     * @param string $fieldName
+     * @param string $filename
+     * @param string $filePath
+     * @return void
+     */
+    private function populateFilesToProcess(&$filesToProcess, $product, $imageIndex, $fieldName, $filename, $filePath)
+    {
+        if (!isset($product->$fieldName) || false === $product->$fieldName) {
+            $product->assign([$fieldName => $fieldName]);
+        }
+
+        $keyName = sprintf('M%s@%s', $imageIndex, $fieldName);
+        $filesToProcess['error'][$keyName] = 0;
+        $filesToProcess['name'][$keyName] = $filename;
+        $filesToProcess['size'][$keyName] = $this->skipFs ? 0 : filesize($filePath);
+        $filesToProcess['tmp_name'][$keyName] = $filePath;
+        $filesToProcess['type'][$keyName] = $this->skipFs || !function_exists('mime_content_type')
+            ? 'image/jpg'
+            : mime_content_type($filePath);
     }
 }

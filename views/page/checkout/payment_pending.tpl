@@ -9,8 +9,10 @@
                 <p>[{oxmultilang ident="THANK_YOU_FOR_ORDER"}] [{$oxcmp_shop->oxshops__oxname->value}].</p>
                 <br>
                 <p>[{$oLang->translateString("PAYEVER_PAYMENT_PENDING_RECEIVED", $iLang, true)}]</p>
+            [{if $isLoanTransaction}]
                 <p>[{$oLang->translateString("PAYEVER_PAYMENT_PENDING_PROCESSED", $iLang, true)}]</p>
                 <p>[{$oLang->translateString("PAYEVER_PAYMENT_PENDING_CONFIRMATION", $iLang, true)}]</p>
+            [{/if}]
                 <br>
             [{/block}]
 

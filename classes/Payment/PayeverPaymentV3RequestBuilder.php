@@ -278,7 +278,7 @@ class PayeverPaymentV3RequestBuilder
             // Save discount in session
             $this->getSession()->oxidpayever_discount = $discount;
             $this->getSession()->setVariable('oxidpayever_discount', $discount);
-            $this->getSession()->setVariable(payeverStandardDispatcher::SESS_TEMP_BASKET, serialize($this->getCart()));
+            $this->getSession()->setVariable(PayeverGatewayManager::SESS_TEMP_BASKET, serialize($this->getCart()));
         }
 
         $this->paymentRequest->setCart($basketItems);
@@ -350,6 +350,10 @@ class PayeverPaymentV3RequestBuilder
             }
         }
 
+        if ($this->getPaymentMethod()->getFieldData('oxpaymentissuer')) {
+            $this->paymentRequest->setPaymentIssuer($this->getPaymentMethod()->getFieldData('oxpaymentissuer'));
+        }
+
         return $this;
     }
 
@@ -403,7 +407,7 @@ class PayeverPaymentV3RequestBuilder
     {
         $paymentData = new PaymentDataEntity();
         $isRedirectMethod = true;
-        if (!$this->getPaymentMethod()->getFieldData('oxissubmitmethod')) {
+        if ($this->getPaymentMethod()->getFieldData('oxisredirectmethod')) {
             $isRedirectMethod = (bool) $this->getPaymentMethod()->getFieldData('oxisredirectmethod');
             $paymentData->setForceRedirect($isRedirectMethod);
         }
@@ -471,12 +475,17 @@ class PayeverPaymentV3RequestBuilder
     private function addAddress()
     {
         $soxAddressId = $this->getSession()->getVariable('deladrid');
-
-        $shippingAddress = $this->getAddressEntity($soxAddressId);
         $billingAddress = $this->getAddressEntity();
-
-        $this->paymentRequest->setShippingAddress($shippingAddress);
         $this->paymentRequest->setBillingAddress($billingAddress);
+
+        if (
+            !in_array(
+            $this->getPaymentMethod()->getFieldData('oxid'),
+            PayeverConfig::getShippingNotAllowedMethods())
+        ) {
+            $shippingAddress = $this->getAddressEntity($soxAddressId);
+            $this->paymentRequest->setShippingAddress($shippingAddress);
+        }
 
         return $this;
     }

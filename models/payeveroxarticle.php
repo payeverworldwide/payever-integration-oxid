@@ -73,6 +73,12 @@ class payeverOxArticle extends payeverOxArticle_parent
             $delta = (float) $newQty - $this->oldQty;
         }
         switch ($action) {
+            case ACTION_DELETE:
+                $this->getSynchronizationManager()->handleProductDelete($this);
+                break;
+            case ACTION_UPDATE_STOCK:
+                $this->getSynchronizationManager()->handleInventory($this, $delta);
+                break;
             case ACTION_INSERT:
             case ACTION_UPDATE:
             default:
@@ -85,12 +91,6 @@ class payeverOxArticle extends payeverOxArticle_parent
                     $this,
                     $action === ACTION_INSERT || null === $delta ? null : $delta
                 );
-                break;
-            case ACTION_DELETE:
-                $this->getSynchronizationManager()->handleProductDelete($this);
-                break;
-            case ACTION_UPDATE_STOCK:
-                $this->getSynchronizationManager()->handleInventory($this, $delta);
                 break;
         }
     }

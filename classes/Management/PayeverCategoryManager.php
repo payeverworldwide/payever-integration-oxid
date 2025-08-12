@@ -58,22 +58,24 @@ class PayeverCategoryManager
         $requestEntities = $requestEntity->getCategories();
         foreach ($requestEntities as $requestCategoryEntity) {
             $categoryName = $this->getRequestCategoryEntityName($requestCategoryEntity);
-            if ($categoryName) {
-                $matchedCategory = $this->getCategoryHelper()->getCategoryByTitle($categoryName);
-                if ($matchedCategory) {
-                    $categoryIds[$matchedCategory->getId()] = $matchedCategory->getId();
-                } else {
-                    $category = $this->getCategoryFactory()->create();
-                    $data = [
-                        'oxtitle' => $categoryName,
-                        'oxparentid' => $defaultCategoryId,
-                    ];
-                    foreach ($this->getConfigHelper()->getLanguageIds() as $langId) {
-                        $category->setLanguage($langId);
-                        $category->assign($data);
-                        if ($category->save()) {
-                            $categoryIds[$category->getId()] = $category->getId();
-                        }
+            if (!$categoryName) {
+                continue;
+            }
+
+            $matchedCategory = $this->getCategoryHelper()->getCategoryByTitle($categoryName);
+            if ($matchedCategory) {
+                $categoryIds[$matchedCategory->getId()] = $matchedCategory->getId();
+            } else {
+                $category = $this->getCategoryFactory()->create();
+                $data = [
+                    'oxtitle' => $categoryName,
+                    'oxparentid' => $defaultCategoryId,
+                ];
+                foreach ($this->getConfigHelper()->getLanguageIds() as $langId) {
+                    $category->setLanguage($langId);
+                    $category->assign($data);
+                    if ($category->save()) {
+                        $categoryIds[$category->getId()] = $category->getId();
                     }
                 }
             }

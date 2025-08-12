@@ -10,6 +10,7 @@
  */
 
 use Payever\Sdk\Payments\Action\ActionDecider;
+use Payever\Sdk\Payments\Action\ActionNotAllowedException;
 use Payever\Sdk\Payments\Http\RequestEntity\PaymentItemEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\ShippingDetailsEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\ShippingGoodsPaymentRequest;
@@ -82,45 +83,9 @@ class PayeverShippingGoodsHandler
 
         try {
             // Get items
-            $updateItems = [];
-            $articles = $order->getOrderArticles(true);
-            foreach ($articles as $article) {
-                /** @var OrderArticle $article */
-                $qnt = $article->getFieldData('oxamount');
-                $price = $article->getFieldData('oxbprice');
-
-                //Check if there was a partial shipping for the order items
-                $partialShipped = $article->getFieldData('oxpayevershipped');
-                if ($partialShipped) {
-                    $qnt -= $partialShipped;
-                    $this->orderAmount += $price * $partialShipped;
-                }
-
-                if ($qnt) {
-                    $field = $this->getFieldFactory()->createRaw($qnt + $partialShipped);
-                    $article->oxorderarticles__oxpayevershipped = $field;
-                    $updateItems[] = $article;
-
-                    $this->createPaymentItemEntity(
-                        $article->oxorderarticles__oxartid->value,
-                        $article->oxorderarticles__oxtitle->value,
-                        $price,
-                        $qnt
-                    );
-                }
-            }
-
-            // Get voucher discounts
-            if ($order->oxorder__oxvoucherdiscount && $order->oxorder__oxvoucherdiscount->value > 0) {
-                $discount = $order->oxorder__oxvoucherdiscount->value;
-                $this->createPaymentItemEntity('discount', 'Discount', -1 * $discount);
-            }
-
-            // Get discounts
-            if ($order->oxorder__oxdiscount && $order->oxorder__oxdiscount->value > 0) {
-                $discount = $order->oxorder__oxdiscount->value;
-                $this->createPaymentItemEntity('discount', 'Discount', -1 * $discount);
-            }
+            $updateItems = $this->processOrderItems($order);
+            $this->processVoucherDiscount($order);
+            $this->processTotalDiscount($order);
 
             $deliveryFee = $this->getDeliveryFee($order);
             $orderTotal = $order->oxorder__oxtotalordersum ? $order->oxorder__oxtotalordersum->value : 0;
@@ -176,7 +141,7 @@ class PayeverShippingGoodsHandler
         } catch (Exception $e) {
             $this->getLogger()->error('Shipping goods error', [
                 'exception_message' => $e->getMessage(),
-                'paymentId' => $order->getFieldData('oxtransid')
+                'paymentId' => $order->getFieldData('oxtransid'),
             ]);
         }
 
@@ -235,7 +200,7 @@ class PayeverShippingGoodsHandler
         //Check if shipping is allowed
         $paymentId = $order->getFieldData('oxtransid');
         if (!$this->actionDecider->isShippingAllowed($paymentId, false)) {
-            throw new \Exception('Shipping method is not allowed');
+            throw new ActionNotAllowedException('Shipping method is not allowed');
         }
 
         //Send shipping api request
@@ -322,5 +287,54 @@ class PayeverShippingGoodsHandler
         $this->paymentItems[] = $paymentEntity;
 
         return $paymentEntity;
+    }
+
+    private function processOrderItems($order)
+    {
+        $updateItems = [];
+        $articles = $order->getOrderArticles(true);
+        foreach ($articles as $article) {
+            /** @var OrderArticle $article */
+            $qnt = $article->getFieldData('oxamount');
+            $price = $article->getFieldData('oxbprice');
+
+            //Check if there was a partial shipping for the order items
+            $partialShipped = $article->getFieldData('oxpayevershipped');
+            if ($partialShipped) {
+                $qnt -= $partialShipped;
+                $this->orderAmount += $price * $partialShipped;
+            }
+
+            if ($qnt) {
+                $field = $this->getFieldFactory()->createRaw($qnt + $partialShipped);
+                $article->oxorderarticles__oxpayevershipped = $field;
+                $updateItems[] = $article;
+
+                $this->createPaymentItemEntity(
+                    $article->oxorderarticles__oxartid->value,
+                    $article->oxorderarticles__oxtitle->value,
+                    $price,
+                    $qnt
+                );
+            }
+        }
+
+        return $updateItems;
+    }
+
+    private function processVoucherDiscount($order)
+    {
+        if ($order->oxorder__oxvoucherdiscount && $order->oxorder__oxvoucherdiscount->value > 0) {
+            $discount = $order->oxorder__oxvoucherdiscount->value;
+            $this->createPaymentItemEntity('discount', 'Discount', -1 * $discount);
+        }
+    }
+
+    private function processTotalDiscount($order)
+    {
+        if ($order->oxorder__oxdiscount && $order->oxorder__oxdiscount->value > 0) {
+            $discount = $order->oxorder__oxdiscount->value;
+            $this->createPaymentItemEntity('discount', 'Discount', -1 * $discount);
+        }
     }
 }

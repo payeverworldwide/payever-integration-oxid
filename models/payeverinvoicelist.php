@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * PHP version 5.4 and 7
+ *
+ * @package     Payever\OXID
+ * @author      payever GmbH <service@payever.de>
+ * @copyright   2017-2021 payever GmbH
+ * @license     MIT <https://opensource.org/licenses/MIT>
+ */
+
+// phpcs:disable PSR2.Classes.PropertyDeclaration.Underscore
+class payeverinvoicelist extends oxlist
+{
+    /**
+     * List Object class name
+     *
+     * @var string
+     */
+    protected $_sObjectsInListName = 'payeverinvoices';
+}
+// phpcs:enable PSR2.Classes.PropertyDeclaration.Underscore

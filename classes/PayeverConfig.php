@@ -13,6 +13,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autoload.php';
+
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
@@ -408,7 +409,7 @@ class PayeverConfig
     {
         static::loadConfig();
 
-        return static::$config->getLogsDir() . static::LOG_FILENAME;
+        return static::$config->getLogsDir() . date('Y-m') . '-' . static::LOG_FILENAME;
     }
 
     /**

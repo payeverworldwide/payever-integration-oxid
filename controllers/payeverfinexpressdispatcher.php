@@ -141,7 +141,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
             );
 
             $this->getDisplayHelper()->addErrorToDisplay($exception->getMessage());
-            $this->redirectToCancel('cart_');
+            $this->redirectToCancel(ExpressWidget::CART_PREFIX);
         }
     }
 
@@ -555,8 +555,9 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
      */
     private function redirectToCancel($reference)
     {
-        if (strpos($reference, 'prod_') !== false) {
-            $productId = str_replace('prod_', '', $reference);
+        $productPrefixPos = strpos($reference, ExpressWidget::PRODUCT_PREFIX);
+        if ($productPrefixPos !== false) {
+            $productId = substr($reference, $productPrefixPos + strlen(ExpressWidget::PRODUCT_PREFIX));
             $product = $this->getProductByNumber($productId);
             $this->getUtils()->redirect($product->getLink(), false);
 

@@ -80,6 +80,12 @@ class PayeverActionProcessor
             case ActionDeciderInterface::ACTION_CLAIM_UPLOAD:
                 $actionExecutor = new PayeverClaimUploadAction();
                 break;
+            case ActionDeciderInterface::ACTION_SETTLE:
+                $actionExecutor = new PayeverSettleAction();
+                break;
+            case ActionDeciderInterface::ACTION_INVOICE:
+                $actionExecutor = new PayeverInvoiceAction();
+                break;
             default:
                 throw new \InvalidArgumentException('Invalid action type');
         }

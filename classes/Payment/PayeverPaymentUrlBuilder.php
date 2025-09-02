@@ -20,6 +20,7 @@ class PayeverPaymentUrlBuilder
     use PayeverConfigTrait;
 
     const STATUS_PARAM = 'sts';
+    const LANG_PARAM = 'lang';
 
     const STATUS_SUCCESS = 'success';
     const STATUS_CANCEL = 'cancel';
@@ -43,6 +44,7 @@ class PayeverPaymentUrlBuilder
             self::STATUS_PARAM => $status,
             'payment_id' => '--PAYMENT-ID--',
             'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+            self::LANG_PARAM => oxRegistry::getLang()->getTplLanguage(),
         ], $params);
 
         return $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlData, "", "&");

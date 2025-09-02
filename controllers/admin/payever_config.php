@@ -232,7 +232,8 @@ class payever_config extends Shop_Config
      */
     public function downloadLogFile()
     {
-        $filePath = PayeverConfig::getLogFilename();
+        $logger = new PayeverLogger();
+        $filePath = $logger->downloadLogs(false);
         $this->sendFile($filePath);
     }
 
@@ -394,34 +395,75 @@ class payever_config extends Shop_Config
      */
     private function getWidgetOptions()
     {
-        $lang =  $this->getConfig()->getRequestParameter(static::LANG_PARAM) ?: oxRegistry::getLang()->getTplLanguage();
+        $options = [];
+        $lang = $this->getConfig()->getRequestParameter(static::LANG_PARAM) ?: oxRegistry::getLang()->getTplLanguage();
         if (!$lang) {
             $lang = self::DEFAULT_LANG;
         }
-        $options = [
-            ['id' => '-', 'name' => oxRegistry::getLang()->translateString('choose_widget', $lang, false)]
-        ];
+
         try {
             $widgets = PayeverConfig::getWidgets();
             foreach ($widgets as $widgetId => $widget) {
-                $translatedPayments = [];
-                foreach ($widget['payments'] as $paymentMethod) {
-                    $translatedPayments[] = oxRegistry::getLang()->translateString($paymentMethod, $lang, false);
+                // Get all possible combinations of payment methods
+                $combinations = $this->getCombinations($widget['payments'], $lang);
+                $allWidgetPayments = $widget['payments'];
+                sort($allWidgetPayments);
+
+                // Process all combinations (including single and multiple payment methods)
+                foreach ($combinations as $combination) {
+                    $comboMethods = $combination['methods'];
+                    sort($comboMethods);
+
+                    $comboId = ($allWidgetPayments !== $comboMethods)
+                        ? $widgetId . '#' . implode('+', $comboMethods)
+                        : $widgetId;
+
+                    $options[] = [
+                        'id'   => $comboId,
+                        'name' => sprintf(
+                            "%s - %s",
+                            oxRegistry::getLang()->translateString($widget['type'], $lang, false),
+                            $combination['name']
+                        )
+                    ];
                 }
-                $options[] = [
-                    'id'   => $widgetId,
-                    'name' => sprintf(
-                        "%s - %s",
-                        oxRegistry::getLang()->translateString($widget['type'], $lang, false),
-                        implode(',', $translatedPayments)
-                    )
-                ];
             }
         } catch (\Exception $e) {
-            // skip
+            // Log the exception for debugging
+            PayeverConfigHelper::getLogger()->warning(
+                sprintf('Failed to get widget options: %s', $e->getMessage())
+            );
         }
 
         return $options;
+    }
+
+    /**
+     * @param $fePayments
+     * @param $lang
+     *
+     * @return array|array[]
+     */
+    private function getCombinations($fePayments, $lang)
+    {
+        $results = [[]];
+
+        foreach ($fePayments as $fePayment) {
+            foreach ($results as $combination) {
+                $results[] = array_merge($combination, [$fePayment]);
+            }
+        }
+
+        $results = array_filter($results);
+
+        return array_map(function ($combo) use ($lang) {
+            return [
+                'methods' => $combo,
+                'name' => implode(', ', array_map(function ($payment) use ($lang) {
+                    return oxRegistry::getLang()->translateString($payment, $lang, false);
+                }, $combo))
+            ];
+        }, $results);
     }
 }
 // phpcs:enable PSR2.Classes.PropertyDeclaration.Underscore

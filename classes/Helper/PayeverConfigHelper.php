@@ -217,23 +217,6 @@ class PayeverConfigHelper
     }
 
     /**
-     * @return bool
-     */
-    public function isApiV3()
-    {
-        return $this->getApiVersion() === PayeverConfig::API_VERSION_3;
-    }
-
-    /**
-     * @codeCoverageIgnore
-     */
-    public function setDiagnosticMode($mode)
-    {
-        PayeverConfig::setConfig(PayeverConfig::KEY_DIAGNOSTIC_MODE, $mode);
-        return PayeverConfig::getDiagnosticMode();
-    }
-
-    /**
      * @return LoggerInterface
      */
     public static function getLogger()

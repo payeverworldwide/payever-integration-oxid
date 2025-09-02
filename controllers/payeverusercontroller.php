@@ -8,8 +8,7 @@ class payeverusercontroller extends payeverusercontroller_parent
     {
         parent::render();
 
-        $companySearch = $this->getConfigHelper()->isCompanySearchAvailable() &&
-            $this->getConfigHelper()->isApiV3();
+        $companySearch = $this->getConfigHelper()->isCompanySearchAvailable();
         $this->_aViewData['companySearch'] = $companySearch;
 
         if ($companySearch) {

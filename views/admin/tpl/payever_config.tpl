@@ -94,21 +94,6 @@
                                 </dt>
                                 <div class="spacer"></div>
                             </dl>
-
-                            <dl>
-                                <dd class="cntExLft"></dd>
-                                <dt>
-                                    <input type="hidden" name="payever_config[payeverApiVersion]" value="3" />
-                                    [{ oxmultilang ident="PAYEVER_API_VERSION" }] &nbsp;
-                                    <select class="editinput" name="payever_config[payeverApiVersion]">
-                                        <option value="3" [{if $payever_config.payeverApiVersion == 3}]selected="selected"[{/if}]>V3</option>
-                                        <option value="2" [{if $payever_config.payeverApiVersion == 2}]selected="selected"[{/if}]>V2</option>
-                                    </select>
-                                <dd><span>[{ oxmultilang ident="PAYEVER_API_VERSION_DESCRIPTION" }]</span></dd>
-                                </dt>
-                                <div class="spacer"></div>
-                            </dl>
-
                             <dl>
                                 <dd>
                                     <label>[{ oxmultilang ident="PAYEVER_CLIENTID" }]</label>
@@ -158,10 +143,10 @@
                                     <dt>
                                         <input type="hidden" name="payever_config[fe_widget_id]" value="[{$payever_config.fe_widget_id}]" />
                                         [{ oxmultilang ident="PAYEVER_WIDGET_TYPE" }] &nbsp;
-                                        <select style="max-width:300px" class="editinput" name="payever_config[fe_widget_id]">
+                                        <select style="max-width:300px" multiple class="editinput" name="payever_config[fe_widget_id][]">
                                             [{if $widgets}]
                                                 [{foreach from=$widgets item=widgetOption}]
-                                                    <option value="[{$widgetOption.id}]" [{if $payever_config.fe_widget_id == $widgetOption.id}]selected="selected"[{/if}]>[{$widgetOption.name}]</option>
+                                                    <option value="[{$widgetOption.id}]" [{if $widgetOption.id|in_array:$payever_config.fe_widget_id}]selected="selected"[{/if}]>[{$widgetOption.name}]</option>
                                                 [{/foreach}]
                                             [{/if}]
                                         </select>

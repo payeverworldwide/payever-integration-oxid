@@ -93,6 +93,12 @@
                     <div class="order-tab-form">
                         [{include file='payever/order/action_claim.tpl' form=$oView->getForm('claim')}]
                     </div>
+                    <div class="order-tab-form">
+                        [{include file='payever/order/action_settle.tpl' form=$oView->getForm('settle')}]
+                    </div>
+                    <div class="order-tab-form">
+                        [{include file='payever/order/action_invoice.tpl' form=$oView->getForm('invoice')}]
+                    </div>
                 </div>
             [{else}]
                 <div class="form-block-error">[{oxmultilang ident="PAYEVER_SELECTED_PAYMENT_NOT_PAYEVER"}]</div>

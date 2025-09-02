@@ -207,19 +207,26 @@ class PayeverPaymentV3RequestBuilder
         /** @var oxbasketitem $item */
         foreach ($this->getCart()->getContents() as $item) {
             $cartItem = new CartItemV3Entity();
+            $quantity = (int) $item->getAmount();
             $cartItem
                 ->setName($item->getTitle())
                 ->setUnitPrice(oxRegistry::getUtils()->fRound($item->getUnitPrice()->getPrice()))
                 ->setTaxRate($item->getUnitPrice()->getVat())
-                ->setQuantity($item->getAmount())
-                ->setTotalAmount(oxRegistry::getUtils()->fRound($item->getUnitPrice()->getPrice() * $item->getAmount()))
+                ->setQuantity($quantity)
+                ->setTotalAmount(oxRegistry::getUtils()->fRound($item->getUnitPrice()->getPrice() * $quantity))
                 ->setDescription($item->getArticle()->getFieldData('oxshortdesc'))
-                ->setCategory($item->getArticle()->getCategory()->getFieldData('oxtitle'))
                 ->setImageUrl($item->getIconUrl())
                 ->setProductUrl($item->getLink())
                 ->setSku(preg_replace('#[^0-9a-z_]+#i', '-', $item->getArticle()->getFieldData('oxartnum')))
-                ->setIdentifier($item->getProductId())
-                ->setBrand($item->getArticle()->getManufacturer()->getFieldData('oxtitle'));
+                ->setIdentifier($item->getProductId());
+
+            if ($item->getArticle()->getManufacturer()) {
+                $cartItem->setBrand($item->getArticle()->getManufacturer()->getFieldData('oxtitle'));
+            }
+
+            if ($item->getArticle()->getCategory()) {
+                $cartItem->setCategory($item->getArticle()->getCategory()->getFieldData('oxtitle'));
+            }
 
             $dimensions = new DimensionsEntity();
             $dimensions->setHeight((float) $item->getArticle()->getFieldData('oxheight'));

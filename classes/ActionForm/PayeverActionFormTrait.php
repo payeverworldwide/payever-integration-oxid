@@ -21,7 +21,7 @@ trait PayeverActionFormTrait
     /**
      * @param string $type
      *
-     * @return PayeverFormCancel|PayeverFormCapture|PayeverFormRefund
+     * @return PayeverFormCancel|PayeverFormCapture|PayeverFormRefund|PayeverFormClaim|PayeverFormSettle|PayeverFormInvoice
      */
     public function getForm($type)
     {
@@ -38,6 +38,12 @@ trait PayeverActionFormTrait
             case ActionDeciderInterface::ACTION_CLAIM:
             case ActionDeciderInterface::ACTION_CLAIM_UPLOAD:
                 $manager = new PayeverFormClaim();
+                break;
+            case ActionDeciderInterface::ACTION_SETTLE;
+                $manager = new PayeverFormSettle();
+                break;
+            case ActionDeciderInterface::ACTION_INVOICE;
+                $manager = new PayeverFormInvoice();
                 break;
             default:
                 throw new \InvalidArgumentException('Manager not found.');

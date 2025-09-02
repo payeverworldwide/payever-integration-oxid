@@ -22,9 +22,9 @@ class payeverStandardDispatcher extends oxUBase
     use PayeverPluginsApiClientTrait;
     use PayeverUrlUtilTrait;
     use PayeverUtilsTrait;
-    use PayeverPaymentManagerTrait;
     use PayeverGatewayManagerTrait;
     use PayeverDisplayHelperTrait;
+    use PayeverPaymentV3RequestBuilderTrait;
 
     /**
      * @return string
@@ -48,7 +48,7 @@ class payeverStandardDispatcher extends oxUBase
     public function getRedirectUrl()
     {
         try {
-            return $this->getPaymentManager()->getPaymentRedirectUrl();
+            return $this->getPaymentV3RequestBuilder()->generatePaymentUrl();
         } catch (Exception $exception) {
             $this->getLogger()->error(sprintf('Error while creating payment: %s', $exception->getMessage()));
             $this->getDisplayHelper()->addErrorToDisplay($exception->getMessage());

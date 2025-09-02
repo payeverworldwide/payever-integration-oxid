@@ -16,6 +16,8 @@ class ExpressWidget
     const ACTION_NOTICE = 'notice';
     const ACTION_CANCEL = 'cancel';
     const ACTION_QUOTE_CALLBACK = 'quoteCallback';
+    const CART_PREFIX = 'cart_';
+    const PRODUCT_PREFIX = 'prod_';
 
     /**
      * @var Config|null
@@ -97,13 +99,6 @@ class ExpressWidget
      */
     public function __construct(array $args)
     {
-        $widgets = PayeverConfig::getWidgets();
-        $this->widgetId    = PayeverConfig::getFinanceExpressWidgetId();
-        $this->widgetTheme = PayeverConfig::getFinanceExpressWidgetTheme();
-        $this->checkoutId  = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['checkout_id'] : '-';
-        $this->bussinessId = PayeverConfig::getBusinessUuid();
-        $this->type = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['type'] : 'button';
-
         if (isset($args['articleNumber'])) {
             $this->productId = $args['articleNumber'];
             $this->prepareWidgetProduct($this->productId);
@@ -145,7 +140,7 @@ class ExpressWidget
         $productTitle    = $product->oxarticles__oxtitle->rawValue;
         $productPrice    = (float) $product->oxarticles__oxprice->rawValue;
 
-        $this->reference = 'prod_' . $productId;
+        $this->reference = time() . '_' . self::PRODUCT_PREFIX . $productId;
         $this->amount    = $productPrice;
         $this->cart      = [
             [
@@ -167,10 +162,10 @@ class ExpressWidget
         $basket = $session->getBasket();
         $aBasketContents = $basket->getContents();
 
-        $this->reference = 'cart_' . uniqid();
+        $this->reference = time() . '_' . self::CART_PREFIX . uniqid();
         $oUser = $basket->getBasketUser();
         if ($oUser) {
-            $this->reference = 'cart_' . $oUser->getBasket('savedbasket')->getId();
+            $this->reference = time() . '_' . self::CART_PREFIX . $oUser->getBasket('savedbasket')->getId();
         }
 
         $this->amount = 0;
@@ -178,10 +173,10 @@ class ExpressWidget
             $this->amount    += (float) $item->getUnitPrice()->getBruttoPrice() * (int) $item->getAmount();
             $this->cart[]    = [
                 'name'       => $item->getTitle(),
-                'quantity'   => $item->getAmount(),
+                'quantity'   => (int) $item->getAmount(),
                 'identifier' => $item->getArticle()->getFieldData('oxartnum'),
                 'price'      => $item->getUnitPrice()->getBruttoPrice(),
-                'amount'     => $item->getUnitPrice()->getBruttoPrice() * $item->getAmount(),
+                'amount'     => $item->getUnitPrice()->getBruttoPrice() * (int) $item->getAmount(),
             ];
         }
         if (method_exists($session->getBasket(), 'enableSaveToDataBase')) {
@@ -194,6 +189,10 @@ class ExpressWidget
      */
     private function getHtmlEntitiesArray()
     {
+        $widgets = PayeverConfig::getWidgets();
+        $widgetIds = PayeverConfig::getFinanceExpressWidgetId();
+        $widgetTheme = PayeverConfig::getFinanceExpressWidgetTheme();
+
         $this->successUrl        = $this->generateCallbackUrl(self::ACTION_SUCCESS);
         $this->failureUrl        = $this->generateCallbackUrl(self::ACTION_FAILURE);
         $this->noticeUrl         = $this->generateCallbackUrl(self::ACTION_NOTICE);
@@ -203,34 +202,71 @@ class ExpressWidget
             ['items' => json_encode($this->getQuoteCallbackProductItems())]
         );
 
-        return [
-            'data-widgetId'         => $this->widgetId,
-            'data-theme'            => $this->widgetTheme,
-            'data-checkoutId'       => $this->checkoutId,
-            'data-business'         => $this->bussinessId,
-            'data-reference'        => $this->reference,
-            'data-amount'           => $this->amount,
-            'data-cart'             => json_encode($this->cart),
-            'data-cancelurl'        => $this->cancelUrl,
-            'data-failureurl'       => $this->failureUrl,
-            'data-pendingurl'       => $this->successUrl,
-            'data-successurl'       => $this->successUrl,
-            'data-noticeurl'        => $this->noticeUrl,
-            'data-quotecallbackurl' => $this->quoteCallbackUrl,
-            'data-type'             => $this->type,
-        ];
+        $widgetDataSources = [];
+        foreach ($widgetIds as $key => $widgetCode) {
+            $widgetPaymentMethods = null;
+            $currentWidgetId = null;
+            if (strpos($widgetCode, '#') !== false) {
+                $widgetData = explode('#', $widgetCode);
+                $currentWidgetId = $widgetData[0];
+                $widgetPaymentMethods = explode('+', $widgetData[1]);
+            }
+
+            $this->widgetId = $currentWidgetId ?: $widgetCode;
+            $this->checkoutId = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['checkout_id'] : '-';
+            $this->bussinessId = PayeverConfig::getBusinessUuid();
+            $this->type = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['type'] : 'button';
+
+            $currentWidgetData = [
+                'data-widgetId'         => $this->widgetId,
+                'data-theme'            => $widgetTheme,
+                'data-checkoutId'       => $this->checkoutId,
+                'data-business'         => $this->bussinessId,
+                'data-reference'        => $this->reference,
+                'data-amount'           => $this->amount,
+                'data-cart'             => htmlspecialchars(json_encode($this->cart), ENT_QUOTES, 'UTF-8'),
+                'data-cancelurl'        => $this->cancelUrl,
+                'data-failureurl'       => $this->failureUrl,
+                'data-pendingurl'       => $this->successUrl,
+                'data-successurl'       => $this->successUrl,
+                'data-noticeurl'        => $this->noticeUrl,
+                'data-quotecallbackurl' => $this->quoteCallbackUrl,
+                'data-type'             => $this->type,
+            ];
+
+            if ($widgetPaymentMethods) {
+                if (count($widgetPaymentMethods) === 1) {
+                    $currentWidgetData['data-payment'] = $widgetPaymentMethods[0];
+                } else {
+                    $filterMethods = array_values(array_diff($widgets[$this->widgetId]['payments'], $widgetPaymentMethods));
+                    if (!empty($filterMethods)) {
+                        $currentWidgetData['data-filter'] = "['" . implode("','", array_values($filterMethods)) . "']";
+                    }
+                }
+            }
+
+            $widgetDataSources['payever-widget-finexp-' . $key] = $currentWidgetData;
+        }
+
+        return $widgetDataSources;
     }
 
     /**
-     * @return string
+     * Renders the HTML entities for the widget cart.
+     *
+     * @return string The rendered HTML entities.
      */
     private function renderHtmlEntities()
     {
         $html = '';
-        foreach ($this->getHtmlEntitiesArray() as $attr => $value) {
-            if (!empty($value)) {
-                $html .= ' ' . $attr . "='" . $value . "' ";
+        foreach ($this->getHtmlEntitiesArray() as $key => $htmlEntitiesArray) {
+            $attrData = '';
+            foreach ($htmlEntitiesArray as $attr => $value) {
+                if (!empty($value)) {
+                    $attrData .= ' ' . $attr . '="' . $value . '" ';
+                }
             }
+            $html .= sprintf('<div class="payever-widget-finexp" id="%s" %s></div>', $key, $attrData);
         }
 
         return $html;
@@ -266,7 +302,7 @@ class ExpressWidget
             ob_start();
             ?>
             <div class="payever-widget-wrapper tobasketFunction clear">
-                <div class="payever-widget-finexp" <?php echo $this->renderHtmlEntities(); ?>></div>
+                <?php echo $this->renderHtmlEntities(); ?>
                 <script>
                     var script = document.createElement('script');
                     script.src = '<?php echo $this->getWidgetJsUrl(); ?>';

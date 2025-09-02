@@ -82,14 +82,14 @@ class PayeverGatewayManager
             }
             $this->getLogger()->debug($message);
         }
-        $sts = $config->getRequestParameter(PayeverPaymentManager::STATUS_PARAM);
+        $sts = $config->getRequestParameter(PayeverPaymentUrlBuilder::STATUS_PARAM);
 
         $this->getLogger()->info(sprintf('Handling callback type: %s, paymentId: %s', $sts, $paymentId), $_GET);
         $fetchDest = $this->getRequestHelper()->getHeader('sec-fetch-dest');
         $this->getLogger()->debug(sprintf('Hit with fetch dest: %s', $fetchDest));
 
         if ($sts == 'cancel') {
-            $lang = $config->getRequestParameter(PayeverPaymentManager::LANG_PARAM)
+            $lang = $config->getRequestParameter(PayeverPaymentUrlBuilder::LANG_PARAM)
                 ?: oxRegistry::getLang()->getTplLanguage();
             if (!$lang) {
                 $lang = self::DEFAULT_LANG;
@@ -151,7 +151,7 @@ class PayeverGatewayManager
                 if ($payeverStatus == Status::STATUS_DECLINED) {
                     $messageType = 'payeverPaymentDeclined';
                 }
-                $lang = $config->getRequestParameter(PayeverPaymentManager::LANG_PARAM) ?:
+                $lang = $config->getRequestParameter(PayeverPaymentUrlBuilder::LANG_PARAM) ?:
                     oxRegistry::getLang()->getTplLanguage();
                 if (!$lang) {
                     $lang = self::DEFAULT_LANG;
@@ -365,7 +365,26 @@ class PayeverGatewayManager
             }
 
             if ($isPaid) {
-                $orderStateId = $this->processSuccess($payment, $oxidOrderStatus, $isPending); // exit
+                $orderStateId = $this->processSuccess($payment, $oxidOrderStatus, $isPending);
+
+                // @codeCoverageIgnoreStart
+                if (!$this->dryRun) {
+                    // Create Invoice PDF
+                    $oOrder = $this->getOrderByPaymentId($payment['paymentId']);
+                    if ($oOrder) {
+                        $userPayment = $this->getOxUserPayment();
+                        $userPayment->load((string) $oOrder->oxorder__oxpaymentid);
+
+                        //if ($userPayment->oxpayments__oxisb2bmethod) {
+                            (new PayeverInvoiceManager())->addInvoice($oOrder);
+                            $this->getLogger()->info(
+                                sprintf('Invoice has been created for order #%s', $oOrder->getId()),
+                                $payment
+                            );
+                        //}
+                    }
+                }
+                // @codeCoverageIgnoreEnd
 
                 $this->getLocker()->releaseLock($payment['paymentId']);
 
@@ -745,6 +764,7 @@ class PayeverGatewayManager
      */
     private function processSuccess($payment, $oxidOrderStatus, $isPending = false)
     {
+        $this->getLogger()->debug('processSuccess', [$payment['paymentId']]);
         list($oUser, $oBasket) = $this->ensureUserAndBasketLoaded($payment);
 
         /** @var payeverOxOrder $oOrder */

@@ -114,6 +114,7 @@ class PayeverInstaller
         self::createLogsTable();
         self::createOrderActionsTable();
         self::createPaymentActionsTable();
+        self::createInvoicesTable();
     }
 
     /**
@@ -265,6 +266,32 @@ class PayeverInstaller
   KEY `PAYEVER_LOGS_LEVEL` (`level`),
   KEY `PAYEVER_LOGS_CREATED_AT` (`created_at`)
 ) COMMENT='Payever logs'"
+        );
+    }
+
+    /**
+     * Creates payeverinvoices table
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    private static function createInvoicesTable()
+    {
+        $oDb = oxDb::getDb();
+        $oDb->execute(
+            "CREATE TABLE IF NOT EXISTS `payeverinvoices` (
+  `OXID` char(32) NOT NULL COMMENT 'Id',
+  `OXINVOICEKEY` varchar(255) NOT NULL COMMENT 'Invoice Key',
+  `OXORDERID` varchar(32) NOT NULL COMMENT 'Order Id',
+  `OXPAYMENTID` varchar(255) NOT NULL COMMENT 'Payment ID',
+  `OXEXTERNALID` varchar(255) NOT NULL COMMENT 'External Id',
+  `OXCONTENTS` blob DEFAULT NULL COMMENT 'Invoice Contents',
+  `OXTIMESTAMP` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Timestamp',
+  PRIMARY KEY (`OXID`),
+  UNIQUE KEY `OXINVOICEKEY` (`OXINVOICEKEY`) USING HASH,
+  KEY `OXORDERID` (`OXORDERID`),
+  KEY `OXEXTERNALID` (`OXEXTERNALID`)
+);"
         );
     }
 

@@ -78,13 +78,16 @@ abstract class PayeverBaseAction implements PayeverActionInterface
      */
     public function processAmount($oxOrder, $amount, $identifier = null)
     {
-        //Send api request
+        // Send api request
+        /** @var \Payever\Sdk\Core\Http\Response $response */
         $response = $this->sendAmountRequest($oxOrder, $amount, $identifier);
+        $responseEntity = $response->getResponseEntity();
+        $call = $responseEntity ? $responseEntity->getCall() : null;
 
         $this->getOrderActionHelper()->addAction([
             'orderId' => $oxOrder->getId(),
-            'actionId' => $response->getResponseEntity()->getCall()->getId(),
-            'state' => $response->getResponseEntity()->getCall()->getStatus(),
+            'actionId' => $call ? $call->getId() : null,
+            'state' => $call ? $call->getStatus() : null,
             'amount' => $amount,
             'type' => payeverorderaction::TYPE_PRODUCT
         ], $this->getActionType());
@@ -147,7 +150,7 @@ abstract class PayeverBaseAction implements PayeverActionInterface
                     ->setIdentifier($article->oxorderarticles__oxartid->value)
                     ->setName($article->oxorderarticles__oxtitle->value)
                     ->setPrice($article->oxorderarticles__oxbprice->value)
-                    ->setQuantity($items[$article->getId()]);
+                    ->setQuantity((int) $items[$article->getId()]);
 
                 $field = 'oxorderarticles__' . $this->getActionField();
                 $qnt = $article->getFieldData($this->getActionField()) + $items[$article->getId()];

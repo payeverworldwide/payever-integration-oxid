@@ -13,6 +13,8 @@ class payeverorderaction extends oxBase
     const ACTION_REFUND = 'refund';
     const ACTION_SHIPPING_GOODS = 'shipping_goods';
     const ACTION_CANCEL = 'cancel';
+    const ACTION_SETTLE = 'settle';
+    const ACTION_INVOICE = 'invoice';
 
     const TYPE_PRODUCT = 'product';
     const TYPE_WRAP_COST = 'wrapcost';

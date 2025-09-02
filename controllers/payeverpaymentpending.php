@@ -84,18 +84,18 @@ class payeverpaymentpending extends oxUBase
                 ->getResponseEntity()
                 ->getResult();
 
-            $dispatcher = oxNew('PayeverPaymentManager');
+            $urlBuilder = new PayeverPaymentUrlBuilder();
 
             switch ($result->getStatus()) {
                 case Status::STATUS_PAID:
                 case Status::STATUS_ACCEPTED:
-                    $data['redirect_url'] = $dispatcher->generateCallbackUrl('success', ['payment_id' => $paymentId]);
+                    $data['redirect_url'] = $urlBuilder->generateCallbackUrl('success', ['payment_id' => $paymentId]);
                     break;
                 case Status::STATUS_FAILED:
-                    $data['redirect_url'] =  $dispatcher->generateCallbackUrl('failure', ['payment_id' => $paymentId]);
+                    $data['redirect_url'] =  $urlBuilder->generateCallbackUrl('failure', ['payment_id' => $paymentId]);
                     break;
                 case Status::STATUS_CANCELLED:
-                    $data['redirect_url'] = $dispatcher->generateCallbackUrl('cancel', ['payment_id' => $paymentId]);
+                    $data['redirect_url'] = $urlBuilder->generateCallbackUrl('cancel', ['payment_id' => $paymentId]);
                     break;
                 default:
                     $data['in_progress'] = true;

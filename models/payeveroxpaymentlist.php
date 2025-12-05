@@ -22,9 +22,16 @@ class payeverOxPaymentList extends payeverOxPaymentList_parent
         $payeverUtil = PayeverMethodHider::getInstance();
 
         foreach ($paymentList as $key => $method) {
+            if (strpos($key, PayeverConfig::PLUGIN_PREFIX) === false) {
+                continue;
+            }
+
             $payeverMethod = strpos($key, '-') ? strstr($key, '-', true) : $key;
             $oxPaymentsVariants = json_decode($method->oxpayments__oxvariants->rawValue, true);
             if ($payeverUtil->isHiddenPaymentMethod($payeverMethod, $oxPaymentsVariants['variantId'])) {
+                unset($paymentList[$key]);
+            }
+            if ($payeverUtil->validateB2BMethods($method)) {
                 unset($paymentList[$key]);
             }
         }

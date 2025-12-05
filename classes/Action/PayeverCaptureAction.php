@@ -1,6 +1,7 @@
 <?php
 
 use Payever\Sdk\Payments\Action\ActionDeciderInterface;
+use Payever\Sdk\Payments\Enum\Status;
 
 /**
  * PHP version 5.4 and 7
@@ -34,6 +35,18 @@ class PayeverCaptureAction extends PayeverBaseAction
         $handler = $this->getShippingGoodsHandler();
 
         return $handler->triggerItemsShippingGoodsPaymentRequest($oxOrder, $paymentItems, $identifier);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    protected function getOrderStatus($transaction)
+    {
+        if ($transaction['status'] !== Status::STATUS_PAID) {
+            return oxRegistry::getLang()->translateString('Partially Shipped');
+        }
+
+        return parent::getOrderStatus($transaction);
     }
 
     /**

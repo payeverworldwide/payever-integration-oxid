@@ -3,13 +3,25 @@
 class payeverusercontroller extends payeverusercontroller_parent
 {
     use PayeverConfigHelperTrait;
+    use PayeverCountryFactoryTrait;
 
     public function render()
     {
         parent::render();
 
         $companySearch = $this->getConfigHelper()->isCompanySearchAvailable();
+        $companySearchType = $this->getConfigHelper()->getCompanySearchType();
+
+        $this->_aViewData['defaultCountry'] = 'de';
         $this->_aViewData['companySearch'] = $companySearch;
+        $this->_aViewData['companySearchType'] = $companySearchType;
+
+        $user = $this->getSession()->getBasket()->getBasketUser();
+        if ($user) {
+            $oxCountry = $this->getCountryFactory()->create();
+            $oxCountry->load($user->getFieldData('oxcountryid'));
+            $this->_aViewData['defaultCountry'] = strtolower($oxCountry->getFieldData('oxisoalpha2'));
+        }
 
         if ($companySearch) {
             //Shop active countries

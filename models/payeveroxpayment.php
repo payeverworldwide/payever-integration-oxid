@@ -35,8 +35,8 @@ class payeverOxPayment extends payeverOxPayment_parent
     {
         if (in_array($this->oxpayments__oxid->value, PayeverConfig::getMethodsList())) {
             if (!$this->oxpayments__oxacceptfee->value) {
-                $percentFee = $this->oxpayments__oxpercentfee->value;
-                $fixedFee = $this->oxpayments__oxfixedfee->value;
+                $percentFee = (float) $this->oxpayments__oxpercentfee->value;
+                $fixedFee = (float) $this->oxpayments__oxfixedfee->value;
 
                 return $dBasePrice * $percentFee / 100 + $fixedFee;
             } else {

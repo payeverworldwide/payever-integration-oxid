@@ -15,11 +15,11 @@
 class PayeverInvoiceFactory
 {
     /**
-     * @return object|payeverinvoice|\OxidEsales\EshopCommunity\Core\Model\BaseModel
+     * @return object|payeverinvoices|\OxidEsales\EshopCommunity\Core\Model\BaseModel
      * @throws oxSystemComponentException
      */
     public function create()
     {
-        return oxNew(payeverinvoice::class);
+        return oxNew(payeverinvoices::class);
     }
 }

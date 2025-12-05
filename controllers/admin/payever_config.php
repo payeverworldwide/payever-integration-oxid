@@ -136,6 +136,15 @@ class payever_config extends Shop_Config
 
         $this->_parameters = array_merge($this->_parameters, $parameters);
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_CONFIG, $this->_parameters);
+
+        $b2bParameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_B2B_CONFIG);
+        if (!empty($b2bParameters[PayeverConfig::KEY_COMPANY_SEARCH_ENABLED])) {
+            PayeverConfig::set(
+                PayeverConfig::VAR_B2B_CONFIG,
+                PayeverConfig::KEY_COMPANY_SEARCH_ENABLED,
+                $b2bParameters[PayeverConfig::KEY_COMPANY_SEARCH_ENABLED]
+            );
+        }
     }
 
     /**
@@ -377,6 +386,7 @@ class payever_config extends Shop_Config
                 'business_id' => $widget->getBusinessId(),
                 'checkout_id' => $widget->getCheckoutId(),
                 'type' => $widget->getType(),
+                'name' => $widget->getName(),
                 'payments' => []
             ];
             foreach ($payments as $paymentMethod) {
@@ -418,13 +428,16 @@ class payever_config extends Shop_Config
                         ? $widgetId . '#' . implode('+', $comboMethods)
                         : $widgetId;
 
+                    $comboName = sprintf(
+                        "%s %s%s",
+                        oxRegistry::getLang()->translateString($widget['type'], $lang, false),
+                        $combination['name'],
+                        !empty($widget['name']) ? ' - ' . $widget['name'] : ''
+                    );
+
                     $options[] = [
                         'id'   => $comboId,
-                        'name' => sprintf(
-                            "%s - %s",
-                            oxRegistry::getLang()->translateString($widget['type'], $lang, false),
-                            $combination['name']
-                        )
+                        'name' => $comboName
                     ];
                 }
             }

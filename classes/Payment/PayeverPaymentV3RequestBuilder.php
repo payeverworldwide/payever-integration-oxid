@@ -353,7 +353,7 @@ class PayeverPaymentV3RequestBuilder
             if ($oxvariants) {
                 $this->paymentRequest
                     ->setPaymentMethod($oxvariants->paymentMethod)
-                    ->setPaymentVariantId($oxvariants->variantId);
+                    ->setVariantId($oxvariants->variantId);
             }
         }
 
@@ -487,8 +487,9 @@ class PayeverPaymentV3RequestBuilder
 
         if (
             !in_array(
-            $this->getPaymentMethod()->getFieldData('oxid'),
-            PayeverConfig::getShippingNotAllowedMethods())
+                $this->getPaymentMethod()->getFieldData('oxid'),
+                PayeverConfig::getShippingNotAllowedMethods()
+            )
         ) {
             $shippingAddress = $this->getAddressEntity($soxAddressId);
             $this->paymentRequest->setShippingAddress($shippingAddress);

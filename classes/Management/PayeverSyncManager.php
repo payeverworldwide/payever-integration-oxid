@@ -33,16 +33,12 @@ class PayeverSyncManager
      * @throws oxConnectionException
      * @throws oxSystemComponentException
      * @throws DatabaseErrorException
+     *
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function synchronize()
     {
-        $prefix = PayeverConfig::PLUGIN_PREFIX;
-        $this->getDatabase()->execute(
-            sprintf("DELETE FROM `oxobject2payment` where `OXPAYMENTID` LIKE '%%%s%%'", $prefix)
-        );
-        $this->getDatabase()->execute(
-            sprintf("DELETE FROM `oxpayments` where `OXID` LIKE '%%%s%%'", $prefix)
-        );
+        $currentMethods = PayeverConfig::getMethods();
         PayeverInstaller::migrateDB();
 
         $locales = $this->getLangList();
@@ -54,15 +50,17 @@ class PayeverSyncManager
 
         $wlMethods = $this->getWLSupportedPaymentMethods();
 
-        $checkAddressEqualityMethods = [];
-        $shippingNotAllowedMethods = [];
         $b2bCountries = [];
+        $activeMethods = [];
+        $shippingNotAllowedMethods = [];
+        $checkAddressEqualityMethods = [];
         foreach ($methods as $methodCode => $method) {
             if ($wlMethods && !in_array(PayeverConfigHelper::removeMethodPrefix($methodCode), $wlMethods)) {
                 continue;
             }
 
-            $this->createOrUpdatePayment($methodCode, $method, $locales);
+            $activeMethods[] = $methodCode;
+            $this->createOrUpdatePayment($methodCode, $method, $currentMethods, $locales);
 
             if ($method->getShippingAddressEquality()) {
                 $checkAddressEqualityMethods[] = $method->getVariantId();
@@ -85,16 +83,18 @@ class PayeverSyncManager
             }
         }
 
-        $companySearchStatus = $this->getPaymentsApiClient()->isB2bSearchActive();
+        $deleteList = array_diff(array_keys($currentMethods), $activeMethods);
+        $this->getDatabase()->execute(
+            sprintf("DELETE FROM `oxobject2payment` where `OXPAYMENTID` IN('%s')", implode("','", $deleteList))
+        );
+        $this->getDatabase()->execute(
+            sprintf("DELETE FROM `oxpayments` where `OXID` IN('%s')", implode("','", $deleteList))
+        );
+
         PayeverConfig::set(
             PayeverConfig::VAR_B2B_CONFIG,
             PayeverConfig::KEY_B2B_COUNTRIES,
             $b2bCountries
-        );
-        PayeverConfig::set(
-            PayeverConfig::VAR_B2B_CONFIG,
-            PayeverConfig::KEY_COMPANY_SEARCH_ENABLED,
-            $companySearchStatus
         );
 
         $parameters = array_merge(
@@ -205,13 +205,17 @@ class PayeverSyncManager
     /**
      * @param $methodCode
      * @param $method
+     * @param $currentMethods
      * @param $locales
+     *
      * @return object
-     * @throws oxSystemComponentException
+     *
+     * @throws oxSystemComponentException|Exception
      */
-    private function createOrUpdatePayment($methodCode, $method, $locales)
+    private function createOrUpdatePayment($methodCode, $method, $currentMethods, $locales)
     {
         $methodData = $method->toArray();
+        $overwritePaymentLabels = PayeverConfig::getOverwritePaymentLabels();
 
         $oPayment = $this->getOxPayment();
         $oPayment->load($methodCode);
@@ -220,14 +224,19 @@ class PayeverSyncManager
         $oPayment->oxpayments__oxid = new oxField($methodCode, oxField::T_RAW);
 
         foreach ($locales as $locale => $lang) {
-            $oPayment->{'oxpayments__oxdesc' . $lang} = new oxField(
-                'payever ' . $methodData["name_{$locale}"],
-                oxField::T_RAW
-            );
-            $oPayment->{'oxpayments__oxlongdesc' . $lang} = new oxField(
-                strip_tags($methodData["description_offer_{$locale}"]),
-                oxField::T_RAW
-            );
+            $desc = 'payever ' . $methodData["name_{$locale}"];
+            $longdesc = $methodData["description_offer_{$locale}"];
+
+            if (!$overwritePaymentLabels && !empty($currentMethods[$methodCode]['OXDESC' . $lang])) {
+                $desc = ($currentMethods[$methodCode]['OXDESC' . $lang]);
+            }
+
+            if (!$overwritePaymentLabels && !empty($currentMethods[$methodCode]['OXLONGDESC' . $lang])) {
+                $longdesc = ($currentMethods[$methodCode]['OXLONGDESC' . $lang]);
+            }
+
+            $oPayment->{'oxpayments__oxdesc' . $lang} = new oxField($desc, oxField::T_RAW);
+            $oPayment->{'oxpayments__oxlongdesc' . $lang} = new oxField(strip_tags($longdesc), oxField::T_RAW);
         }
 
         // todo: describe magic values

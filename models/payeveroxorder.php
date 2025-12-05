@@ -64,12 +64,14 @@ class payeverOxOrder extends payeverOxOrder_parent
         $sPaymentId = $oBasket->getPaymentId();
 
         if (!in_array($sPaymentId, PayeverConfig::getMethodsList())) {
+            $this->getLogger()->warning('Payment id not in methods list');
             return parent::finalizeOrder($oBasket, $oUser, $blRecalculatingOrder);
         }
 
         // check if this order is already stored
         $sGetChallenge = oxRegistry::getSession()->getVariable('sess_challenge');
         if ($this->_checkOrderExist($sGetChallenge)) {
+            $this->getLogger()->info('Order is already exists');
             oxRegistry::getUtils()->logger('BLOCKER');
             // we might use this later, this means that somebody klicked like mad on order button
             return self::ORDER_STATE_ORDEREXISTS;
@@ -83,6 +85,7 @@ class payeverOxOrder extends payeverOxOrder_parent
             // validating various order/basket parameters before finalizing
             $iOrderState = $this->validateOrder($oBasket, $oUser);
             if ($iOrderState) {
+                $this->getLogger()->warning('Various order validation failed');
                 return $iOrderState;
             }
         }
@@ -113,6 +116,7 @@ class payeverOxOrder extends payeverOxOrder_parent
         if (!$blRecalculatingOrder) {
             $blRet = $this->_executePayment($oBasket, $oUserPayment);
             if ($blRet !== true) {
+                $this->getLogger()->warning('Execute payment failed');
                 return $blRet;
             }
         }
@@ -162,6 +166,7 @@ class payeverOxOrder extends payeverOxOrder_parent
         if ($useTsProtection && !$blRecalculatingOrder && $oBasket->getTsProductId()) {
             $blRet = $this->_executeTsProtection($oBasket);
             if ($blRet !== true) {
+                $this->getLogger()->warning('TS protection failed');
                 return $blRet;
             }
         }

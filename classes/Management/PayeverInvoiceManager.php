@@ -26,6 +26,9 @@ class PayeverInvoiceManager
      */
     private $invoiceGenerator;
 
+    /**
+     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+     */
     public function __construct($dryRun = false)
     {
         if ($dryRun) {
@@ -42,7 +45,7 @@ class PayeverInvoiceManager
     /**
      * @param oxOrder $order
      *
-     * @return object|payeverinvoice
+     * @return object|payeverinvoices
      * @throws oxSystemComponentException
      */
     public function addInvoice(oxOrder $order)
@@ -75,7 +78,7 @@ class PayeverInvoiceManager
     /**
      * @param $externalID
      *
-     * @return payeverinvoice[]
+     * @return payeverinvoices[]
      * @throws oxSystemComponentException
      */
     public function getInvoicesByExternalID($externalID)
@@ -94,7 +97,7 @@ class PayeverInvoiceManager
     /**
      * @param $key
      *
-     * @return payeverinvoice|null
+     * @return payeverinvoices|null
      * @throws oxSystemComponentException
      */
     public function getInvoiceByKey($key)

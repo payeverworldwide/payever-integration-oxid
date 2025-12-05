@@ -17,15 +17,11 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
  * Class PayeverActionProcessor
  *
  * @codeCoverageIgnore
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class PayeverActionProcessor
 {
-    use PayeverOrderActionHelperTrait;
-    use PayeverPaymentActionHelperTrait;
-    use PayeverOrderTransactionHelperTrait;
     use PayeverLoggerTrait;
-    use PayeverFieldFactoryTrait;
-    use PayeverPaymentsApiClientTrait;
 
     /**
      * Process action request
@@ -59,7 +55,9 @@ class PayeverActionProcessor
 
     /**
      * @param string $action
+     *
      * @return PayeverActionInterface
+     *
      * @throws Exception
      */
     private function getActionExecutor($action)

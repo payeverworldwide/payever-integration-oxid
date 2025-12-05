@@ -12,7 +12,10 @@
 /**
  * Getting dynamic values and params for Payever payment types
  *
+ * @SuppressWarnings(PHPMD.ExitExpression)
+ *
  * @extend oxBaseClass
+ *
  * @codeCoverageIgnore
  */
 class payeverclaim extends oxUBase
@@ -27,7 +30,8 @@ class payeverclaim extends oxUBase
 
     /**
      * @return void
-     * @SuppressWarnings(PHPMD.ExitExpression)
+     *
+     * @throws oxSystemComponentException
      */
     public function render()
     {
@@ -82,17 +86,13 @@ class payeverclaim extends oxUBase
     {
         $user = $this->getRequestHelper()->getServer('PHP_AUTH_USER');
         $password = $this->getRequestHelper()->getServer('PHP_AUTH_PW');
-        if (empty($user) ||
-            empty($password) ||
-            !$this->validateUserCredentials($user, $password)
-        )  {
+        if (empty($user) || empty($password) || !$this->validateUserCredentials($user, $password)) {
             $this->createAuthenticateResponse();
         }
     }
 
     /**
      * Creates an authentication response with 401 Unauthorized status code and www-authenticate header.
-     *
      */
     private function createAuthenticateResponse()
     {
@@ -104,7 +104,8 @@ class payeverclaim extends oxUBase
 
     private function validateUserCredentials($login, $password)
     {
-        $oAuthUser = oxNew(\OxidEsales\Eshop\Application\Model\User::class);
+        $oAuthUser = oxNew('oxUser');
+
         return $oAuthUser->login($login, $password, false);
     }
 }

@@ -15,6 +15,8 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'autol
 
 class PayeverMethodHider
 {
+    use PayeverSessionTrait;
+    use PayeverConfigHelperTrait;
     use PayeverRequestHelperTrait;
 
     const FAILED_METHODS_COOKIE_NAME  = 'payever_hidden_methods';
@@ -98,6 +100,28 @@ class PayeverMethodHider
         }
 
         return in_array($methodName, $this->hiddenMethods);
+    }
+
+    /**
+     * @param $method
+     *
+     * @return bool
+     */
+    public function validateB2BMethods($method)
+    {
+        // Check B2B
+        if ($method->getFieldData('oxisb2bmethod')) {
+            $user = $this->getSession()->getUser();
+            if (!$user->getFieldData('oxcompany')) {
+                return true;
+            }
+
+            if (!$user->getFieldData('oxexternalid') && $this->getConfigHelper()->isCompanySearchAvailable()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -223,6 +223,13 @@ class PayeverGatewayManager
                         return;
                     }
 
+                    if ($isNotice && !$isPending && $this->shouldRejectIfExpiredStatus($retrievePaymentResult)) {
+                        $payment['errorMessage'] = 'Notification rejected: Order status has not been updated. Expired status.'; //phpcs:ignore
+
+                        $this->rejectPayment($payment, false);
+                        return;
+                    }
+
                     $notificationResultEntity = new NotificationResultEntity($rawData['data']['payment']);
                     $company = $notificationResultEntity->getCompany();
                     if ($company) {
@@ -841,7 +848,7 @@ class PayeverGatewayManager
         $retrievePaymentResult = $this->getRetrievePaymentResultEntity($payment);
 
         // Calculate amount
-        $basketAmount = $this->getOrderHelper()->getAmountByCart($oBasket);
+        $basketAmount = $oBasket->getPrice()->getPrice();
 
         // Calculate discounts
         $discount = 0;
@@ -902,6 +909,18 @@ class PayeverGatewayManager
     private function shouldRejectNotification($order, $notificationTimestamp)
     {
         return (int) $order->oxorder__payever_notification_timestamp->rawValue >= $notificationTimestamp;
+    }
+
+    private function shouldRejectIfExpiredStatus(RetrievePaymentResultEntity $retrievePaymentResult)
+    {
+        if (
+            in_array($retrievePaymentResult->getStatus(), [Status::STATUS_DECLINED, Status::STATUS_FAILED]) &&
+            in_array($retrievePaymentResult->getSpecificStatus(), ['ORDER_EXPIRED', 'CHECKOUT_EXPIRED'])
+        ) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

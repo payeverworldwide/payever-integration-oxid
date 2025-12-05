@@ -59,7 +59,8 @@ abstract class PayeverBaseAction implements PayeverActionInterface
         }
 
         //Change order status
-        $status = str_replace('STATUS_', '', json_decode($response->getData())->result->status);
+        $transaction = $this->getOrderTransactionHelper()->getTransaction($oxOrder);
+        $status = $this->getOrderStatus($transaction);
         $oxOrder->oxorder__oxtransstatus = $this->getFieldFactory()->createRaw($status);
         $oxOrder->save();
 
@@ -73,13 +74,13 @@ abstract class PayeverBaseAction implements PayeverActionInterface
      * @param float $amount
      * @param string $identifier
      *
-     * @return mixed
+     * @return \Payever\Sdk\Core\Http\Response
+     *
      * @throws Exception
      */
     public function processAmount($oxOrder, $amount, $identifier = null)
     {
         // Send api request
-        /** @var \Payever\Sdk\Core\Http\Response $response */
         $response = $this->sendAmountRequest($oxOrder, $amount, $identifier);
         $responseEntity = $response->getResponseEntity();
         $call = $responseEntity ? $responseEntity->getCall() : null;
@@ -102,7 +103,8 @@ abstract class PayeverBaseAction implements PayeverActionInterface
      * @param array $items
      * @param string $identifier
      *
-     * @return mixed
+     * @return \Payever\Sdk\Core\Http\Response
+     *
      * @throws Exception
      */
     public function processItems($oxOrder, $items, $identifier = null)
@@ -129,6 +131,20 @@ abstract class PayeverBaseAction implements PayeverActionInterface
         }
 
         return $response;
+    }
+
+    /**
+     * Get order status
+     *
+     * @param array $transaction
+     *
+     * @return string
+     *
+     * @throws Exception
+     */
+    protected function getOrderStatus($transaction)
+    {
+        return str_replace('STATUS_', '', $transaction['status']);
     }
 
     /**
@@ -195,7 +211,7 @@ abstract class PayeverBaseAction implements PayeverActionInterface
      * @param float $amount
      * @param string $identifier
      *
-     * @return mixed
+     * @return \Payever\Sdk\Core\Http\Response
      *
      * @throws Exception
      */
@@ -208,7 +224,7 @@ abstract class PayeverBaseAction implements PayeverActionInterface
      * @param array $paymentItems
      * @param string $identifier
      *
-     * @return mixed
+     * @return \Payever\Sdk\Core\Http\Response
      *
      * @throws Exception
      */

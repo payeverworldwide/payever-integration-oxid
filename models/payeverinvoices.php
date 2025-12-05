@@ -9,7 +9,7 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-class payeverinvoice extends oxBase
+class payeverinvoices extends oxBase
 {
     /**
      * Class constructor, initiates parent constructor (parent::oxBase()).

@@ -80,20 +80,6 @@
                                 </dt>
                                 <div class="spacer"></div>
                             </dl>
-
-                            <dl>
-                                <dd class="cntExLft"></dd>
-                                <dt>
-                                    <input type="hidden" name="payever_config[diagnosticMode]" value="0" />
-                                    [{ oxmultilang ident="PAYEVER_SEND_DIAGNOSTIC" }] &nbsp;
-                                    <select class="editinput" name="payever_config[diagnosticMode]">
-                                        <option value="0" [{if $payever_config.diagnosticMode == 0}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }]</option>
-                                        <option value="1" [{if $payever_config.diagnosticMode == 1}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }]</option>
-                                    </select>
-                                <dd><span>[{ oxmultilang ident="PAYEVER_SEND_DIAGNOSTIC_DESCRIPTION" }]</span></dd>
-                                </dt>
-                                <div class="spacer"></div>
-                            </dl>
                             <dl>
                                 <dd>
                                     <label>[{ oxmultilang ident="PAYEVER_CLIENTID" }]</label>
@@ -122,18 +108,31 @@
                             </dl>
                         </div>
                         <div class="payever-config-section">
-                                <div class="payever-config-section-title">[{ oxmultilang ident="PAYEVER_B2B_CONFIG" }]</div>
-                                <dl>
-                                    <dd class="cntExLft"></dd>
-                                    <dt>
-                                     <input type="hidden" name="payever_b2b_config[payeverCompanySearchEnabled]" value="[{$payever_b2b_config.payeverCompanySearchEnabled}]" />
-                                        [{ oxmultilang ident="PAYEVER_IS_COMPANY_SEARCH_ENABLED" }] &nbsp;
-                                        <select style="max-width:300px" disabled class="editinput">    
-                                            <option selected="selected" [{if $payever_b2b_config.payeverCompanySearchEnabled }] value="1">[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }][{else}] value="0">[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }][{/if}]</option>
-                                        </select>
-                                    </dt>
-                                    <div class="spacer"></div>
-                                </dl>
+                            <div class="payever-config-section-title">[{ oxmultilang ident="PAYEVER_B2B_CONFIG" }]</div>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    [{ oxmultilang ident="PAYEVER_IS_COMPANY_SEARCH_ENABLED" }] &nbsp;
+                                    <select name="payever_b2b_config[payeverCompanySearchEnabled]" style="max-width:300px" class="editinput">
+                                        <option value="0" [{if $payever_b2b_config.payeverCompanySearchEnabled == 0}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }]</option>
+                                        <option value="1" [{if $payever_b2b_config.payeverCompanySearchEnabled == 1}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }]</option>
+                                    </select>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverCompanySearchType]" value="[{$payever_config.payeverCompanySearchType}]" />
+                                    [{ oxmultilang ident="PAYEVER_COMPANY_SEARCH_TYPE" }] &nbsp;
+                                    <select style="max-width:300px" class="editinput" name="payever_config[payeverCompanySearchType]">
+                                        <option value="dropdown" [{if $payever_config.payeverCompanySearchType == 'dropdown'}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_COMPANY_SEARCH_DROPDOWN" }]</option>
+                                        <option value="popup" [{if $payever_config.payeverCompanySearchType == 'popup'}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_COMPANY_SEARCH_POPUP" }]</option>
+                                        <option value="mixed" [{if $payever_config.payeverCompanySearchType == 'mixed'}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_COMPANY_SEARCH_MIXED" }]</option>
+                                    </select>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
                         </div>
                         [{if $payever_widget_active}]
                             <div class="payever-config-section">
@@ -146,7 +145,7 @@
                                         <select style="max-width:300px" multiple class="editinput" name="payever_config[fe_widget_id][]">
                                             [{if $widgets}]
                                                 [{foreach from=$widgets item=widgetOption}]
-                                                    <option value="[{$widgetOption.id}]" [{if $widgetOption.id|in_array:$payever_config.fe_widget_id}]selected="selected"[{/if}]>[{$widgetOption.name}]</option>
+                                                    <option value="[{$widgetOption.id}]" [{if is_array($payever_config.fe_widget_id) && $widgetOption.id|in_array:$payever_config.fe_widget_id}]selected="selected"[{/if}]>[{$widgetOption.name}]</option>
                                                 [{/foreach}]
                                             [{/if}]
                                         </select>
@@ -219,11 +218,21 @@
                             <dl>
                                 <dd class="cntExLft"></dd>
                                 <dt>
-                                <input type="hidden" name="payever_config[displayPaymentIcon]" value="0" />
-                                <input type="checkbox" class="editinput" name="payever_config[displayPaymentIcon]" value="1"
-                                    [{if $payever_config.displayPaymentIcon}]checked="checked"[{/if}] />&nbsp;
-                                [{ oxmultilang ident="PAYEVER_DISPLAY_ICON" }]<br />
-                            </dt>
+                                    <input type="hidden" name="payever_config[overwritePaymentLabels]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[overwritePaymentLabels]" value="1"
+                                           [{if $payever_config.overwritePaymentLabels}]checked="checked"[{/if}] />&nbsp;
+                                    [{ oxmultilang ident="PAYEVER_OVERWRITE_PAYMENT_LABELS" }]<br />
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[displayPaymentIcon]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[displayPaymentIcon]" value="1"
+                                        [{if $payever_config.displayPaymentIcon}]checked="checked"[{/if}] />&nbsp;
+                                    [{ oxmultilang ident="PAYEVER_DISPLAY_ICON" }]<br />
+                                </dt>
                                 <div class="spacer"></div>
                             </dl>
                             <dl>
@@ -322,7 +331,6 @@
 
                         <div class="payever-config-section">
                             <div class="payever-config-section-title">[{ oxmultilang ident="PAYEVER_API_LOGGING" }]</div>
-
                             <dl>
                                 <dd class="cntExLft"></dd>
                                 <dt>
@@ -336,6 +344,19 @@
                                         <br>
                                         <dd><span>[{ oxmultilang ident="PAYEVER_LOG_FILEPATH" }]: [{$log_filename}]</span></dd>
                                     [{/if}]
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[diagnosticMode]" value="0" />
+                                    [{ oxmultilang ident="PAYEVER_SEND_DIAGNOSTIC" }] &nbsp;
+                                    <select class="editinput" name="payever_config[diagnosticMode]">
+                                        <option value="0" [{if $payever_config.diagnosticMode == 0}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_NO" }]</option>
+                                        <option value="1" [{if $payever_config.diagnosticMode == 1}]selected="selected"[{/if}]>[{ oxmultilang ident="PAYEVER_PAYMENT_YES" }]</option>
+                                    </select>
+                                <dd><span>[{ oxmultilang ident="PAYEVER_SEND_DIAGNOSTIC_DESCRIPTION" }]</span></dd>
                                 </dt>
                                 <div class="spacer"></div>
                             </dl>

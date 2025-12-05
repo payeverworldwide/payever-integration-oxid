@@ -217,6 +217,14 @@ class PayeverConfigHelper
     }
 
     /**
+     * @return string
+     */
+    public function getCompanySearchType()
+    {
+        return PayeverConfig::getCompanySearchType() ?: 'dropdown';
+    }
+
+    /**
      * @return LoggerInterface
      */
     public static function getLogger()

@@ -26,7 +26,7 @@ class payevercompanysearch extends oxUBase
      */
     public function search()
     {
-        $company = $this->getConfig()->getRequestParameter('company');
+        $company = $this->getConfig()->getRequestParameter('term');
         $countryId = $this->getConfig()->getRequestParameter('country');
 
         $country = oxNew('oxcountry');
@@ -54,7 +54,7 @@ class payevercompanysearch extends oxUBase
             $this->getLogger()->warning($e->getMessage());
         }
 
-        $result = json_encode($result);
+        $result = json_encode(array_slice($result, 0, 6));
         headers_sent() || header('Content-Type: application/json');
         echo $result;
         exit;

@@ -39,10 +39,10 @@ trait PayeverActionFormTrait
             case ActionDeciderInterface::ACTION_CLAIM_UPLOAD:
                 $manager = new PayeverFormClaim();
                 break;
-            case ActionDeciderInterface::ACTION_SETTLE;
+            case ActionDeciderInterface::ACTION_SETTLE:
                 $manager = new PayeverFormSettle();
                 break;
-            case ActionDeciderInterface::ACTION_INVOICE;
+            case ActionDeciderInterface::ACTION_INVOICE:
                 $manager = new PayeverFormInvoice();
                 break;
             default:

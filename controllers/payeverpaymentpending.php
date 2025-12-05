@@ -14,8 +14,11 @@ use Payever\Sdk\Payments\Enum\Status;
 /**
  * Getting dynamic values and params for Payever payment types
  *
+ * @SuppressWarnings(PHPMD.ExitExpression)
+ *
  * @extend oxBaseClass
  */
+// phpcs:disable PSR2.Classes.PropertyDeclaration.Underscore
 class payeverpaymentpending extends oxUBase
 {
     use DryRunTrait;

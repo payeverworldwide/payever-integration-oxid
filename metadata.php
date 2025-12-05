@@ -28,7 +28,7 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '3.4.0',
+    'version' => '3.5.0',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
@@ -209,7 +209,7 @@ $aModule = [
         'payeverProductsImport' => 'payever/controllers/payeverproductsimport.php',
         'payeverShowLogs' => 'payever/controllers/payevershowlogs.php',
         'payeverclaim' => 'payever/controllers/payeverclaim.php',
-        'payeverinvoice' => 'payever/models/payeverinvoice.php',
+        'payeverinvoices' => 'payever/models/payeverinvoices.php',
         'payeverinvoicelist' => 'payever/models/payeverinvoicelist.php',
         'payeverorderaction' => 'payever/models/payeverorderaction.php',
     ],

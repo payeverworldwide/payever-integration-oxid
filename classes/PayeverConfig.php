@@ -52,6 +52,7 @@ class PayeverConfig
     const KEY_DEBUG = 'debugMode';
     const KEY_LOG_LEVEL = 'logLevel';
 
+    const KEY_OVERWRITE_PAYMENT_LABELS = 'overwritePaymentLabels';
     const KEY_DISPLAY_DESCRIPTION = 'displayPaymentDescription';
     const KEY_DISPLAY_ICON = 'displayPaymentIcon';
     const KEY_DISPLAY_BASKET_ID = 'displayBasketId';
@@ -98,6 +99,7 @@ class PayeverConfig
     const VAR_B2B_CONFIG = 'payever_b2b_config';
     const KEY_B2B_COUNTRIES = 'payeverB2BCountries';
     const KEY_COMPANY_SEARCH_ENABLED = 'payeverCompanySearchEnabled';
+    const KEY_COMPANY_SEARCH_TYPE = 'payeverCompanySearchType';
 
     const CHECK_VARIANT_FOR_ADDRESS_EQUALITY = 'payeverCheckVariantForAddressEquality';
     const SHIPPING_NOT_ALLOWED_METHODS = 'shippingNotAllowedMethods';
@@ -142,6 +144,27 @@ class PayeverConfig
             },
             $methods
         );
+    }
+
+    /**
+     * @return array
+     *
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseConnectionException
+     * @throws \OxidEsales\Eshop\Core\Exception\DatabaseErrorException
+     */
+    public static function getMethods()
+    {
+        $prefix = static::PLUGIN_PREFIX;
+        $oDb = \oxDb::getDb(\oxDb::FETCH_MODE_ASSOC);
+
+        $result = $oDb->getAll("SELECT * FROM `oxpayments` WHERE `OXID` LIKE ?;", ["$prefix%"]);
+
+        $methods = [];
+        foreach ($result as $method) {
+            $methods[$method['OXID']] = $method;
+        }
+
+        return $methods;
     }
 
     private static function loadConfig()
@@ -314,6 +337,11 @@ class PayeverConfig
         return (bool) static::get(static::VAR_B2B_CONFIG, static::KEY_COMPANY_SEARCH_ENABLED);
     }
 
+    public static function getCompanySearchType()
+    {
+        return static::get(static::VAR_CONFIG, static::KEY_COMPANY_SEARCH_TYPE);
+    }
+
     public static function getB2BCountries()
     {
         return static::get(static::VAR_B2B_CONFIG, static::KEY_B2B_COUNTRIES) ?: [];
@@ -322,6 +350,11 @@ class PayeverConfig
     public static function getShippingNotAllowedMethods()
     {
         return (array) static::get(static::VAR_CONFIG, static::SHIPPING_NOT_ALLOWED_METHODS);
+    }
+
+    public static function getOverwritePaymentLabels()
+    {
+        return (bool) static::get(static::VAR_CONFIG, static::KEY_OVERWRITE_PAYMENT_LABELS);
     }
 
     public static function getDisplayDescription()

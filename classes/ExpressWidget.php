@@ -47,11 +47,6 @@ class ExpressWidget
     /**
      * @var string
      */
-    private $widgetTheme;
-
-    /**
-     * @var string
-     */
     private $checkoutId;
 
     /**
@@ -204,20 +199,35 @@ class ExpressWidget
 
         $widgetDataSources = [];
         foreach ($widgetIds as $key => $widgetCode) {
-            $widgetPaymentMethods = null;
-            $currentWidgetId = null;
-            if (strpos($widgetCode, '#') !== false) {
-                $widgetData = explode('#', $widgetCode);
-                $currentWidgetId = $widgetData[0];
-                $widgetPaymentMethods = explode('+', $widgetData[1]);
-            }
+            $widgetDataSources['payever-widget-finexp-' . $key] = $this->getHtmlEntitiesItem(
+                $widgetCode,
+                $widgets,
+                $widgetTheme
+            );
+        }
 
-            $this->widgetId = $currentWidgetId ?: $widgetCode;
-            $this->checkoutId = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['checkout_id'] : '-';
-            $this->bussinessId = PayeverConfig::getBusinessUuid();
-            $this->type = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['type'] : 'button';
+        return $widgetDataSources;
+    }
 
-            $currentWidgetData = [
+    /**
+     * @return array
+     */
+    private function getHtmlEntitiesItem($widgetCode, $widgets, $widgetTheme)
+    {
+        $widgetPaymentMethods = null;
+        $currentWidgetId = null;
+        if (strpos($widgetCode, '#') !== false) {
+            $widgetData = explode('#', $widgetCode);
+            $currentWidgetId = $widgetData[0];
+            $widgetPaymentMethods = explode('+', $widgetData[1]);
+        }
+
+        $this->widgetId = $currentWidgetId ?: $widgetCode;
+        $this->checkoutId = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['checkout_id'] : '-';
+        $this->bussinessId = PayeverConfig::getBusinessUuid();
+        $this->type = isset($widgets[$this->widgetId]) ? $widgets[$this->widgetId]['type'] : 'button';
+
+        $currentWidgetData = [
                 'data-widgetId'         => $this->widgetId,
                 'data-theme'            => $widgetTheme,
                 'data-checkoutId'       => $this->checkoutId,
@@ -232,23 +242,24 @@ class ExpressWidget
                 'data-noticeurl'        => $this->noticeUrl,
                 'data-quotecallbackurl' => $this->quoteCallbackUrl,
                 'data-type'             => $this->type,
-            ];
+        ];
 
-            if ($widgetPaymentMethods) {
-                if (count($widgetPaymentMethods) === 1) {
-                    $currentWidgetData['data-payment'] = $widgetPaymentMethods[0];
-                } else {
-                    $filterMethods = array_values(array_diff($widgets[$this->widgetId]['payments'], $widgetPaymentMethods));
-                    if (!empty($filterMethods)) {
-                        $currentWidgetData['data-filter'] = "['" . implode("','", array_values($filterMethods)) . "']";
-                    }
-                }
+        if ($widgetPaymentMethods) {
+            if (count($widgetPaymentMethods) === 1) {
+                $currentWidgetData['data-payment'] = $widgetPaymentMethods[0];
+
+                return $currentWidgetData;
             }
 
-            $widgetDataSources['payever-widget-finexp-' . $key] = $currentWidgetData;
+            $filterMethods = array_diff($widgets[$this->widgetId]['payments'], $widgetPaymentMethods);
+            $filterMethods = array_values($filterMethods);
+
+            if (!empty($filterMethods)) {
+                $currentWidgetData['data-filter'] = "['" . implode("','", array_values($filterMethods)) . "']";
+            }
         }
 
-        return $widgetDataSources;
+        return $currentWidgetData;
     }
 
     /**

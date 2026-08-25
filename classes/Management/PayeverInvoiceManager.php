@@ -58,6 +58,9 @@ class PayeverInvoiceManager
             $date,
             ''
         );
+        if (empty($contents)) {
+            throw new Exception('Invoice could not be generated');
+        }
 
         $invoice = $this->invoiceFactory->create();
         $invoice->assign(
@@ -73,6 +76,26 @@ class PayeverInvoiceManager
 
         $invoice->save();
         return $invoice;
+    }
+
+    /**
+     * Checks if order has invoices.
+     *
+     * @param oxOrder $order
+     *
+     * @return bool
+     */
+    public function hasInvoice(oxOrder $order)
+    {
+        $collection = $this->invoiceListFactory->create();
+        $collection->clear();
+
+        $invoiceObject = $this->invoiceFactory->create();
+        method_exists($collection, 'setBaseObject') && $collection->setBaseObject($invoiceObject);
+        $query = $invoiceObject->buildSelectString(['OXORDERID' => $order->getId()]);
+        $collection->selectString($query);
+
+        return count($collection->getArray()) > 0;
     }
 
     /**

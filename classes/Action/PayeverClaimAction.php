@@ -1,7 +1,6 @@
 <?php
 
 use Payever\Sdk\Payments\Http\RequestEntity\ClaimPaymentRequest;
-use Payever\Sdk\Payments\Http\ResponseEntity\ClaimPaymentResponse;
 
 /**
  * PHP version 5.4 and 7
@@ -18,10 +17,7 @@ class PayeverClaimAction implements PayeverActionInterface
     use PayeverPaymentsApiClientTrait;
 
     /**
-     * @param oxOrder $oxOrder
-     * @return ClaimPaymentResponse
-     *
-     * @throws Exception
+     * @inheritDoc
      */
     public function processActionRequest($oxOrder)
     {

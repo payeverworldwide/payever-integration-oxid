@@ -12,6 +12,6 @@
         </div>
     [{/if}]
     <div>
-        <input type="submit" class="edittext total-form-submit-btn" style="padding: 3px;" value="[{oxmultilang ident="PAYEVER_ORDER_PROCESS_`$actionLang`"}]">
+        <input type="submit" name="[{$action}]-submit-btn" class="edittext total-form-submit-btn" style="padding: 3px;" value="[{oxmultilang ident="PAYEVER_ORDER_PROCESS_`$actionLang`"}]">
     </div>
 </form>

@@ -42,7 +42,12 @@ class PayeverCaptureAction extends PayeverBaseAction
      */
     protected function getOrderStatus($transaction)
     {
-        if ($transaction['status'] !== Status::STATUS_PAID) {
+        $isPaid = $transaction['status'] === Status::STATUS_PAID;
+        if ($this->getActionRequest()->getType() === self::TYPE_TOTAL && !$isPaid) {
+            return '';
+        }
+
+        if (!$isPaid) {
             return oxRegistry::getLang()->translateString('Partially Shipped');
         }
 

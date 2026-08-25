@@ -49,11 +49,6 @@ class PayeverFormInvoice extends PayeverFormBase
         return ActionDeciderInterface::ACTION_INVOICE;
     }
 
-    public function getActionField()
-    {
-        return PayeverActionTypeInterface::FIELD_INVOICED;
-    }
-
     /**
      * @inheritDoc
      */
@@ -77,5 +72,13 @@ class PayeverFormInvoice extends PayeverFormBase
     public function partialItemsFormAllowed($order)
     {
         return false;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getActionField()
+    {
+        return payeverOxArticle::FIELD_INVOICED;
     }
 }

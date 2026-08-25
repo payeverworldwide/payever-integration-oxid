@@ -17,9 +17,7 @@ class PayeverClaimUploadAction implements PayeverActionInterface
     use PayeverPaymentsApiClientTrait;
 
     /**
-     * @param oxOrder $oxOrder
-     * @return void
-     * @throws Exception
+     * @inheritDoc
      */
     public function processActionRequest($oxOrder)
     {

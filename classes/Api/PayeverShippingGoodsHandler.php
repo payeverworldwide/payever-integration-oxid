@@ -11,6 +11,7 @@
 
 use Payever\Sdk\Payments\Action\ActionDecider;
 use Payever\Sdk\Payments\Action\ActionNotAllowedException;
+use Payever\Sdk\Payments\Enum\PaymentMethod;
 use Payever\Sdk\Payments\Http\RequestEntity\PaymentItemEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\ShippingDetailsEntity;
 use Payever\Sdk\Payments\Http\RequestEntity\ShippingGoodsPaymentRequest;
@@ -180,6 +181,17 @@ class PayeverShippingGoodsHandler
         //Create shipping goods request entity
         $shippingGoodsRequest = $this->createShippingGoodsPaymentRequest($order);
         $shippingGoodsRequest->setAmount($amount);
+
+        $paymentMethod = PayeverConfigHelper::removeMethodPrefix($order->getFieldData('oxpaymenttype'));
+        if (PaymentMethod::isB2BMethod($paymentMethod)) {
+            $invoiceManager = new PayeverInvoiceManager();
+            if (!$invoiceManager->hasInvoice($order)) {
+                $invoiceManager->addInvoice($order);
+                $this->getLogger()->info(sprintf('Invoice has been created for order #%s', $order->getId()));
+            }
+
+            $shippingGoodsRequest->setReference($order->getFieldData('OXORDERNR'));
+        }
 
         //Send shipping api request
         return $this->sendShippingGoodsPaymentRequest($order, $shippingGoodsRequest, $identifier);

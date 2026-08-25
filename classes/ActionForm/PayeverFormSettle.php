@@ -49,17 +49,13 @@ class PayeverFormSettle extends PayeverFormBase
         return ActionDeciderInterface::ACTION_SETTLE;
     }
 
-    public function getActionField()
-    {
-        return PayeverActionTypeInterface::FIELD_SETTLED;
-    }
-
     /**
      * @inheritDoc
      */
     public function partialAmountFormAllowed($order)
     {
-        return false;
+        $allowed = $this->isSettleActionAllowed($order);
+        return $allowed['partialAllowed'];
     }
 
     /**
@@ -67,7 +63,7 @@ class PayeverFormSettle extends PayeverFormBase
      */
     public function prefillAmountAllowed($order)
     {
-        return false;
+        return $this->getActions($order) || $this->getActions($order, payeverorderaction::ACTION_SETTLE);
     }
 
     /**
@@ -76,5 +72,13 @@ class PayeverFormSettle extends PayeverFormBase
     public function partialItemsFormAllowed($order)
     {
         return false;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getActionField()
+    {
+        return payeverOxArticle::FIELD_SETTLED;
     }
 }

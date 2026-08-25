@@ -115,10 +115,6 @@ class PayeverMethodHider
             if (!$user->getFieldData('oxcompany')) {
                 return true;
             }
-
-            if (!$user->getFieldData('oxexternalid') && $this->getConfigHelper()->isCompanySearchAvailable()) {
-                return true;
-            }
         }
 
         return false;

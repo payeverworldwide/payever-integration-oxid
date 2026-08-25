@@ -23,15 +23,20 @@
             [{/if}]
             </label>
         </dt>
-    <dd class="[{if $oView->getCheckedPaymentId() == $paymentmethod->oxpayments__oxid->value}]activePayment[{/if}]">
-        [{block name="checkout_payment_longdesc"}]
-            [{if $paymentmethod->oxpayments__oxlongdesc->value && $payment_desc.payever.display_desc eq 1}]
-                <div class="desc payever-payment-description">
-                    [{ $paymentmethod->oxpayments__oxlongdesc->value }]
-                </div>
-            [{/if}]
-        [{/block}]
-    </dd>
+        <dd class="[{if $oView->getCheckedPaymentId() == $paymentmethod->oxpayments__oxid->value}]activePayment[{/if}]">
+            [{block name="checkout_payment_longdesc"}]
+                [{if $paymentmethod->oxpayments__oxlongdesc->value && $payment_desc.payever.display_desc eq 1}]
+                    <div class="desc payever-payment-description">
+                        [{ $paymentmethod->oxpayments__oxlongdesc->value }]
+                    </div>
+                [{/if}]
+            [{/block}]
+            [{block name="checkout_payment_terms"}]
+                [{if $paymentmethod->isTermsMethod()}]
+                    <div class="container_terms_[{$paymentmethod->getId()}]"></div>
+                [{/if}]
+            [{/block}]
+        </dd>
     </dl>
 </div>
 [{else}]

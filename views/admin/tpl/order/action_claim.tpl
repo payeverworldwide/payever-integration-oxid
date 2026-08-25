@@ -67,6 +67,8 @@
             <input type="button"
                    name="claim-btn"
                    id="claim-btn"
+                   name="claim-upload-btn"
+                   id="claim-upload-btn"
                    style="padding: 3px;"
                    value="[{oxmultilang ident="PAYEVER_ORDER_PROCESS_`$actionLang`"}]"
                    [{if !$claimActionAllowed.enabled}]disabled[{/if}]

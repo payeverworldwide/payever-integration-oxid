@@ -43,10 +43,12 @@
 
                 const content = $(`
                     <div class="js-pseudo-modal-template">
-                        <div class="modal fade" id="company-search-modal" tabindex="-1" role="dialog">
-                            <div class="modal-dialog payever-modal-dialog" role="document">
-                                ${this.buildSelectDialog(companies)}
-                                ${this.buildConfirmDialog()}
+                        <div class="payever-modal" id="company-search-modal" tabindex="-1" role="dialog">
+                            <div class="payever-modal-content">
+                                <div class="modal-dialog payever-modal-dialog" role="document">
+                                    ${this.buildSelectDialog(companies)}
+                                    ${this.buildConfirmDialog()}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -54,10 +56,7 @@
 
                 //Show popup modal
                 $('body').append(content);
-
-                const searchModalElement = $('#company-search-modal');
-                searchModalElement.modal('show');
-                searchModalElement.on('shown.bs.modal', this.onOpenModal.bind(this))
+                this.onOpenModal();
             },
 
             buildSelectDialog(companies) {
@@ -191,7 +190,7 @@
 
                 discardBtn.on('click', () => {
                     this.getCompanySearchPlugin().makeCompanyIdOptional();
-                    modal.modal('hide');
+                    $('.js-pseudo-modal-template').remove();
                     this.form[0].submit();
                 });
 
@@ -202,7 +201,7 @@
                     }
                 });
 
-                modal.find(this.options.selectorCloseModal).on('click', () => modal.modal('hide'));
+                modal.find(this.options.selectorCloseModal).on('click', () =>  $('.js-pseudo-modal-template').remove());
             },
 
             handleApply(modal, applyBtn) {
@@ -240,7 +239,7 @@
                     this.getCompanySearchContentElement().html('');
                 }
 
-                modal.modal('hide')
+                $('.js-pseudo-modal-template').remove();
                 this.form[0].submit();
             },
 

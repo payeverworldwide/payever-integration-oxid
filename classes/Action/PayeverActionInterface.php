@@ -17,7 +17,8 @@ interface PayeverActionInterface
 
     /**
      * @param oxOrder $oOrder
-     * @return mixed
+     *
+     * @return \Payever\Sdk\Core\Http\Response
      */
     public function processActionRequest($oOrder);
 }

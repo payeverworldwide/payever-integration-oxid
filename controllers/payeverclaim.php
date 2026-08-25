@@ -57,7 +57,6 @@ class payeverclaim extends oxUBase
 
                 echo json_encode($result);
                 exit();
-                break;
             case self::ACTION_INVOICE:
                 $invoiceKey = $this->getRequestHelper()->getQueryData('key');
                 $invoice = $this->getInvoiceManager()->getInvoiceByKey($invoiceKey);
@@ -67,15 +66,19 @@ class payeverclaim extends oxUBase
 
                 // Force browser to download the pdf
                 $paymentId = $invoice->getFieldData('OXPAYMENTID');
-                $contents = $invoice->getFieldData('OXCONTENTS');
-                header('Content-type: application/pdf');
-                header('Content-Disposition: attachment; filename=invoice_' . $paymentId . '.pdf');
-                header('Content-length: ' . strlen($contents));
-                header('Pragma: no-cache');
-                header('Expires: 0');
+                $contents = $invoice->payeverinvoices__oxcontents->rawValue;
+                if (!headers_sent()) {
+                    header('Content-type: application/pdf');
+                    header('Content-Disposition: attachment; filename=invoice_' . $paymentId . '.pdf');
+                    header('Content-length: ' . strlen($contents));
+                    header('Pragma: no-cache');
+                    header('Expires: 0');
+                }
 
                 echo $contents;
                 exit();
+            default:
+                throw new \BadMethodCallException('Unknown action');
         }
     }
 

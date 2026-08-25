@@ -27,8 +27,8 @@
     "ext-fileinfo": "*",
     "setasign/fpdf": "^1.8",
     "payever/core-sdk-php": "2.2.0",
-    "payever/plugins-sdk-php": "2.0.0",
-    "payever/payments-sdk-php": "2.7.2",
+    "payever/plugins-sdk-php": "2.0.1",
+    "payever/payments-sdk-php": "2.8.2",
     "payever/products-sdk-php": "2.0.0",
     "monolog/monolog": "^v1.23.0"
   },

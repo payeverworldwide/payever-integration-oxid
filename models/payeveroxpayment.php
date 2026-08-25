@@ -62,4 +62,12 @@ class payeverOxPayment extends payeverOxPayment_parent
     {
         return null !== $this->oxpayments__oxissubmitmethod->value;
     }
+
+    /**
+     * @return bool
+     */
+    public function isTermsMethod()
+    {
+        return strpos($this->getId(), 'resurs_installment') !== false;
+    }
 }

@@ -22,6 +22,8 @@ class payeverOxArticle extends payeverOxArticle_parent
     const FIELD_REFUNDED = 'oxpayeverrefunded';
     const FIELD_CANCELLED = 'oxpayevercancelled';
     const FIELD_SHIPPED = 'oxpayevershipped';
+    const FIELD_INVOICED = 'oxpayeverinvoiced';
+    const FIELD_SETTLED = 'oxpayeversettled';
 
     /**
      * @param bool $skipSyncHandling

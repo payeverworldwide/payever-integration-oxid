@@ -13,15 +13,13 @@ use Payever\Sdk\Payments\Action\ActionDeciderInterface;
 
 class PayeverInvoiceAction extends PayeverBaseAction
 {
-    use PayeverOxRequestTrait;
-    use PayeverPaymentsApiClientTrait;
-
     /**
      * @inheritDoc
      */
     protected function sendAmountRequest($oxOrder, $amount, $identifier)
     {
         $paymentId = $oxOrder->getFieldData('oxtransid');
+
         return $this->getPaymentsApiClient()->invoicePaymentRequest($paymentId, $amount, $identifier);
     }
 
@@ -46,6 +44,6 @@ class PayeverInvoiceAction extends PayeverBaseAction
      */
     public function getActionField()
     {
-        return PayeverActionTypeInterface::FIELD_INVOICED;
+        return payeverOxArticle::FIELD_INVOICED;
     }
 }

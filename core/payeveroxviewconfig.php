@@ -17,9 +17,8 @@
 class payeverOxViewConfig extends payeverOxViewConfig_parent
 {
     /**
-     * Dispaly Payment description, logo in Payment page
+     * Display Payment description, logo in Payment page
      *
-     * @param null
      * @return array
      */
     public function displayPaymentDesc()
@@ -30,6 +29,18 @@ class payeverOxViewConfig extends payeverOxViewConfig_parent
                 'display_logo' => PayeverConfig::getDisplayIcon(),
             ],
         ];
+    }
+
+    /**
+     * Display Payment terms
+     *
+     * @param array $paymentMethods
+     *
+     * @return array
+     */
+    public function getTermsData($paymentMethods)
+    {
+        return PayeverTerms::collectPaymentOptionsTerms($paymentMethods);
     }
 
     /**

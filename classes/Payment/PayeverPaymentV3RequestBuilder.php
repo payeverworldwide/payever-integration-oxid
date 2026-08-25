@@ -228,16 +228,7 @@ class PayeverPaymentV3RequestBuilder
                 $cartItem->setCategory($item->getArticle()->getCategory()->getFieldData('oxtitle'));
             }
 
-            $dimensions = new DimensionsEntity();
-            $dimensions->setHeight((float) $item->getArticle()->getFieldData('oxheight'));
-            $dimensions->setWidth((float) $item->getArticle()->getFieldData('oxwidth'));
-            $dimensions->setLength((float) $item->getArticle()->getFieldData('oxlength'));
-
-            $attributes = new AttributesEntity();
-            $attributes->setWeight((float) $item->getArticle()->getWeight());
-            $attributes->setDimensions($dimensions);
-
-            $cartItem->setAttributes($attributes);
+            $cartItem = $this->addAttributes($cartItem, $item->getArticle());
 
             $basketItems[] = $cartItem;
         }
@@ -291,6 +282,45 @@ class PayeverPaymentV3RequestBuilder
         $this->paymentRequest->setCart($basketItems);
 
         return $this;
+    }
+
+    /**
+     * @param CartItemV3Entity $cartItem
+     * @param oxorderarticle $article
+     *
+     * @return CartItemV3Entity
+     */
+    private function addAttributes($cartItem, $article)
+    {
+        $dimensions = new DimensionsEntity();
+        if (!empty($article->getFieldData('oxheight'))) {
+            $dimensions->setHeight((float)$article->getFieldData('oxheight'));
+        }
+        if (!empty($article->getFieldData('oxwidth'))) {
+            $dimensions->setWidth((float)$article->getFieldData('oxwidth'));
+        }
+        if (!empty($article->getFieldData('oxlength'))) {
+            $dimensions->setLength((float)$article->getFieldData('oxlength'));
+        }
+
+        $attributes = new AttributesEntity();
+        if (count($dimensions->toArray())) {
+            $attributes->setDimensions($dimensions);
+        }
+
+        if (!empty($article->getFieldData('oxweight'))) {
+            $attributes->setWeight((float)$article->getFieldData('oxweight'));
+        }
+
+        if (!empty($article->getFieldData('oxean'))) {
+            $attributes->setGtin((float)$article->getFieldData('oxean'));
+        }
+
+        if (count($attributes->toArray())) {
+            $cartItem->setAttributes($attributes);
+        }
+
+        return $cartItem;
     }
 
     /**
@@ -457,17 +487,19 @@ class PayeverPaymentV3RequestBuilder
     {
         $user = $this->getCart()->getBasketUser();
         $companyName = $user->getFieldData('oxcompany');
-        if ($companyName) {
-            $companyEntity = new CompanyEntity();
-            $companyEntity->setName($companyName);
-
-            if ($this->getConfigHelper()->isCompanySearchAvailable()) {
-                $companyEntity->setExternalId($user->getFieldData('oxexternalid'));
-                $companyEntity->setTaxId($user->getFieldData('oxvatid'));
-            }
-
-            $this->paymentRequest->setCompany($companyEntity);
+        if (!$companyName) {
+            return $this;
         }
+
+        $companyEntity = new CompanyEntity();
+        $companyEntity->setName($companyName);
+
+        if ($this->getPaymentMethod()->getFieldData('oxisb2bmethod') && $user->getFieldData('oxexternalid')) {
+            $companyEntity->setExternalId($user->getFieldData('oxexternalid'));
+            $companyEntity->setTaxId($user->getFieldData('oxvatid'));
+        }
+
+        $this->paymentRequest->setCompany($companyEntity);
 
         return $this;
     }

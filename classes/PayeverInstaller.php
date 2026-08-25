@@ -68,6 +68,8 @@ class PayeverInstaller
         self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERSHIPPED', ['type' => 'INT', 'nullable' => false]);
         self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERCANCELLED', ['type' => 'INT', 'nullable' => false]);
         self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERREFUNDED', ['type' => 'INT', 'nullable' => false]);
+        self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERINVOICED', ['type' => 'INT', 'nullable' => false]);
+        self::addColumnIfNotExists('oxorderarticles', 'OXPAYEVERSETTLED', ['type' => 'INT', 'nullable' => false]);
 
         $columns = [
             'oxacceptfee' => [

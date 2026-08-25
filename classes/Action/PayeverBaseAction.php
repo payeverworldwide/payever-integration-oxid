@@ -32,7 +32,9 @@ abstract class PayeverBaseAction implements PayeverActionInterface
 
     /**
      * @param oxOrder $oxOrder
-     * @return mixed
+     *
+     * @return \Payever\Sdk\Core\Http\Response
+     *
      * @throws Exception
      */
     public function processActionRequest($oxOrder)
@@ -61,8 +63,10 @@ abstract class PayeverBaseAction implements PayeverActionInterface
         //Change order status
         $transaction = $this->getOrderTransactionHelper()->getTransaction($oxOrder);
         $status = $this->getOrderStatus($transaction);
-        $oxOrder->oxorder__oxtransstatus = $this->getFieldFactory()->createRaw($status);
-        $oxOrder->save();
+        if ($status) {
+            $oxOrder->oxorder__oxtransstatus = $this->getFieldFactory()->createRaw($status);
+            $oxOrder->save();
+        }
 
         return $response;
     }

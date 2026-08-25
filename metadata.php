@@ -28,7 +28,7 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '3.5.0',
+    'version' => '3.6.0',
     'author' => 'payever GmbH',
     'extend' => [
         'order'          => 'payever/controllers/payeverorder',
@@ -123,6 +123,7 @@ $aModule = [
         'PayeverLogger' => 'payever/classes/PayeverLogger.php',
         'PayeverConfig' => 'payever/classes/PayeverConfig.php',
         'PayeverRegistry' => 'payever/classes/PayeverRegistry.php',
+        'PayeverTerms' => 'payever/classes/PayeverTerms.php',
         'PayeverApiOauthTokenList' => 'payever/classes/Api/PayeverApiOauthTokenList.php',
         'PayeverApiClientProvider' => 'payever/classes/Api/PayeverApiClientProvider.php',
         'PayeverApiApmSecretService' => 'payever/classes/Api/PayeverApiApmSecretService.php',
@@ -240,6 +241,11 @@ $aModule = [
             'file' => '/views/blocks/azure/page/checkout/payment/select_payment.tpl',
         ],
         [
+            'template' => 'page/checkout/payment.tpl',
+            'block' => 'change_payment',
+            'file' => '/views/blocks/azure/page/checkout/payment/change_payment.tpl',
+        ],
+        [
             'template' => 'page/checkout/order.tpl',
             'block' => 'checkout_order_details',
             'file' => '/views/blocks/payever_order_iframe.tpl',
@@ -284,6 +290,8 @@ $aModule = [
         'payever/order/action_capture.tpl' => 'payever/views/admin/tpl/order/action_capture.tpl',
         'payever/order/action_refund.tpl' => 'payever/views/admin/tpl/order/action_refund.tpl',
         'payever/order/action_claim.tpl' => 'payever/views/admin/tpl/order/action_claim.tpl',
+        'payever/order/action_settle.tpl' => 'payever/views/admin/tpl/order/action_settle.tpl',
+        'payever/order/action_invoice.tpl' => 'payever/views/admin/tpl/order/action_invoice.tpl',
         'payever/order/form_partial_amount.tpl' => 'payever/views/admin/tpl/order/form_partial_amount.tpl',
         'payever/order/form_partial_items.tpl' => 'payever/views/admin/tpl/order/form_partial_items.tpl',
         'payever/order/form_totals.tpl' => 'payever/views/admin/tpl/order/form_totals.tpl',

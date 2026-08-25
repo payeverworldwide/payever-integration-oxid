@@ -9,43 +9,25 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-use Payever\Sdk\Payments\Action\ActionDeciderInterface;
-
-class PayeverSettleAction extends PayeverBaseAction
+class PayeverSettleAction implements PayeverActionInterface
 {
-    use PayeverOxRequestTrait;
+    use PayeverConfigTrait;
+    use PayeverFieldFactoryTrait;
     use PayeverPaymentsApiClientTrait;
 
     /**
      * @inheritDoc
      */
-    protected function sendAmountRequest($oxOrder, $amount, $identifier)
+    public function processActionRequest($oxOrder)
     {
         $paymentId = $oxOrder->getFieldData('oxtransid');
-        return $this->getPaymentsApiClient()->settlePaymentRequest($paymentId, null);
-    }
+        $response =  $this->getPaymentsApiClient()->settlePaymentRequest($paymentId);
 
-    /**
-     * @inheritDoc
-     */
-    protected function sendItemsRequest($oxOrder, $paymentItems, $identifier)
-    {
-        //
-    }
+        //Change order status
+        $status = str_replace('STATUS_', '', $response->getResponseEntity()->getResult()->getStatus());
+        $oxOrder->oxorder__oxtransstatus = $this->getFieldFactory()->createRaw($status);
+        $oxOrder->save();
 
-    /**
-     * @inheritDoc
-     */
-    public function getActionType()
-    {
-        return ActionDeciderInterface::ACTION_SETTLE;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function getActionField()
-    {
-        return PayeverActionTypeInterface::FIELD_SETTLED;
+        return $response;
     }
 }

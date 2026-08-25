@@ -55,6 +55,16 @@ class PayeverGatewayManager
     const ACTION_EXTERNAL_SOURCE = 'external';
 
     /**
+     * B2B Methods. Use for backward compatibility.
+     * @see \Payever\Sdk\Payments\Enum\PaymentMethod::METHOD_ALLIANZ_TRADE_B2B_BNPL
+     * @see \Payever\Sdk\Payments\Enum\PaymentMethod::METHOD_BFS_B2B_BNPL
+     */
+    const B2B_METHODS = [
+        'allianz_trade_b2b_bnpl',
+        'bfs_b2b_bnpl'
+    ];
+
+    /**
      * Main entry point for all payever callbacks & notifications
      *
      * @return void
@@ -140,9 +150,10 @@ class PayeverGatewayManager
         try {
             $retrievePaymentResult = $this->getRetrievePaymentResultEntity($payment);
             $paymentDetails = $retrievePaymentResult->getPaymentDetails();
+            $paymentMethod = $retrievePaymentResult->getPaymentType();
 
             $payment['basketId'] = $retrievePaymentResult->getReference();
-            $payment['paymentMethod'] = PayeverConfig::PLUGIN_PREFIX . $retrievePaymentResult->getPaymentType();
+            $payment['paymentMethod'] = PayeverConfig::PLUGIN_PREFIX . $paymentMethod;
             $payment['panId'] = isset($paymentDetails['usage_text']) ? $paymentDetails['usage_text'] : null;
             $payment['restoreBasketInSession'] = $fetchDest != 'iframe';
             $payeverStatus = $retrievePaymentResult->getStatus();
@@ -234,7 +245,9 @@ class PayeverGatewayManager
                     $company = $notificationResultEntity->getCompany();
                     if ($company) {
                         $oUser = oxNew("oxUser");
-                        if ($oUser->loadUserByEmail($notificationResultEntity->getAddress()->getEmail())) {
+                        $sUserId = $oUser->getIdByUserName($notificationResultEntity->getAddress()->getEmail());
+                        if ($sUserId) {
+                            $oUser->load($sUserId);
                             $oUser->assign([
                                 'oxcompany' => $company->getName() ? : '',
                                 'oxexternalid' => $company->getExternalId() ? : ''
@@ -382,13 +395,18 @@ class PayeverGatewayManager
                         $userPayment = $this->getOxUserPayment();
                         $userPayment->load((string) $oOrder->oxorder__oxpaymentid);
 
-                        //if ($userPayment->oxpayments__oxisb2bmethod) {
-                            (new PayeverInvoiceManager())->addInvoice($oOrder);
+                        $invoiceManager = new PayeverInvoiceManager();
+                        if (
+                            $this->isB2BMethod($paymentMethod) &&
+                            $payeverStatus === Status::STATUS_PAID &&
+                            !$invoiceManager->hasInvoice($oOrder)
+                        ) {
+                            $invoiceManager->addInvoice($oOrder);
                             $this->getLogger()->info(
                                 sprintf('Invoice has been created for order #%s', $oOrder->getId()),
                                 $payment
                             );
-                        //}
+                        }
                     }
                 }
                 // @codeCoverageIgnoreEnd
@@ -431,8 +449,6 @@ class PayeverGatewayManager
             /**
              * If we got here - payment wasn't successful
              */
-            $paymentMethod = $retrievePaymentResult->getPaymentType();
-
             $this->getMethodHider()->processFailedMethod($paymentMethod);
 
             $message = strpos($paymentMethod, 'santander') !== false
@@ -992,5 +1008,21 @@ class PayeverGatewayManager
                 </head><body><noscript><meta http-equiv=\"refresh\" content=\"0;url={$url}\"></noscript></body></html>";
         }
         exit();
+    }
+
+    /**
+     * Check if specified payment method is B2B
+     *
+     * @param string $paymentMethod
+     * @return bool
+     * @throws Exception
+     */
+    private function isB2BMethod($paymentMethod)
+    {
+        if (in_array($paymentMethod, self::B2B_METHODS, true)) {
+            return true;
+        }
+
+        return false;
     }
 }

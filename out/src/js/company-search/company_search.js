@@ -223,14 +223,11 @@
             }
 
             getCompanyAddressString() {
-                const address = ['street', 'city', 'zipcode', 'countryId']
+                const address = ['street', 'streetNumber', 'city', 'zipcode', 'countryId']
                 const addressString = [];
 
                 address.forEach((value) => {
                     const field = this.form.find(this.options.selectorAddressFields[value]);
-                    if (!field[0].checkVisibility()) {
-                        return;
-                    }
 
                     if (!field.val()?.trim()) {
                         return;

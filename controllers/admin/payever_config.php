@@ -138,7 +138,7 @@ class payever_config extends Shop_Config
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_CONFIG, $this->_parameters);
 
         $b2bParameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_B2B_CONFIG);
-        if (!empty($b2bParameters[PayeverConfig::KEY_COMPANY_SEARCH_ENABLED])) {
+        if (isset($b2bParameters[PayeverConfig::KEY_COMPANY_SEARCH_ENABLED])) {
             PayeverConfig::set(
                 PayeverConfig::VAR_B2B_CONFIG,
                 PayeverConfig::KEY_COMPANY_SEARCH_ENABLED,

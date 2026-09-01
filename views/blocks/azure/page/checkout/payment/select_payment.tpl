@@ -19,7 +19,9 @@
             <label for="payment_[{$sPaymentID}]"><b>[{ $paymentmethod->oxpayments__oxdesc->value }] [{if $payment_mode eq 0}]SANDBOX Mode[{/if}]</b>
             [{if $paymentmethod->getPrice()}]
                 [{assign var="oPaymentPrice" value=$paymentmethod->getPrice() }]
-                ([{$oPaymentPrice->getBruttoPrice()|number_format:2:".":","}] [{ $currency->sign}])
+                [{if $oPaymentPrice->getBruttoPrice()}]
+                    ([{$oPaymentPrice->getBruttoPrice()|number_format:2:".":","}] [{ $currency->sign}])
+                [{/if}]
             [{/if}]
             </label>
         </dt>

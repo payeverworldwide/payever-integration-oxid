@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author    payever GmbH <service@payever.de>
@@ -21,8 +21,10 @@ use OxidEsales\Eshop\Application\Model\Country;
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
-class payeverFinexpressDispatcher extends payeverStandardDispatcher
+class payeverfinexpressdispatcher extends payeverstandarddispatcher
 {
+    use PayeverOxConfigTrait;
+    use PayeverOxRequestTrait;
     use PayeverFileLockTrait;
     use PayeverDisplayHelperTrait;
     use PayeverCountryFactoryTrait;
@@ -35,6 +37,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     use PayeverOxBasketTrait;
     use PayeverOxArticleTrait;
     use PayeverOxDeliveryListTrait;
+    use PayeverProductHelperTrait;
 
     const LOCK_WAIT_SECONDS = 30;
 
@@ -103,7 +106,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     public function payeverWidgetSuccess()
     {
         $config    = $this->getConfig();
-        $paymentId = $config->getRequestParameter('reference');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(
             sprintf(
                 'Handling Finance Express callback success, paymentId: %s',
@@ -122,7 +125,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
 
             $this->processOrder(
                 $retrievePaymentResult,
-                $config->getRequestParameter('is_pending')
+                $this->getRequest()->getRequestParameter('is_pending')
             );
             $this->getLocker()->releaseLock($paymentId);
 
@@ -137,7 +140,10 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
                     "Payment unlocked by exception: %s",
                     $exception->getMessage()
                 ),
-                [$paymentId]
+                [
+                    'trace' => $exception->getTraceAsString(),
+                    'payment_id' => $paymentId
+                ]
             );
 
             $this->getDisplayHelper()->addErrorToDisplay($exception->getMessage());
@@ -151,7 +157,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     public function payeverWidgetFailure()
     {
         $config    = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(
             sprintf(
                 'Handling Finance Express callback failure, paymentId: %s',
@@ -169,7 +175,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     public function payeverWidgetCancel()
     {
         $config    = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(
             sprintf(
                 'Handling Finance Express callback cancel, paymentId: %s',
@@ -191,7 +197,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     public function payeverWidgetNotice()
     {
         $config    = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(sprintf("Handling Finance Express callback notice, paymentId: %s", $paymentId), $_GET);
         $this->getLogger()->info('Waiting for lock', [$paymentId]);
         $this->getLocker()->acquireLock($paymentId, static::LOCK_WAIT_SECONDS);
@@ -203,7 +209,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
 
             $order = $this->processOrder(
                 $retrievePaymentResult,
-                $config->getRequestParameter('is_pending')
+                $this->getRequest()->getRequestParameter('is_pending')
             );
             $this->getLocker()->releaseLock($paymentId);
 
@@ -219,7 +225,10 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
                     'Payment unlocked by exception: %s',
                     $exception->getMessage()
                 ),
-                [$paymentId]
+                [
+                    'trace' => $exception->getTraceAsString(),
+                    'payment_id' => $paymentId
+                ]
             );
 
             $this->sendJsonResponse(['result' => 'error', 'message' => $exception->getMessage()], 400);
@@ -246,6 +255,9 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
      * @param $oUser
      *
      * @return object|oxBasket
+     * @throws \OxidEsales\Eshop\Core\Exception\ArticleInputException
+     * @throws \OxidEsales\Eshop\Core\Exception\NoArticleException
+     * @throws \OxidEsales\Eshop\Core\Exception\OutOfStockException
      */
     private function createBasket($cartItems, $oUser)
     {
@@ -270,11 +282,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
      */
     private function getProductByNumber($articleNumber)
     {
-        $product = $this->getOxArticle();
-        $query   = $product->buildSelectString(['oxartnum' => $articleNumber]);
-        $product->assignRecord($query);
-
-        return $product;
+        return $this->getProductHelper()->getProductBySku($articleNumber);
     }
 
     /**
@@ -404,7 +412,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         $oUser = $this->createUser($retrievePaymentResult);
         $this->prepareDeliveryAddress($oUser);
 
-        $oSession = $this->getSession();
+        $oSession = \OxidEsales\Eshop\Core\Registry::getSession();
         $oSession->oxidpayever_payment_id = $retrievePaymentResult->getId();
         $oSession->setVariable('oxidpayever_payment_id', $retrievePaymentResult->getId());
 
@@ -423,7 +431,7 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
 
         // finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
         if ($oOrder instanceof payeverOxOrderCompatible) {
-            $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)
+            $orderStateId = $oOrder->setPayeverOrderStatus($oxidOrderStatus)
                                    ->finalizeOrder($oBasket, $oUser, true);
         } else {
             $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, true, $oxidOrderStatus);
@@ -459,15 +467,15 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         }
 
         $this->getLogger()->debug('Prepare session before redirect');
-        $this->getSession()->setVariable('sess_challenge', $oBasket->getOrderId());
+        \OxidEsales\Eshop\Core\Registry::getSession()->setVariable('sess_challenge', $oBasket->getOrderId());
 
         $basketName = $this->getConfig()->getConfigParam('blMallSharedBasket') == 0
             ? $this->getConfig()->getShopId() . '_basket'
             : 'basket';
 
         $this->getLogger()->debug('Saved serialized basket to session');
-        $this->getSession()->setBasket($oBasket);
-        $this->getSession()->setVariable($basketName, serialize($oBasket));
+        \OxidEsales\Eshop\Core\Registry::getSession()->setBasket($oBasket);
+        \OxidEsales\Eshop\Core\Registry::getSession()->setVariable($basketName, serialize($oBasket));
 
         $oOrder->oxorder__oxfolder = $this->getFieldFactory()->createRaw('ORDERFOLDER_NEW');
         $oOrder->assign($oParams);
@@ -481,11 +489,11 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         $oOrder->save();
 
         // Reassign product IDs
-        /** @var \OxidEsales\Eshop\Application\Model\OrderArticleList $oOrderArticleList */
+        /** @var \OxidEsales\Eshop\Application\Model\OrderArticleList|\OxidEsales\Eshop\Core\Model\ListModel $oOrderArticleList */
         $oOrderArticleList = $oOrder->getOrderArticles();
-        foreach (array_keys($oOrderArticleList) as $index) {
-            /** @var oxarticle $art */
-            $oOrderArticleList[$index]->oxorderarticles__oxorderid->setValue($oOrder->getId());
+        foreach ($oOrderArticleList as &$oOrderArticle) {
+            /** @var oxarticle $oOrderArticle */
+            $oOrderArticle->oxorderarticles__oxorderid->setValue($oOrder->getId());
         }
 
         $oOrder->setOrderArticleList($oOrderArticleList);
@@ -504,9 +512,9 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
         $sDelAddress = $oUser->getEncodedDeliveryAddress();
 
         // delivery address
-        if (oxRegistry::getSession()->getVariable('deladrid')) {
+        if (\OxidEsales\Eshop\Core\Registry::getSession()->getVariable('deladrid')) {
             $oDelAdress = oxNew('oxaddress');
-            $oDelAdress->load(oxRegistry::getSession()->getVariable('deladrid'));
+            $oDelAdress->load(\OxidEsales\Eshop\Core\Registry::getSession()->getVariable('deladrid'));
 
             $sDelAddress .= $oDelAdress->getEncodedDeliveryAddress();
         }
@@ -535,14 +543,14 @@ class payeverFinexpressDispatcher extends payeverStandardDispatcher
     {
         $config = $this->getConfig();
         $_POST['sDeliveryAddressMD5'] = $this->getDeliveryAddressMD5($oUser);
-        if (!$config->getRequestParameter('ord_agb') && $config->getConfigParam('blConfirmAGB')) {
+        if (!$this->getRequest()->getRequestParameter('ord_agb') && $config->getConfigParam('blConfirmAGB')) {
             $_POST['ord_agb'] = 1;
         }
         if ($config->getConfigParam('blEnableIntangibleProdAgreement')) {
-            if (!$config->getRequestParameter('oxdownloadableproductsagreement')) {
+            if (!$this->getRequest()->getRequestParameter('oxdownloadableproductsagreement')) {
                 $_POST['oxdownloadableproductsagreement'] = 1;
             }
-            if (!$config->getRequestParameter('oxserviceproductsagreement')) {
+            if (!$this->getRequest()->getRequestParameter('oxserviceproductsagreement')) {
                 $_POST['oxserviceproductsagreement'] = 1;
             }
         }

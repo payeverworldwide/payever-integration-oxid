@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -16,7 +16,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
  *
  * @codeCoverageIgnore
  */
-abstract class PayeverFormBase
+abstract class PayeverFormBase implements PayeverActionTypeInterface
 {
     use PayeverOrderActionHelperTrait;
     use PayeverPaymentActionHelperTrait;

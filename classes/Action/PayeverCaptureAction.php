@@ -4,7 +4,7 @@ use Payever\Sdk\Payments\Action\ActionDeciderInterface;
 use Payever\Sdk\Payments\Enum\Status;
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -48,7 +48,7 @@ class PayeverCaptureAction extends PayeverBaseAction
         }
 
         if (!$isPaid) {
-            return oxRegistry::getLang()->translateString('Partially Shipped');
+            return \OxidEsales\Eshop\Core\Registry::getLang()->translateString('Partially Shipped');
         }
 
         return parent::getOrderStatus($transaction);
@@ -91,6 +91,6 @@ class PayeverCaptureAction extends PayeverBaseAction
      */
     public function getActionField()
     {
-        return payeverOxArticle::FIELD_SHIPPED;
+        return PayeverActionTypeInterface::FIELD_SHIPPED;
     }
 }

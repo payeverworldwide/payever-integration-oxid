@@ -35,6 +35,19 @@
   "require-dev": {
     "oxid-esales/testing-library": "^5.0"
   },
+  "autoload": {
+    "classmap": [
+      "classes/",
+      "commands/",
+      "controllers/",
+      "core/",
+      "models/"
+    ],
+    "psr-4": {
+      "Payever\\Payments\\": "src/"
+    },
+    "files": ["autoload.php"]
+  },
   "config": {
     "allow-plugins": {
       "oxid-esales/oxideshop-unified-namespace-generator": true

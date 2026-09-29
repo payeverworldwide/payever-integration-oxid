@@ -4,7 +4,7 @@ use Payever\Sdk\Payments\Http\RequestEntity\ClaimUploadPaymentRequest;
 use Payever\Sdk\Payments\Http\ResponseEntity\ClaimUploadPaymentResponse;
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -13,6 +13,7 @@ use Payever\Sdk\Payments\Http\ResponseEntity\ClaimUploadPaymentResponse;
  */
 class PayeverClaimUploadAction implements PayeverActionInterface
 {
+    use PayeverOxRequestTrait;
     use PayeverConfigTrait;
     use PayeverPaymentsApiClientTrait;
 
@@ -22,7 +23,7 @@ class PayeverClaimUploadAction implements PayeverActionInterface
     public function processActionRequest($oxOrder)
     {
         $paymentId = $oxOrder->getFieldData('oxtransid');
-        $files = $this->getConfig()->getUploadedFile('claim_upload_files');
+        $files = isset($_FILES['claim_upload_files']) ? $_FILES['claim_upload_files'] : null;
 
         if (empty($files)) {
             throw new \InvalidArgumentException('Invoice files were not selected.');

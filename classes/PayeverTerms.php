@@ -31,7 +31,7 @@ class PayeverTerms
         $country = self::getCountry($cart);
 
         $orderHelper = new PayeverOrderHelper();
-        $amount = oxRegistry::getUtils()->fRound($orderHelper->getAmountByCart($cart));
+        $amount = \OxidEsales\Eshop\Core\Registry::getUtils()->fRound($orderHelper->getAmountByCart($cart));
 
         $paymentTerms = [
             'data' => [],

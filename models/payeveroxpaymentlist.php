@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -28,7 +28,8 @@ class payeverOxPaymentList extends payeverOxPaymentList_parent
 
             $payeverMethod = strpos($key, '-') ? strstr($key, '-', true) : $key;
             $oxPaymentsVariants = json_decode($method->oxpayments__oxvariants->rawValue, true);
-            if ($payeverUtil->isHiddenPaymentMethod($payeverMethod, $oxPaymentsVariants['variantId'])) {
+            $variantId = isset($oxPaymentsVariants['variantId']) ? $oxPaymentsVariants['variantId'] : null;
+            if ($payeverUtil->isHiddenPaymentMethod($payeverMethod, $variantId)) {
                 unset($paymentList[$key]);
             }
             if ($payeverUtil->validateB2BMethods($method)) {

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -21,7 +21,7 @@ trait PayeverSessionTrait
     public function getSession()
     {
         if ($this->oSession == null) {
-            $this->oSession = oxRegistry::getSession();
+            $this->oSession = \OxidEsales\Eshop\Core\Registry::getSession();
         }
 
         return $this->oSession;

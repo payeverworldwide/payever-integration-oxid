@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -121,7 +121,7 @@ class PayeverConfigHelper
     public function getLanguageIds()
     {
         $ids = [];
-        $aLanguages = oxRegistry::getLang()->getLanguageArray();
+        $aLanguages = \OxidEsales\Eshop\Core\Registry::getLang()->getLanguageArray();
         foreach ($aLanguages as $aLanguage) {
             if (property_exists($aLanguage, 'id')) {
                 $ids[] = $aLanguage->id;
@@ -136,7 +136,7 @@ class PayeverConfigHelper
      */
     public function getDefaultLanguageId()
     {
-        return (int) oxRegistry::getLang()->getBaseLanguage();
+        return (int) \OxidEsales\Eshop\Core\Registry::getLang()->getBaseLanguage();
     }
 
     /**

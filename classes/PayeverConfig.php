@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -114,6 +114,9 @@ class PayeverConfig
     // Could be disabled for wl plugin
     const ALLOW_IFRAME = true;
 
+    const ENGINE_SMARTY = 'smarty';
+    const ENGINE_TWIG = 'twig';
+
     /** @var oxConfig */
     private static $config;
 
@@ -170,7 +173,7 @@ class PayeverConfig
     private static function loadConfig()
     {
         if (!static::$config) {
-            static::$config = oxRegistry::getConfig();
+            static::$config = \OxidEsales\Eshop\Core\Registry::getConfig();
         }
     }
 
@@ -420,22 +423,74 @@ class PayeverConfig
 
     public static function getPluginVersion()
     {
+        // OXID 6.x stored module versions in aModuleVersions shop config var
         $versions = static::get('aModuleVersions');
+        if (is_array($versions) && isset($versions[static::PLUGIN_CODE])) {
+            return $versions[static::PLUGIN_CODE];
+        }
 
-        return $versions[static::PLUGIN_CODE];
+        // OXID 7.x: use module configuration service
+        try {
+            $provider = \OxidEsales\Eshop\Core\Registry::get(
+                \OxidEsales\EshopCommunity\Internal\Framework\Module\Facade\ModulesDataProviderInterface::class
+            );
+            foreach ($provider->getModuleConfigurations() as $moduleConfig) {
+                if ($moduleConfig->getId() === static::PLUGIN_CODE) {
+                    return $moduleConfig->getVersion();
+                }
+            }
+        } catch (\Exception $e) {
+            // ignore — fall through to metadata fallback
+        }
+
+        // Last resort: parse from metadata.php
+        $metadataFile = __DIR__ . '/../metadata.php';
+        if (file_exists($metadataFile)) {
+            if (preg_match("/'version'\s*=>\s*'([^']+)'/", file_get_contents($metadataFile), $m)) {
+                return $m[1];
+            }
+        }
+
+        return '';
     }
 
     public static function getOxidVersion()
     {
-        return static::$config->getVersion();
+        return \OxidEsales\Eshop\Core\ShopVersion::getVersion();
+    }
+
+    public static function getOxidMajorVersion(): int
+    {
+        return (int) mb_substr(\OxidEsales\Eshop\Core\ShopVersion::getVersion(), 0, 1);
     }
 
     public static function getOxidVersionInt()
     {
-        $version = static::$config->getVersion();
-        $version = explode(".", $version);
+        $version = explode(".", \OxidEsales\Eshop\Core\ShopVersion::getVersion());
 
         return $version[0] . $version[1];
+    }
+
+    /**
+     * Retrieves the render engine used by the application.
+     *
+     * @return string The render engine type, either `ENGINE_TWIG` or `ENGINE_SMARTY`.
+     */
+    public static function getRenderEngine()
+    {
+        if (class_exists('OxidEsales\EshopCommunity\Internal\Container\ContainerFactory')) {
+            $container = \OxidEsales\EshopCommunity\Internal\Container\ContainerFactory::getInstance()->getContainer();
+            $render = $container
+                ->get(OxidEsales\EshopCommunity\Internal\Framework\Templating\TemplateRendererBridgeInterface::class)
+                ->getTemplateRenderer()
+                ->getTemplateEngine();
+
+            if (str_contains(strtolower(get_class($render)), self::ENGINE_TWIG)) {
+                return self::ENGINE_TWIG;
+            }
+        }
+
+        return self::ENGINE_SMARTY;
     }
 
     public static function getLogFilename()

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -21,7 +21,7 @@ trait PayeverUtilsTrait
     protected function getUtils()
     {
         return null === $this->utils
-            ? $this->utils = oxRegistry::getUtils()
+            ? $this->utils = \OxidEsales\Eshop\Core\Registry::getUtils()
             : $this->utils;
     }
 

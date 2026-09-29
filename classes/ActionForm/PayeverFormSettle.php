@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -79,6 +79,6 @@ class PayeverFormSettle extends PayeverFormBase
      */
     public function getActionField()
     {
-        return payeverOxArticle::FIELD_SETTLED;
+        return PayeverActionTypeInterface::FIELD_SETTLED;
     }
 }

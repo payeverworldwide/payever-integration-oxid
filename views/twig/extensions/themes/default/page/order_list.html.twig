@@ -1,0 +1,64 @@
+{% extends "order_list.html.twig" %}
+
+{# OXID6: src/payever/views/blocks/payever_list_filter_actions.tpl #}
+{% block admin_order_list_filter %}
+    {{ parent() }}
+
+    {% if oViewConf.displayBasketId() %}
+        <td valign="top" class="listfilter" height="20">
+            <div class="r1">
+                <div class="b1">
+                    <input class="listedit" type="text" size="30" maxlength="128" name="where[oxorder][basketid]" value="{{ where.oxorder.basketid }}">
+                </div>
+            </div>
+        </td>
+    {% endif %}
+{% endblock %}
+
+{# OXID6: src/payever/views/blocks/payever_list_sorting_actions.tpl #}
+{% block admin_order_list_sorting %}
+    {{ parent() }}
+
+    {% if oViewConf.displayBasketId() %}
+        <td class="listheader" height="15">
+            <a href="Javascript:top.oxid.admin.setSorting( document.search, 'oxorder', 'basketid', 'asc');document.search.submit();" class="listheader">
+                {{ translate({ ident: "PAYEVER_ORDER_BASKETID" }) }}
+            </a>
+        </td>
+    {% endif %}
+{% endblock %}
+
+{# OXID6: src/payever/views/blocks/payever_list_items_actions.tpl #}
+{% block admin_order_list_item %}
+    {{ parent() }}
+
+    {% if oViewConf.displayBasketId() %}
+        {% if listitem.oxorder__oxstorno.value == 1 %}
+            {% set listclass = "listitem3" %}
+        {% else %}
+            {% if listitem['blacklist'] is defined and listitem.blacklist == 1 %}
+                {% set listclass = "listitem3" %}
+            {% else %}
+                {% set listclass = 'listitem' ~ blWhite %}
+            {% endif %}
+        {% endif %}
+        {% if listitem.getId() == oxid %}
+            {% set listclass = "listitem4" %}
+        {% endif %}
+        <td valign="top" class="{{ listclass}}" height="15">
+            <div class="listitemfloating">
+                <a href="Javascript:top.oxid.admin.editThis('[{ $listitem->oxorder__oxid->value}]');"
+                   class="{{ listclass}}">{{ listitem.oxorder__basketid.value }}</a>
+            </div>
+        </td>
+    {% endif %}
+{% endblock %}
+
+{# OXID6: src/payever/views/blocks/payever_list_colgroup_actions.tpl #}
+{% block admin_order_list_colgroup %}
+    {{ parent() }}
+
+    {% if oViewConf.displayBasketId() %}
+        <col width="25%">
+    {% endif %}
+{% endblock %}

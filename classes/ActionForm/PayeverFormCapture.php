@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -25,7 +25,7 @@ class PayeverFormCapture extends PayeverFormBase
         $cancelled = $this->getSentAmount(
             $order,
             payeverorderaction::ACTION_CANCEL,
-            payeverOxArticle::FIELD_CANCELLED
+            PayeverActionTypeInterface::FIELD_CANCELLED
         );
 
         return $total - $cancelled;
@@ -53,7 +53,7 @@ class PayeverFormCapture extends PayeverFormBase
         foreach ($articles as $article) {
             if (
                 $article->getFieldData($this->getActionField()) ||
-                $article->getFieldData(payeverOxArticle::FIELD_CANCELLED)
+                $article->getFieldData(PayeverActionTypeInterface::FIELD_CANCELLED)
             ) {
                 $allow = false;
                 break;
@@ -99,6 +99,6 @@ class PayeverFormCapture extends PayeverFormBase
      */
     public function getActionField()
     {
-        return payeverOxArticle::FIELD_SHIPPED;
+        return PayeverActionTypeInterface::FIELD_SHIPPED;
     }
 }

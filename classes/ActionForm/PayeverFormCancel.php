@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -32,7 +32,7 @@ class PayeverFormCancel extends PayeverFormBase
         $shipped = $this->getSentAmount(
             $order,
             payeverorderaction::ACTION_SHIPPING_GOODS,
-            payeverOxArticle::FIELD_SHIPPED
+            PayeverActionTypeInterface::FIELD_SHIPPED
         );
 
         if ($actions['enabled'] && !$actions['partialAllowed'] && $shipped) {
@@ -51,7 +51,7 @@ class PayeverFormCancel extends PayeverFormBase
         $shipped = $this->getSentAmount(
             $order,
             payeverorderaction::ACTION_SHIPPING_GOODS,
-            payeverOxArticle::FIELD_SHIPPED
+            PayeverActionTypeInterface::FIELD_SHIPPED
         );
 
         return $total - $shipped;
@@ -67,7 +67,7 @@ class PayeverFormCancel extends PayeverFormBase
         foreach ($articles as $article) {
             if (
                 $article->getFieldData($this->getActionField()) ||
-                $article->getFieldData(payeverOxArticle::FIELD_SHIPPED)
+                $article->getFieldData(PayeverActionTypeInterface::FIELD_SHIPPED)
             ) {
                 $allow = false;
                 break;
@@ -122,6 +122,6 @@ class PayeverFormCancel extends PayeverFormBase
      */
     public function getActionField()
     {
-        return payeverOxArticle::FIELD_CANCELLED;
+        return PayeverActionTypeInterface::FIELD_CANCELLED;
     }
 }

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -15,7 +15,8 @@
  */
 class payevercompanysearch extends oxUBase
 {
-    use PayeverConfigTrait;
+    use PayeverOxRequestTrait;
+    use PayeverOxConfigTrait;
     use PayeverLoggerTrait;
 
     /**
@@ -26,8 +27,8 @@ class payevercompanysearch extends oxUBase
      */
     public function search()
     {
-        $company = $this->getConfig()->getRequestParameter('term');
-        $countryId = $this->getConfig()->getRequestParameter('country');
+        $company = $this->getRequest()->getRequestParameter('term');
+        $countryId = $this->getRequest()->getRequestParameter('country');
 
         $country = oxNew('oxcountry');
         $country->load($countryId);
@@ -68,9 +69,9 @@ class payevercompanysearch extends oxUBase
      */
     public function retrieve()
     {
-        $value = $this->getConfig()->getRequestParameter('value');
-        $type = $this->getConfig()->getRequestParameter('type');
-        $country = $this->getConfig()->getRequestParameter('country');
+        $value = $this->getRequest()->getRequestParameter('value');
+        $type = $this->getRequest()->getRequestParameter('type');
+        $country = $this->getRequest()->getRequestParameter('country');
 
         $result = [];
         try {

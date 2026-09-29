@@ -1,0 +1,45 @@
+{# OXID6: src/payever/views/blocks/payever_user_billing_company.tpl #}
+{% extends 'form/fieldset/user_billing.html.twig' %}
+
+{% block form_user_billing_country %}
+    {% if companySearch and availableCountries %}
+        {{ parent() }}
+        <input type="hidden" name="invadr[oxuser__oxexternalid]" value="{% if invadr.oxuser__oxexternalid is defined %}{{ invadr.oxuser__oxexternalid }}{% else %}{{ oxcmp_user.oxuser__oxexternalid.value }}{% endif %}">
+        <input type="hidden" name="invadr[oxuser__oxvatid]" value="{% if invadr.oxuser__oxvatid is defined %}{{ invadr.oxuser__oxvatid }}{% else %}{{ oxcmp_user.oxuser__oxvatid.value }}{% endif %}">
+        <input type="hidden" name="country_code" id="countries_selector_code" value="">
+
+        <script type="text/javascript">
+            var onlyCountries = {{ availableCountries|raw }};
+            var companySearchType = '{{ companySearchType }}';
+            var defaultCountry = '{{ defaultCountry }}';
+            var companyValidationMsg = '{{ oLang.translateString("PAYEVER_COMPANY_VALIDATION", iLang, true) }}';
+            var companySearchTransactions = {
+                title: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_TITLE", iLang, true) }}',
+                confirmationComment: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_COMMENT", iLang, true) }}',
+                applyButton: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_APPLY", iLang, true) }}',
+                confirmButton: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_CONFIRM", iLang, true) }}',
+                backButton: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_BACK", iLang, true) }}',
+                originalAddressTitle: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_ORG_ADDRESS", iLang, true) }}',
+                newAddressTitle: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_NEW_ADDRESS", iLang, true) }}',
+                discardButton: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_DISCARD", iLang, true) }}',
+                yourEntryTitle: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_ENTRY", iLang, true) }}',
+                company: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_COMPANY", iLang, true) }}',
+                address: '{{ oLang.translateString("PAYEVER_COMPANY_MODAL_ADDRESS", iLang, true) }}',
+            };
+        </script>
+
+        {{ style({ include: oViewConf.getModuleUrl('payever', 'src/css/company-search/address-autocomplete.css') }) }}
+        {{ style({ include: oViewConf.getModuleUrl('payever', 'src/css/company-search/company-search-popup.css') }) }}
+        {{ style({ include: oViewConf.getModuleUrl('payever', 'src/css/company-search/country-picker.css') }) }}
+        {{ style({ include: oViewConf.getModuleUrl('payever', 'src/css/company-search/loading-animation.css') }) }}
+
+        {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/company-search/company_search.js'), dynamic: __oxid_include_dynamic }) }}
+        {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/company-search/company_search_api.js'), dynamic: __oxid_include_dynamic }) }}
+        {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/company-search/company_search_autocomplete.js'), dynamic: __oxid_include_dynamic }) }}
+        {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/company-search/company_search_country_picker.js'), dynamic: __oxid_include_dynamic }) }}
+        {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/company-search/company_search_popup.js'), dynamic: __oxid_include_dynamic }) }}
+        {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/company-search/index.js'), dynamic: __oxid_include_dynamic }) }}
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}

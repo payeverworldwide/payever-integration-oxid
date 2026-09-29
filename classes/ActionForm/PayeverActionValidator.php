@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -13,6 +13,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 
 class PayeverActionValidator
 {
+    use PayeverOxRequestTrait;
     use PayeverConfigTrait;
     use PayeverActionRequestTrait;
 
@@ -63,7 +64,7 @@ class PayeverActionValidator
     {
         //Check form confirm checkbox
         if ($this->form->confirmCheckbox) {
-            $confirm = (bool)$this->getConfig()->getRequestParameter('payeverConfirm');
+            $confirm = (bool)$this->getRequest()->getRequestParameter('payeverConfirm');
             if (!$confirm) {
                 throw new \InvalidArgumentException(
                     'PAYEVER_ORDER_CHECK_' . strtoupper($this->form->getActionType()) . '_CHECKBOX'

@@ -1,0 +1,57 @@
+{# OXID6: src/payever/views/blocks/payever_order_iframe.tpl #}
+{% extends "page/checkout/order.html.twig" %}
+
+{% block checkout_order_main %}
+
+    {% if oView.isIframePayeverPayment() == false %}
+        {{ parent() }}
+    {% else %}
+
+        <iframe sandbox="allow-same-origin allow-forms allow-top-navigation allow-scripts allow-popups allow-popups-to-escape-sandbox" frameborder="0" width="100%"  style="min-height: 600px" id="payever_iframe" src="{{ oView.getIframePaymentUrl() }}"></iframe>
+
+        <div class="well well-sm cart-buttons">
+            <a href="{{ seo_url({ ident: oViewConf.getPaymentLink() }) }}&clearIframeSession=true" class="prevStep submitButton largeButton">{{ translate({ ident: "PREVIOUS_STEP" }) }}</a>
+            <div class="clearfix"></div>
+        </div>
+
+        {{ oView.clearIframeSession() }}
+        <script type="text/javascript">
+            function sendCheckoutNewScrollOffset() {
+                var iframe = document.getElementById('payever_iframe');
+                if (iframe) {
+                    var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    var offsetTop = iframe.offsetTop;
+                    iframe.contentWindow.postMessage({
+                        'event': 'sendPayeverCheckoutScrollOffset',
+                        'scrollTop':    scrollTop,
+                        'offsetTop':    offsetTop,
+                        'windowHeight': window.innerHeight
+                    }, "*");
+                }
+            }
+
+            if (window.addEventListener) {
+                window.addEventListener("message", onMessagePayever, false);
+                window.addEventListener('scroll', sendCheckoutNewScrollOffset, false);
+                window.addEventListener('resize', sendCheckoutNewScrollOffset, false);
+            } else if (window.attachEvent) {
+                window.attachEvent("onmessage", onMessagePayever, false);
+                window.attachEvent('onscroll', sendCheckoutNewScrollOffset, false);
+                window.attachEvent('onresize', sendCheckoutNewScrollOffset, false);
+            }
+
+            function onMessagePayever(event) {
+                if (event && event.data) {
+                    switch (event.data.event) {
+                        case 'payeverCheckoutHeightChanged':
+                            var value = Math.max(0, parseInt(event.data.value));
+                            document.getElementById('payever_iframe').style.height = value+"px";
+                            break;
+                        case 'payeverCheckoutScrollOffsetRequested':
+                            sendCheckoutNewScrollOffset();
+                    }
+                }
+            }
+        </script>
+    {% endif %}
+{% endblock %}

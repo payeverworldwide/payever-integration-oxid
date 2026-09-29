@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -19,20 +19,23 @@ use Payever\Sdk\Payments\Enum\Status;
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  * @codeCoverageIgnore
  */
-class payeverExpressDispatcher extends payeverStandardDispatcher
+class payeverexpressdispatcher extends payeverstandarddispatcher
 {
+    use PayeverOxConfigTrait;
+    use PayeverOxRequestTrait;
     use PayeverFileLockTrait;
     use PayeverDisplayHelperTrait;
     use PayeverCountryFactoryTrait;
     use PayeverPaymentsApiClientTrait;
     use PayeverOrderHelperTrait;
+    use PayeverProductHelperTrait;
 
     const LOCK_WAIT_SECONDS = 30;
 
     public function payeverWidgetSuccess()
     {
         $config = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(sprintf(
             "Handling Finance Express callback success, paymentId: %s",
             $paymentId
@@ -47,7 +50,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
         $product = $this->getProductByNumber($retrievePaymentResult->getReference());
 
         try {
-            $isPending = $config->getRequestParameter('is_pending');
+            $isPending = $this->getRequest()->getRequestParameter('is_pending');
 
             $this->processOrder($retrievePaymentResult, $product, $isPending);
             $this->getLocker()->releaseLock($paymentId);
@@ -75,7 +78,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     public function payeverWidgetFailure()
     {
         $config = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(sprintf(
             "Handling Finance Express callback failure, paymentId: %s",
             $paymentId
@@ -96,7 +99,9 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
         $this->getLogger()->info(sprintf("Canceling Finance Express payment with message: %s", $message));
         $this->getDisplayHelper()->addErrorToDisplay($message);
 
-        $this->_redirectToCart();
+        $this->getUtils()->redirect(
+            \OxidEsales\Eshop\Core\Registry::getConfig()->getShopHomeUrl() . 'cl=basket', false
+        );
     }
 
     /**
@@ -106,7 +111,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     public function payeverWidgetNotice()
     {
         $config = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         $this->getLogger()->info(sprintf("Handling Finance Express callback notice, paymentId: %s", $paymentId), $_GET);
 
         $this->getLogger()->info("Waiting for lock", [$paymentId]);
@@ -169,7 +174,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @throws \OxidEsales\Eshop\Core\Exception\NoArticleException
      * @throws \OxidEsales\Eshop\Core\Exception\OutOfStockException
      */
-    protected function createBasket($productId, $oUser)
+    private function createBasket($productId, $oUser)
     {
         $oxBasket = oxNew('oxBasket');
         $oxBasket->setBasketUser($oUser);
@@ -184,13 +189,9 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @param string $articleNumber
      * @return object|oxarticle
      */
-    protected function getProductByNumber($articleNumber)
+    private function getProductByNumber($articleNumber)
     {
-        $product = oxNew('oxarticle');
-        $query = $product->buildSelectString(['oxartnum' => $articleNumber]);
-        $product->assignRecord($query);
-
-        return $product;
+        return $this->getProductHelper()->getProductBySku($articleNumber);
     }
 
     /**
@@ -200,7 +201,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @return object|oxuser|oxUser|null
      * @throws oxSystemComponentException
      */
-    protected function createUser($payment)
+    private function createUser($payment)
     {
         $address = $payment->getAddress();
         $userEmail = $address->getEmail();
@@ -240,7 +241,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @param $salutation
      * @return string
      */
-    protected function getOxidSalutation($salutation)
+    private function getOxidSalutation($salutation)
     {
         switch ($salutation) {
             case 'MR_SALUATATION':
@@ -266,7 +267,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      *
      * @return oxuser|null
      */
-    protected function loadUserByEmail($email)
+    private function loadUserByEmail($email)
     {
         $oUser = oxNew("oxUser");
         $sUserId = $oUser->getIdByUserName($email);
@@ -298,7 +299,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     {
         $oxidOrderStatus = $this->getGatewayManager()->getInternalStatus($retrievePaymentResult->getStatus());
 
-        $oSession = $this->getSession();
+        $oSession = \OxidEsales\Eshop\Core\Registry::getSession();
 
         $oSession->oxidpayever_payment_id = $retrievePaymentResult->getId();
         $oSession->setVariable('oxidpayever_payment_id', $retrievePaymentResult->getId());
@@ -352,7 +353,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @SuppressWarnings(PHPMD.ElseExpression)
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    protected function handleNewOrder($retrievePaymentResult, $product, $oxidOrderStatus, $isPending, $isNotice)
+    private function handleNewOrder($retrievePaymentResult, $product, $oxidOrderStatus, $isPending, $isNotice)
     {
         $isPaid = $this->getGatewayManager()->isPaidStatus($oxidOrderStatus);
         $paymentMethod = PayeverConfig::PLUGIN_PREFIX . $retrievePaymentResult->getPaymentType();
@@ -387,7 +388,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
 
         //finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
         if ($oOrder instanceof payeverOxOrderCompatible) {
-            $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, true);
+            $orderStateId = $oOrder->setPayeverOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, true);
         } else {
             $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, true, $oxidOrderStatus);
         }
@@ -423,15 +424,15 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
 
         if (!$isNotice) {
             $this->getLogger()->debug('Prepare session before redirect');
-            $this->getSession()->setVariable('sess_challenge', $oBasket->getOrderId());
+            \OxidEsales\Eshop\Core\Registry::getSession()->setVariable('sess_challenge', $oBasket->getOrderId());
 
             $basketName = $this->getConfig()->getConfigParam('blMallSharedBasket') == 0
                 ? $this->getConfig()->getShopId() . '_basket'
                 : 'basket';
 
             $this->getLogger()->debug('Saved serialized basket to session');
-            $this->getSession()->setBasket($oBasket);
-            $this->getSession()->setVariable($basketName, serialize($oBasket));
+            \OxidEsales\Eshop\Core\Registry::getSession()->setBasket($oBasket);
+            \OxidEsales\Eshop\Core\Registry::getSession()->setVariable($basketName, serialize($oBasket));
         }
 
         return [$oOrder, $oParams];
@@ -443,7 +444,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @param $isPending
      * @return array
      */
-    protected function handleExistingOrder($oOrder, $oxidOrderStatus, $isPending)
+    private function handleExistingOrder($oOrder, $oxidOrderStatus, $isPending)
     {
         $isPaid = $this->getGatewayManager()->isPaidStatus($oxidOrderStatus);
 
@@ -466,7 +467,7 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @param int $notificationTimestamp
      * @return bool
      */
-    protected function shouldRejectNotification($order, $notificationTimestamp)
+    private function shouldRejectNotification($order, $notificationTimestamp)
     {
         return (int) $order->oxorder__payever_notification_timestamp->rawValue > $notificationTimestamp;
     }
@@ -475,14 +476,14 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
      * @param $oUser
      * @return string
      */
-    protected function getDeliveryAddressMD5($oUser)
+    private function getDeliveryAddressMD5($oUser)
     {
         $sDelAddress = $oUser->getEncodedDeliveryAddress();
 
         // delivery address
-        if (oxRegistry::getSession()->getVariable('deladrid')) {
+        if (\OxidEsales\Eshop\Core\Registry::getSession()->getVariable('deladrid')) {
             $oDelAdress = oxNew('oxaddress');
-            $oDelAdress->load(oxRegistry::getSession()->getVariable('deladrid'));
+            $oDelAdress->load(\OxidEsales\Eshop\Core\Registry::getSession()->getVariable('deladrid'));
 
             $sDelAddress .= $oDelAdress->getEncodedDeliveryAddress();
         }
@@ -510,14 +511,14 @@ class payeverExpressDispatcher extends payeverStandardDispatcher
     {
         $config = $this->getConfig();
         $_POST['sDeliveryAddressMD5'] = $this->getDeliveryAddressMD5($oUser);
-        if (!$config->getRequestParameter('ord_agb') && $config->getConfigParam('blConfirmAGB')) {
+        if (!$this->getRequest()->getRequestParameter('ord_agb') && $config->getConfigParam('blConfirmAGB')) {
             $_POST['ord_agb'] = 1;
         }
         if ($config->getConfigParam('blEnableIntangibleProdAgreement')) {
-            if (!$config->getRequestParameter('oxdownloadableproductsagreement')) {
+            if (!$this->getRequest()->getRequestParameter('oxdownloadableproductsagreement')) {
                 $_POST['oxdownloadableproductsagreement'] = 1;
             }
-            if (!$config->getRequestParameter('oxserviceproductsagreement')) {
+            if (!$this->getRequest()->getRequestParameter('oxserviceproductsagreement')) {
                 $_POST['oxserviceproductsagreement'] = 1;
             }
         }

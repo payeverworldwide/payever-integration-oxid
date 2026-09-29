@@ -1,0 +1,75 @@
+{% extends 'page/checkout/payment.html.twig' %}
+
+{# OXID6: src/payever/views/blocks/azure/page/checkout/payment/select_payment.tpl #}
+{% block select_payment %}
+    {% set payment_desc = oViewConf.displayPaymentDesc() %}
+    {% set payment_mode = oViewConf.getModeTitle() %}
+
+    {% if 'oxpe_' in sPaymentID %}
+        <div class="well well-sm">
+            <dl>
+                <dt>
+                    <input id="payment_{{ sPaymentID }}" type="radio" name="paymentid" value="{{ sPaymentID }}" {% if oView.getCheckedPaymentId() == paymentmethod.oxpayments__oxid.value %}checked{% endif %}>
+
+                    {% if payment_desc.payever.display_logo == 1 %}
+                        <span class="payever-payment-icon">
+                            {% if paymentmethod.oxpayments__oxthumbnail.value|length > 0 %}
+                                <img src="{{ paymentmethod.oxpayments__oxthumbnail.value|raw }}" alt="{{ paymentmethod.oxpayments__oxdesc.value }}" {{ dt_payever_logo }} />
+                            {% else %}
+                                <img src="{{ oViewConf.getModuleUrl('payever', 'out/src/img/'~sPaymentID|replace({'-': ''})~'.png') }}" alt="{{ paymentmethod.oxpayments__oxdesc.value }}" {{ dt_payever_logo }} />
+                            {% endif %}
+                        </span>
+                    {% endif %}
+
+                    <label for="payment_{{ sPaymentID }}"><b>{{ paymentmethod.oxpayments__oxdesc.value }} {% if payment_mode == 0 %} SANDBOX Mode {% endif %}</b>
+                        {% if paymentmethod.getPrice() %}
+                            {% set oPaymentPrice = paymentmethod.getPrice() %}
+                            {% if oViewConf.isFunctionalityEnabled('blShowVATForPayCharge')  %}
+                                {% apply spaceless %}
+                                    ({{ format_price(oPaymentPrice.getNettoPrice(), { currency: currency }) }}
+                                    {% if oPaymentPrice.getVatValue() > 0 %}
+                                        {{ translate({ ident: "PLUS_VAT" }) }} {{ format_price(oPaymentPrice.getVatValue(), { currency: currency }) }}
+                                    {% endif %})
+                                {% endapply %}
+                            {% else %}
+                                ({{ format_price(oPaymentPrice.getBruttoPrice(), { currency: currency }) }})
+                            {% endif %}
+                        {% endif %}
+                    </label>
+                </dt>
+
+                <dd class="{% if oView.getCheckedPaymentId() == paymentmethod.oxpayments__oxid.value %}activePayment{% endif %}">
+                    <div class="clearfix"></div>
+
+                    {% block checkout_payment_longdesc %}
+                        {% if paymentmethod.oxpayments__oxlongdesc.value|striptags|trim and payment_desc.payever.display_desc == 1 %}
+                            <div class="desc payever-payment-description">
+                                {{ paymentmethod.oxpayments__oxlongdesc.value }}
+                            </div>
+                        {% endif %}
+                    {% endblock %}
+
+                    {% block checkout_payment_terms %}
+                        {% if paymentmethod.isTermsMethod() %}
+                            <div class="container_terms_{{ paymentmethod.getId() }}"></div>
+                        {% endif %}
+                    {% endblock %}
+                </dd>
+            </dl>
+        </div>
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
+
+{# OXID6: src/payever/views/blocks/azure/page/checkout/payment/change_payment.tpl #}
+{% block change_payment %}
+    {{ parent() }}
+    {% if oView.getPaymentList() %}
+        {% set payment_terms = oViewConf.getTermsData(oView.getPaymentList()) %}
+        {% if payment_terms %}
+            <script type="text/javascript">var payment_terms = {{ payment_terms|json_encode }}</script>
+            {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/terms.js'), dynamic: __oxid_include_dynamic }) }}
+        {% endif %}
+    {% endif %}
+{% endblock %}

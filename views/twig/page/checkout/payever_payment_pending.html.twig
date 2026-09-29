@@ -1,0 +1,41 @@
+{# OXID6: src/payever/views/page/checkout/payment_pending.tpl #}
+{% capture append = "oxidBlock_content" %}
+    {% block checkout_thankyou_main %}
+        {% set basket = oView.getBasket() %}
+
+        <div id="thankyouPage">
+            <h3 class="blockHead">{{ translate({ ident: "THANK_YOU" }) }}</h3>
+
+            {% block checkout_thankyou_info %}
+                {{ translate({ ident: "THANK_YOU_FOR_ORDER" }) }} {{ oxcmp_shop.oxshops__oxname.value }}. <br>
+                <br>
+                {{ translate({ ident: "MESSAGE_WE_WILL_INFORM_YOU" }) }}<br><br>
+
+                <p>{{ oLang.translateString("PAYEVER_PAYMENT_PENDING_RECEIVED", iLang, true) }}</p>
+                {% if isLoanTransaction %}
+                    <p>{{ oLang.translateString("PAYEVER_PAYMENT_PENDING_PROCESSED", iLang, true) }}</p>
+                    <p>{{ oLang.translateString("PAYEVER_PAYMENT_PENDING_CONFIRMATION", iLang, true) }}</p>
+                    <br>
+                {% endif %}
+            {% endblock %}
+
+            <div class="order-status-loader">
+                <p id="payever-status-message">{{ oLang.translateString("PAYEVER_PAYMENT_LOADER_MSG", iLang, true) }}</p>
+                <div id="payever-loading-animation" class="payever-loading-animation">
+                    <div class="payever-loader">&nbsp;</div>
+                </div>
+            </div>
+        </div>
+    {% endblock %}
+    {{ insert_tracker({title: template_title}) }}
+
+    {{ style({ include: oViewConf.getModuleUrl('payever', 'src/css/loader.css') }) }}
+    {{ script({ include: oViewConf.getModuleUrl('payever', 'src/js/status.js'), dynamic: __oxid_include_dynamic }) }}
+
+    <script type="application/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            window.PayeverPendingStatusChecker.checkStatus('{{ checkStatusLink|raw }}');
+        });
+    </script>
+{% endcapture %}
+{% include "layout/page.html.twig" %}

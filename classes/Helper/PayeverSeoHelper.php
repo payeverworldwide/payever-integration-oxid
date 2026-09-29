@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -66,7 +66,7 @@ class PayeverSeoHelper
     protected function getProdutSeoEncoder()
     {
         return null === $this->productSeoEncoder
-            ? $this->productSeoEncoder = oxRegistry::get('oxSeoEncoderArticle')
+            ? $this->productSeoEncoder = \OxidEsales\Eshop\Core\Registry::get('oxSeoEncoderArticle')
             : $this->productSeoEncoder;
     }
 }

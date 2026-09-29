@@ -1,0 +1,12 @@
+{% set action = form.getActionType() %}
+{% set actionAllowed = form.isActionAllowed(edit) %}
+{% set actionLang = action|upper %}
+
+{% if actionAllowed.enabled %}
+    <div class="form-block form-template">
+        <div class="form-block-label">
+            <b>{{ ("PAYEVER_" ~ actionLang ~ "_STATUS")|translate }}:</b>
+        </div>
+        {% include "@payever/order/form_totals.html.twig" %}
+    </div>
+{% endif %}

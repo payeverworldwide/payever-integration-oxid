@@ -1,0 +1,13 @@
+services:
+  _defaults:
+    public: false
+    autowire: true
+
+  Payever\Payments\Twig\WidgetLogicInterface:
+    class: Payever\Payments\Twig\WidgetLogic
+    public: true
+
+  Payever\Payments\Twig\WidgetExtension:
+    tags: [ 'twig.extension' ]
+    arguments:
+      $container: '@service_container'

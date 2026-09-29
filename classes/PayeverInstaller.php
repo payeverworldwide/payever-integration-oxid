@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -126,7 +126,7 @@ class PayeverInstaller
      */
     private static function createColumnsForPaymentsTable($columns)
     {
-        $oConfig = oxRegistry::getConfig();
+        $oConfig = \OxidEsales\Eshop\Core\Registry::getConfig();
         $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
         foreach ($columns as $cval => $definition) {
             self::addColumnIfNotExists('oxpayments', $cval, $definition);
@@ -161,7 +161,7 @@ class PayeverInstaller
             'oxparentid' => 'oxrootid',
             'oxtitle' => 'payever',
         ];
-        $aLanguages = oxRegistry::getLang()->getLanguageArray();
+        $aLanguages = \OxidEsales\Eshop\Core\Registry::getLang()->getLanguageArray();
         foreach ($aLanguages as $aLanguage) {
             if (property_exists($aLanguage, 'id')) {
                 $defaultPayeverCategory->assign($data);
@@ -409,7 +409,7 @@ class PayeverInstaller
      */
     public static function cleanTmp($sClearFolderPath = '')
     {
-        $sTempFolderPath = oxRegistry::getConfig()->getConfigParam('sCompileDir');
+        $sTempFolderPath = \OxidEsales\Eshop\Core\Registry::getConfig()->getConfigParam('sCompileDir');
 
         if (
             !empty($sClearFolderPath) &&
@@ -452,7 +452,7 @@ class PayeverInstaller
      */
     protected static function addColumnIfNotExists($table, $column, array $definition = [])
     {
-        $oConfig = oxRegistry::getConfig();
+        $oConfig = \OxidEsales\Eshop\Core\Registry::getConfig();
         $oDb = oxDb::getDb(oxDb::FETCH_MODE_ASSOC);
         $aResult = $oDb->getAll(
             'SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',

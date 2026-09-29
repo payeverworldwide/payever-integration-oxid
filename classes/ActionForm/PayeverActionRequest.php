@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -11,6 +11,7 @@
 
 class PayeverActionRequest
 {
+    use PayeverOxRequestTrait;
     use PayeverConfigTrait;
 
     /**
@@ -20,7 +21,7 @@ class PayeverActionRequest
      */
     public function getAction()
     {
-        return $this->getConfig()->getRequestParameter('action');
+        return $this->getRequest()->getRequestParameter('action');
     }
 
     /**
@@ -30,7 +31,7 @@ class PayeverActionRequest
      */
     public function getType()
     {
-        return $this->getConfig()->getRequestParameter('type');
+        return $this->getRequest()->getRequestParameter('type');
     }
 
     /**
@@ -40,7 +41,7 @@ class PayeverActionRequest
      */
     public function getAmount()
     {
-        $amount = $this->getConfig()->getRequestParameter('amount') ?: 0;
+        $amount = $this->getRequest()->getRequestParameter('amount') ?: 0;
 
         return (float)str_replace(',', '.', $amount);
     }
@@ -52,8 +53,8 @@ class PayeverActionRequest
      */
     public function getItems()
     {
-        $itemQnt = oxRegistry::getConfig()->getRequestParameter('itemQnt');
-        $itemActive = oxRegistry::getConfig()->getRequestParameter('itemActive');
+        $itemQnt = \OxidEsales\Eshop\Core\Registry::getRequest()->getRequestParameter('itemQnt');
+        $itemActive = \OxidEsales\Eshop\Core\Registry::getRequest()->getRequestParameter('itemActive');
 
         if (!$itemActive || !$itemQnt) {
             return [];

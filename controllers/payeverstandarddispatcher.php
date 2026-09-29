@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -9,11 +9,9 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-/**
- * Class payeverStandardDispatcher
- */
-class payeverStandardDispatcher extends oxUBase
+class payeverstandarddispatcher extends oxUBase
 {
+    use PayeverOxConfigTrait;
     use PayeverConfigHelperTrait;
     use DryRunTrait;
     use PayeverLoggerTrait;
@@ -31,7 +29,7 @@ class payeverStandardDispatcher extends oxUBase
      */
     public function processPayment()
     {
-        $redirectUrl = $this->getSession()->getVariable('oxidpayever_payment_view_redirect_url');
+        $redirectUrl = \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('oxidpayever_payment_view_redirect_url');
         if ($redirectUrl) {
             $sUrl = $this->getUrlUtil()->processUrl($redirectUrl);
             $this->getUtils()->redirect($sUrl, false);
@@ -66,13 +64,13 @@ class payeverStandardDispatcher extends oxUBase
         $fetchDest = $this->getRequestHelper()->getHeader('sec-fetch-dest');
         $this->getLogger()->debug(
             'Hit redirectToThankYou with fetch dest ' . $fetchDest,
-            ['sess_challenge' => $this->getSession()->getVariable('sess_challenge')]
+            ['sess_challenge' => \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('sess_challenge')]
         );
 
         // Check if payment mode is iframe
         if (
             !$this->getConfigHelper()->getIsRedirect() &&
-            !$this->getSession()->getVariable(PayeverConfig::SESS_IS_REDIRECT_METHOD)
+            !\OxidEsales\Eshop\Core\Registry::getSession()->getVariable(PayeverConfig::SESS_IS_REDIRECT_METHOD)
         ) {
             $back_link = $this->getConfig()->getSslShopUrl() . '?cl=thankyou';
             $script = <<<JS

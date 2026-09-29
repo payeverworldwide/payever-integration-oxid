@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -39,11 +39,11 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
     /**
      * {@inheritDoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->getSynchronizationManager()->isEnabled()) {
             $output->writeln('Products and inventory synchronization is disabled');
-            return;
+            return 0;
         }
         $items = $this->getActionQueueManager()->getItems(self::QUEUE_PROCESSING_SIZE);
         $output->writeln('START: Processing payever sync action queue');
@@ -79,5 +79,7 @@ class PayeverSyncQueueConsumeCommand extends \Symfony\Component\Console\Command\
             }
         }
         $output->writeln(sprintf('FINISH: Processed %d queue records', $processed));
+
+        return 0;
     }
 }

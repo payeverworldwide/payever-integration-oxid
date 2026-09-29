@@ -3,7 +3,7 @@
 use Payever\Sdk\Payments\Http\RequestEntity\ClaimPaymentRequest;
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -13,6 +13,7 @@ use Payever\Sdk\Payments\Http\RequestEntity\ClaimPaymentRequest;
 
 class PayeverClaimAction implements PayeverActionInterface
 {
+    use PayeverOxRequestTrait;
     use PayeverConfigTrait;
     use PayeverPaymentsApiClientTrait;
 
@@ -22,7 +23,7 @@ class PayeverClaimAction implements PayeverActionInterface
     public function processActionRequest($oxOrder)
     {
         $paymentId = $oxOrder->getFieldData('oxtransid');
-        $isDisputed = (bool) $this->getConfig()->getRequestParameter('is_disputed');
+        $isDisputed = (bool) $this->getRequest()->getRequestParameter('is_disputed');
 
         $claimPaymentRequest = new ClaimPaymentRequest();
         $claimPaymentRequest->setIsDisputed($isDisputed);

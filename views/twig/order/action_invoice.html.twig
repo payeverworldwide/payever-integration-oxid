@@ -1,0 +1,36 @@
+{% set action = form.getActionType() %}
+{% set actionAllowed = form.isActionAllowed(edit) %}
+{% set actionLang = action|upper %}
+
+{% if actionAllowed.enabled %}
+    <div class="form-block form-template">
+        <div class="form-block-label">
+            <b>{{ ("PAYEVER_" ~ actionLang ~ "_STATUS")|translate }}:</b>
+        </div>
+
+        {% if actionAllowed.partialAllowed %}
+            {% set sentAmount = form.getSentAmount(edit) %}
+            {% if form.partialAmountFormAllowed(edit) %}
+                {% include "@payever/order/form_partial_amount.html.twig" %}
+            {% endif %}
+
+            <div style="font-weight: bold; text-align: right;padding: 0 8px;line-height: 28px;">
+                {{ ("PAYEVER_TOTAL_" ~ actionLang ~ "_COMPLETE")|translate }}:
+                <span id="sentAmount">{{ sentAmount }}</span>
+                {{ edit.oxorder__oxcurrency.value }}
+            </div>
+
+            {% if formError[action] is defined %}
+                <div style="text-align: right;padding: 0 8px;color:red;">
+                    {{ formError[action] }}
+                </div>
+            {% endif %}
+
+            <div style="padding: 2px 7px">
+                <input type="button" name="{{ action }}-submit-btn" class="form-submit-btn" style="padding: 3px;" value="{{ ("PAYEVER_ORDER_PROCESS_" ~ actionLang)|translate }}">
+            </div>
+        {% else %}
+            {% include "@payever/order/form_totals.html.twig" %}
+        {% endif %}
+    </div>
+{% endif %}

@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -8,12 +8,23 @@
  * @license   MIT <https://opensource.org/licenses/MIT>
  */
 
-$isOxidV6 = @class_exists('OxidEsales\EshopCommunity\Application\Model\Order');
+// Detect OXID major version before declaring metadata version.
+// This must happen at the top so $sMetadataVersion can be set conditionally.
+$oxidVersion = 4;
+if (class_exists('OxidEsales\Eshop\Core\ShopVersion')) {
+    $oxidVersion = (int) mb_substr(OxidEsales\Eshop\Core\ShopVersion::getVersion(), 0, 1);
+}
 
 /**
- * Metadata version
+ * Metadata version:
+ * - 1.2 for OXID 4/5: old-style module-relative file-path extends, no controllers key.
+ * - 2.0 for OXID 6+: enables the 'controllers' key. MetaDataSchemaValidator in OXID 6.4+
+ *   rejects 'controllers' in v1.2, causing module activation failure. OXID 6.8 still uses
+ *   old-style slash-separated extends (e.g. 'payever/core/payeveroxviewconfig') because
+ *   ModuleChainsGenerator::backwardsCompatibleCreateClassExtension() builds the file path
+ *   from them — bare class names as values would fail. Only OXID 7+ uses FQCN extends.
  */
-$sMetadataVersion = '1.2';
+$sMetadataVersion = $oxidVersion >= 6 ? '2.0' : '1.2';
 
 /**
  * Module information
@@ -28,200 +39,25 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '3.6.1',
+    'version' => '4.0.0',
     'author' => 'payever GmbH',
+    // Old-style module-relative file-path extends for OXID 4/5/6.
+    // OXID 7+: replaced with FQCN extends at the bottom of this file.
     'extend' => [
-        'order'          => 'payever/controllers/payeverorder',
-        'payment'        => 'payever/controllers/payeverpayment',
-        'order_list'     => 'payever/controllers/admin/payeverorderlist',
-        'oxorder'        => $isOxidV6 ? 'payever/models/payeveroxordercompatible' : 'payever/models/payeveroxorder',
-        'oxpayment'      => 'payever/models/payeveroxpayment',
-        'oxpaymentlist'  => 'payever/models/payeveroxpaymentlist',
-        'oxviewconfig'   => 'payever/core/payeveroxviewconfig',
-        'oxarticle'      => 'payever/models/payeveroxarticle',
-        'OxidEsales\Eshop\Application\Model\User\UserUpdatableFields' => 'payever/models/user/userupdatablefields',
-        'user' => 'payever/controllers/payeverusercontroller',
+        'order'        => 'payever/controllers/payeverorder',
+        'order_list'   => 'payever/controllers/admin/payeverorderlist',
+        'payment'      => 'payever/controllers/payeverpayment',
+        'user'         => 'payever/controllers/payeverusercontroller',
         'account_user' => 'payever/controllers/payeverusercontroller',
-    ],
-    'files' => [
-        // classes map (OXID < 6.0 doesn't support composer autoloading)
-        'DryRunTrait' => 'payever/classes/DryRunTrait.php',
-        'ExpressWidget' => 'payever/classes/ExpressWidget.php',
-        'PayeverPaymentsApiClientTrait' => 'payever/classes/Api/PayeverPaymentsApiClientTrait.php',
-        'PayeverCommandManagerTrait' => 'payever/classes/Api/PayeverCommandManagerTrait.php',
-        'PayeverPluginsApiClientTrait' => 'payever/classes/Api/PayeverPluginsApiClientTrait.php',
-        'PayeverWidgetApiClientTrait' => 'payever/classes/Api/PayeverWidgetApiClientTrait.php',
-        'PayeverProductRequestEntity' => 'payever/classes/Api/PayeverProductRequestEntity.php',
-        'PayeverFileLockTrait' => 'payever/classes/Trait/PayeverFileLockTrait.php',
-        'PayeverLangTrait' => 'payever/classes/Trait/PayeverLangTrait.php',
-        'PayeverOxArticleTrait' => 'payever/classes/Trait/PayeverOxArticleTrait.php',
-        'PayeverOxBasketTrait' => 'payever/classes/Trait/PayeverOxBasketTrait.php',
-        'PayeverOxConfigTrait' => 'payever/classes/Trait/PayeverOxConfigTrait.php',
-        'PayeverOxDeliveryListTrait' => 'payever/classes/Trait/PayeverOxDeliveryListTrait.php',
-        'PayeverOxOrderTrait' => 'payever/classes/Trait/PayeverOxOrderTrait.php',
-        'PayeverOxPaymentTrait' => 'payever/classes/Trait/PayeverOxPaymentTrait.php',
-        'PayeverOxRequestTrait' => 'payever/classes/Trait/PayeverOxRequestTrait.php',
-        'PayeverOxUserPaymentTrait' => 'payever/classes/Trait/PayeverOxUserPaymentTrait.php',
-        'PayeverOxUserTrait' => 'payever/classes/Trait/PayeverOxUserTrait.php',
-        'PayeverSessionTrait' => 'payever/classes/Trait/PayeverSessionTrait.php',
-        'PayeverUrlUtilTrait' => 'payever/classes/Trait/PayeverUrlUtilTrait.php',
-        'PayeverUtilsTrait' => 'payever/classes/Trait/PayeverUtilsTrait.php',
-        'PayeverViewUtilTrait' => 'payever/classes/Trait/PayeverViewUtilTrait.php',
-        'PayeverConfigHelperTrait' => 'payever/classes/Helper/PayeverConfigHelperTrait.php',
-        'PayeverCartFactory' => 'payever/classes/Factory/PayeverCartFactory.php',
-        'PayeverCartFactoryTrait' => 'payever/classes/Factory/PayeverCartFactoryTrait.php',
-        'PayeverOrderHelper' => 'payever/classes/Helper/PayeverOrderHelper.php',
-        'PayeverOrderHelperTrait' => 'payever/classes/Helper/PayeverOrderHelperTrait.php',
-        'PayeverConfigTrait' => 'payever/classes/PayeverConfigTrait.php',
-        'PayeverLoggerTrait' => 'payever/classes/Log/PayeverLoggerTrait.php',
-        'PayeverDatabaseTrait' => 'payever/classes/Database/PayeverDatabaseTrait.php',
-        'PayeverOrderActionHelper' => 'payever/classes/Helper/PayeverOrderActionHelper.php',
-        'PayeverOrderActionHelperTrait' => 'payever/classes/Helper/PayeverOrderActionHelperTrait.php',
-        'PayeverPaymentActionHelper' => 'payever/classes/Helper/PayeverPaymentActionHelper.php',
-        'PayeverPaymentActionHelperTrait' => 'payever/classes/Helper/PayeverPaymentActionHelperTrait.php',
-        'PayeverOrderTransactionHelper' => 'payever/classes/Helper/PayeverOrderTransactionHelper.php',
-        'PayeverOrderTransactionHelperTrait' => 'payever/classes/Helper/PayeverOrderTransactionHelperTrait.php',
-        'PayeverDisplayHelper' => 'payever/classes/Helper/PayeverDisplayHelper.php',
-        'PayeverDisplayHelperTrait' => 'payever/classes/Helper/PayeverDisplayHelperTrait.php',
-        'PayeverLogProcessor' => 'payever/classes/Logger/Processor/PayeverLogProcessor.php',
-        'PayeverAddressFactory' => 'payever/classes/Factory/PayeverAddressFactory.php',
-        'PayeverAddressFactoryTrait' => 'payever/classes/Factory/PayeverAddressFactoryTrait.php',
-        'PayeverCountryFactory' => 'payever/classes/Factory/PayeverCountryFactory.php',
-        'PayeverCountryFactoryTrait' => 'payever/classes/Factory/PayeverCountryFactoryTrait.php',
-        'PayeverOrderFactory' => 'payever/classes/Factory/PayeverOrderFactory.php',
-        'PayeverOrderFactoryTrait' => 'payever/classes/Factory/PayeverOrderFactoryTrait.php',
-        'PayeverPaymentMethodFactory' => 'payever/classes/Factory/PayeverPaymentMethodFactory.php',
-        'PayeverPaymentMethodFactoryTrait' => 'payever/classes/Factory/PayeverPaymentMethodFactoryTrait.php',
-        'PayeverArticleListCollectionFactory' => 'payever/classes/Factory/PayeverArticleListCollectionFactory.php',
-        'PayeverFieldFactory' => 'payever/classes/Factory/PayeverFieldFactory.php',
-        'PayeverFieldFactoryTrait' => 'payever/classes/Factory/PayeverFieldFactoryTrait.php',
-        'PayeverArticleFactory' => 'payever/classes/Factory/PayeverArticleFactory.php',
-        'PayeverCategoryFactory' => 'payever/classes/Factory/PayeverCategoryFactory.php',
-        'PayeverCategoryFactoryTrait' => 'payever/classes/Factory/PayeverCategoryFactoryTrait.php',
-        'Object2CategoryFactory' => 'payever/classes/Factory/Object2CategoryFactory.php',
-        'PayeverPriceFactory' => 'payever/classes/Factory/PayeverPriceFactory.php',
-        'PayeverSynchronizationQueueFactory' => 'payever/classes/Factory/PayeverSynchronizationQueueFactory.php',
-        'PayeverSynchronizationQueueListFactory' => 'payever/classes/Factory/PayeverSynchronizationQueueListFactory.php',
-        'PayeverSynchronizationQueueFactoryTrait' => 'payever/classes/Factory/PayeverSynchronizationQueueFactoryTrait.php',
-        'PayeverFPDFFactory' => 'payever/classes/Factory/PayeverFPDFFactory.php',
-        'PayeverInvoiceFactory' => 'payever/classes/Factory/PayeverInvoiceFactory.php',
-        'PayeverInvoiceListFactory' => 'payever/classes/Factory/PayeverInvoiceListFactory.php',
-        'PayeverLogsFactory' => 'payever/classes/Factory/PayeverLogsFactory.php',
-        'PayeverLogsListFactory' => 'payever/classes/Factory/PayeverLogsListFactory.php',
-        'PayeverCategoryHelper' => 'payever/classes/Helper/PayeverCategoryHelper.php',
-        'PayeverCategoryHelperTrait' => 'payever/classes/Helper/PayeverCategoryHelperTrait.php',
-        'PayeverRequestHelper' => 'payever/classes/Helper/PayeverRequestHelper.php',
-        'PayeverRequestHelperTrait' => 'payever/classes/Helper/PayeverRequestHelperTrait.php',
-        'PayeverInstaller' => 'payever/classes/PayeverInstaller.php',
-        'PayeverMethodHider' => 'payever/classes/PayeverMethodHider.php',
-        'PayeverMethodHiderTrait' => 'payever/classes/PayeverMethodHiderTrait.php',
-        'payeversynchronizationqueue' => 'payever/models/payeversynchronizationqueue.php',
-        'payeversynchronizationqueuelist' => 'payever/models/payeversynchronizationqueuelist.php',
-        'payeverlogs' => 'payever/models/payeverlogs.php',
-        'payeverlogslist' => 'payever/models/payeverlogslist.php',
-        'payeverpaymentaction' => 'payever/models/payeverpaymentaction.php',
-        'PayeverLogger' => 'payever/classes/PayeverLogger.php',
-        'PayeverConfig' => 'payever/classes/PayeverConfig.php',
-        'PayeverRegistry' => 'payever/classes/PayeverRegistry.php',
-        'PayeverTerms' => 'payever/classes/PayeverTerms.php',
-        'PayeverApiOauthTokenList' => 'payever/classes/Api/PayeverApiOauthTokenList.php',
-        'PayeverApiClientProvider' => 'payever/classes/Api/PayeverApiClientProvider.php',
-        'PayeverApiApmSecretService' => 'payever/classes/Api/PayeverApiApmSecretService.php',
-        'PayeverPluginCommandExecutor' => 'payever/classes/Api/PayeverPluginCommandExecutor.php',
-        'PayeverPluginRegistryInfoProvider' => 'payever/classes/Api/PayeverPluginRegistryInfoProvider.php',
-        'PayeverShippingGoodsHandler' => 'payever/classes/Api/PayeverShippingGoodsHandler.php',
-        'PayeverCompanySearchManager' => 'payever/classes/Management/PayeverCompanySearchManager.php',
-        'PayeverGenericManagerTrait' => 'payever/classes/Management/PayeverGenericManagerTrait.php',
-        'PayeverCategoryManager' => 'payever/classes/Management/PayeverCategoryManager.php',
-        'PayeverGalleryManager' => 'payever/classes/Management/PayeverGalleryManager.php',
-        'PayeverPriceManager' => 'payever/classes/Management/PayeverPriceManager.php',
-        'PayeverShippingManager' => 'payever/classes/Management/PayeverShippingManager.php',
-        'PayeverActionRequest' => 'payever/classes/ActionForm/PayeverActionRequest.php',
-        'PayeverActionRequestTrait' => 'payever/classes/ActionForm/PayeverActionRequestTrait.php',
-        'PayeverActionInterface' => 'payever/classes/Action/PayeverActionInterface.php',
-        'PayeverActionProcessor' => 'payever/classes/Action/PayeverActionProcessor.php',
-        'PayeverActionProcessorTrait' => 'payever/classes/Action/PayeverActionProcessorTrait.php',
-        'PayeverBaseAction' => 'payever/classes/Action/PayeverBaseAction.php',
-        'PayeverCancelAction' => 'payever/classes/Action/PayeverCancelAction.php',
-        'PayeverCaptureAction' => 'payever/classes/Action/PayeverCaptureAction.php',
-        'PayeverClaimAction' => 'payever/classes/Action/PayeverClaimAction.php',
-        'PayeverClaimUploadAction' => 'payever/classes/Action/PayeverClaimUploadAction.php',
-        'PayeverRefundAction' => 'payever/classes/Action/PayeverRefundAction.php',
-        'PayeverInvoiceAction' => 'payever/classes/Action/PayeverInvoiceAction.php',
-        'PayeverSettleAction' => 'payever/classes/Action/PayeverSettleAction.php',
-        'PayeverActionFormTrait' => 'payever/classes/ActionForm/PayeverActionFormTrait.php',
-        'PayeverActionValidator' => 'payever/classes/ActionForm/PayeverActionValidator.php',
-        'PayeverFormBase' => 'payever/classes/ActionForm/PayeverFormBase.php',
-        'PayeverFormCancel' => 'payever/classes/ActionForm/PayeverFormCancel.php',
-        'PayeverFormCapture' => 'payever/classes/ActionForm/PayeverFormCapture.php',
-        'PayeverFormClaim' => 'payever/classes/ActionForm/PayeverFormClaim.php',
-        'PayeverFormRefund' => 'payever/classes/ActionForm/PayeverFormRefund.php',
-        'PayeverFormInvoice' => 'payever/classes/ActionForm/PayeverFormInvoice.php',
-        'PayeverFormSettle' => 'payever/classes/ActionForm/PayeverFormSettle.php',
-        'PayeverActionQueueManager' => 'payever/classes/Management/PayeverActionQueueManager.php',
-        'PayeverActionQueueManagerTrait' => 'payever/classes/Management/PayeverActionQueueManagerTrait.php',
-        'PayeverSubscriptionManager' => 'payever/classes/Management/PayeverSubscriptionManager.php',
-        'PayeverSubscriptionManagerTrait' => 'payever/classes/Management/PayeverSubscriptionManagerTrait.php',
-        'PayeverExportManager' => 'payever/classes/Management/PayeverExportManager.php',
-        'PayeverOptionManager' => 'payever/classes/Management/PayeverOptionManager.php',
-        'PayeverConfigHelper' => 'payever/classes/Helper/PayeverConfigHelper.php',
-        'PayeverSeoHelper' => 'payever/classes/Helper/PayeverSeoHelper.php',
-        'PayeverProductHelper' => 'payever/classes/Helper/PayeverProductHelper.php',
-        'PayeverProductHelperTrait' => 'payever/classes/Helper/PayeverProductHelperTrait.php',
-        'PayeverProductTransformer' => 'payever/classes/Transformer/PayeverProductTransformer.php',
-        'PayeverProductTransformerTrait' => 'payever/classes/Transformer/PayeverProductTransformerTrait.php',
-        'PayeverInventoryTransformer' => 'payever/classes/Transformer/PayeverInventoryTransformer.php',
-        'PayeverInventoryTransformerTrait' => 'payever/classes/Transformer/PayeverInventoryTransformerTrait.php',
-        'PayeverProductsIterator' => 'payever/classes/Iterator/PayeverProductsIterator.php',
-        'PayeverInventoryIterator' => 'payever/classes/Iterator/PayeverInventoryIterator.php',
-        'PayeverSynchronizationManager' => 'payever/classes/Management/PayeverSynchronizationManager.php',
-        'PayeverSynchronizationManagerTrait' => 'payever/classes/Management/PayeverSynchronizationManagerTrait.php',
-        'PayeverGatewayManager' => 'payever/classes/Management/PayeverGatewayManager.php',
-        'PayeverGatewayManagerTrait' => 'payever/classes/Management/PayeverGatewayManagerTrait.php',
-        'PayeverSyncManager' => 'payever/classes/Management/PayeverSyncManager.php',
-        'PayeverSyncManagerTrait' => 'payever/classes/Management/PayeverSyncManagerTrait.php',
-        'PayeverImportManager' => 'payever/classes/Management/PayeverImportManager.php',
-        'PayeverAbstractActionHandler' => 'payever/classes/ActionHandler/PayeverAbstractActionHandler.php',
-        'PayeverUpdateProductActionHandler' => 'payever/classes/ActionHandler/PayeverUpdateProductActionHandler.php',
-        'PayeverSetInventoryActionHandler' => 'payever/classes/ActionHandler/PayeverSetInventoryActionHandler.php',
-        'PayeverAddInventoryActionHandler' => 'payever/classes/ActionHandler/PayeverAddInventoryActionHandler.php',
-        'PayeverSubtractInventoryActionHandler' => 'payever/classes/ActionHandler/PayeverSubtractInventoryActionHandler.php',
-        'PayeverCreateProductActionHandler' => 'payever/classes/ActionHandler/PayeverCreateProductActionHandler.php',
-        'PayeverDeleteProductActionHandler' => 'payever/classes/ActionHandler/PayeverDeleteProductActionHandler.php',
-        'PayeverPaymentUrlBuilder' => 'payever/classes/Payment/PayeverPaymentUrlBuilder.php',
-        'PayeverPaymentV3RequestBuilderTrait' => 'payever/classes/Payment/PayeverPaymentV3RequestBuilderTrait.php',
-        'PayeverPaymentV3RequestBuilder' => 'payever/classes/Payment/PayeverPaymentV3RequestBuilder.php',
-        'PayeverInvoiceGenerator' => 'payever/classes/Generator/PayeverInvoiceGenerator.php',
-        'PayeverInvoiceManager' => 'payever/classes/Management/PayeverInvoiceManager.php',
-        'PayeverInvoiceManagerTrait' => 'payever/classes/Management/PayeverInvoiceManagerTrait.php',
-        'PayeverSyncQueueConsumeCommand' => 'payever/commands/PayeverSyncQueueConsumeCommand.php',
-        'PayeverAbstractModuleCommand' => 'payever/commands/PayeverAbstractModuleCommand.php',
-        'PayeverModuleActivateCommand' => 'payever/commands/PayeverModuleActivateCommand.php',
-        'PayeverModuleDeactivateCommand' => 'payever/commands/PayeverModuleDeactivateCommand.php',
-
-        'payeverordertab' => 'payever/controllers/admin/payeverordertab.php',
-        'payever_config' => 'payever/controllers/admin/payever_config.php',
-        'payeverproductsexport' => 'payever/controllers/admin/payeverproductsexport.php',
-        'payeverStandardDispatcher' => 'payever/controllers/payeverstandarddispatcher.php',
-        'payeverExpressDispatcher' => 'payever/controllers/payeverexpressdispatcher.php',
-        'payevercompanysearch' => 'payever/controllers/payevercompanysearch.php',
-        'payeverFinexpressDispatcher' => 'payever/controllers/payeverfinexpressdispatcher.php',
-        'payeverpaymentpending' => 'payever/controllers/payeverpaymentpending.php',
-        'payeverProductsImport' => 'payever/controllers/payeverproductsimport.php',
-        'payeverShowLogs' => 'payever/controllers/payevershowlogs.php',
-        'payeverclaim' => 'payever/controllers/payeverclaim.php',
-        'payeverinvoices' => 'payever/models/payeverinvoices.php',
-        'payeverinvoicelist' => 'payever/models/payeverinvoicelist.php',
-        'payeverorderaction' => 'payever/models/payeverorderaction.php',
+        'oxviewconfig' => 'payever/core/payeveroxviewconfig',
+        'oxarticle'    => 'payever/models/payeveroxarticle',
+        'oxorder'      => 'payever/models/payeveroxorder',
+        'oxpayment'    => 'payever/models/payeveroxpayment',
+        'oxpaymentlist' => 'payever/models/payeveroxpaymentlist',
+        'OxidEsales\\Eshop\\Application\\Model\\User\\UserUpdatableFields' => 'payever/models/user/userupdatablefields',
     ],
     'events' => [
-        /**
-         * @see PayeverInstaller::onActivate()
-         */
-        'onActivate' => 'PayeverInstaller::onActivate',
-        /**
-         * @see PayeverInstaller::onDeactivate()
-         */
+        'onActivate'   => 'PayeverInstaller::onActivate',
         'onDeactivate' => 'PayeverInstaller::onDeactivate',
     ],
     'blocks' => [
@@ -300,3 +136,48 @@ $aModule = [
         'payever_payment_pending.tpl' => 'payever/views/page/checkout/payment_pending.tpl',
     ],
 ];
+
+// $oxidVersion is detected at the top of this file (before $sMetadataVersion).
+
+// OXID 6: switch oxorder to the compatibility shim (keeps old-style file-path extend).
+if ($oxidVersion === 6) {
+    $aModule['extend']['oxorder'] = 'payever/models/payeveroxordercompatible';
+}
+
+// OXID 6+: register controllers. MetaDataSchemaValidator in OXID 6.4+ rejects
+// 'controllers' in v1.2 metadata; the v2.0 version declared above allows it.
+// OXID 6.8 extend block stays old-style (file paths) because backwardsCompatibleCreate-
+// ClassExtension() builds the include path from the value — bare class names break it.
+if ($oxidVersion >= 6) {
+    $aModule['controllers'] = [
+        'payever_config'              => 'payever_config',
+        'payeverordertab'             => 'payeverordertab',
+        'payeverproductsexport'       => 'payeverproductsexport',
+        'payeverstandarddispatcher'   => 'payeverstandarddispatcher',
+        'payeverexpressdispatcher'    => 'payeverexpressdispatcher',
+        'payeverfinexpressdispatcher' => 'payeverfinexpressdispatcher',
+        'payevercompanysearch'        => 'payevercompanysearch',
+        'payeverpaymentpending'       => 'payeverpaymentpending',
+        'payeverproductsimport'       => 'payeverproductsimport',
+        'payevershowlogs'             => 'payevershowlogs',
+        'payeverclaim'                => 'payeverclaim',
+    ];
+}
+
+// OXID 7+: replace the entire extend block with FQCN class names (required by
+// ModuleChainsGenerator's non-backwards-compatible path via Composer autoloader).
+if ($oxidVersion >= 7) {
+    $aModule['extend'] = [
+        \OxidEsales\Eshop\Application\Controller\OrderController::class            => payeverOrder::class,
+        \OxidEsales\Eshop\Application\Controller\PaymentController::class          => payeverPayment::class,
+        \OxidEsales\Eshop\Application\Controller\Admin\OrderList::class            => payeverOrderList::class,
+        \OxidEsales\Eshop\Application\Model\Order::class                           => payeverOxOrderCompatible::class,
+        \OxidEsales\Eshop\Application\Model\Payment::class                         => payeverOxPayment::class,
+        \OxidEsales\Eshop\Application\Model\PaymentList::class                     => payeverOxPaymentList::class,
+        \OxidEsales\Eshop\Core\ViewConfig::class                                   => payeveroxviewconfig::class,
+        \OxidEsales\Eshop\Application\Model\Article::class                         => payeverOxArticle::class,
+        \OxidEsales\Eshop\Application\Model\User\UserUpdatableFields::class        => userupdatablefields::class,
+        \OxidEsales\Eshop\Application\Controller\UserController::class             => payeverusercontroller::class,
+        \OxidEsales\Eshop\Application\Controller\AccountUserController::class      => payeverusercontroller::class,
+    ];
+}

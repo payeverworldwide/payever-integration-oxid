@@ -16,7 +16,7 @@ class payeverusercontroller extends payeverusercontroller_parent
         $this->_aViewData['companySearch'] = $companySearch;
         $this->_aViewData['companySearchType'] = $companySearchType;
 
-        $user = $this->getSession()->getBasket()->getBasketUser();
+        $user = \OxidEsales\Eshop\Core\Registry::getSession()->getBasket()->getBasketUser();
         if ($user) {
             $oxCountry = $this->getCountryFactory()->create();
             $oxCountry->load($user->getFieldData('oxcountryid'));
@@ -44,7 +44,7 @@ class payeverusercontroller extends payeverusercontroller_parent
             }
 
             if ($availableCountries['iso2']) {
-                $oLang = oxRegistry::getLang();
+                $oLang = \OxidEsales\Eshop\Core\Registry::getLang();
                 $this->_aViewData['availableCountries'] = json_encode($availableCountries);
                 $this->_aViewData['oLang'] = $oLang;
                 $this->_aViewData['iLang'] = $oLang->getTplLanguage();

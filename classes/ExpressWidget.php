@@ -5,7 +5,9 @@ use OxidEsales\Eshop\Core\Config;
 
 class ExpressWidget
 {
+    use PayeverOxRequestTrait;
     use DryRunTrait;
+    use PayeverProductHelperTrait;
 
     const WIDGET_ACTIVE = true;
     const LIVE_WIDGET_JS = 'https://widgets.payever.org/finance-express/widget.min.js';
@@ -94,7 +96,7 @@ class ExpressWidget
      */
     public function __construct(array $args)
     {
-        if (isset($args['articleNumber'])) {
+        if (!empty($args['articleNumber'])) {
             $this->productId = $args['articleNumber'];
             $this->prepareWidgetProduct($this->productId);
 
@@ -131,7 +133,7 @@ class ExpressWidget
      */
     private function prepareWidgetProduct($productId)
     {
-        $product         = $this->getProductByNumber($productId);
+        $product         = $this->getProductHelper()->getProductBySku($productId);
         $productTitle    = $product->oxarticles__oxtitle->rawValue;
         $productPrice    = (float) $product->oxarticles__oxprice->rawValue;
 
@@ -153,7 +155,7 @@ class ExpressWidget
      */
     private function prepareWidgetCart()
     {
-        $session = oxRegistry::getSession();
+        $session = \OxidEsales\Eshop\Core\Registry::getSession();
         $basket = $session->getBasket();
         $aBasketContents = $basket->getContents();
 
@@ -334,25 +336,13 @@ class ExpressWidget
         return '';
     }
 
-    /**
-     * @param $articleNumber
-     *
-     * @return oxarticle|string
-     */
-    private function getProductByNumber($articleNumber)
-    {
-        $product = oxNew('oxarticle');
-        $product->assignRecord($product->buildSelectString(['oxartnum' => $articleNumber]));
-
-        return $product;
-    }
-
     private function generateCallbackUrl($status, $params = [])
     {
         $urlData = [
-            'cl'                  => 'payeverfinexpressDispatcher',
+            'payment_id'          => '--PAYMENT-ID--',
+            'cl'                  => 'payeverFinexpressDispatcher',
             'fnc'                 => 'payeverWidget' . ucfirst($status),
-            'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+            'sDeliveryAddressMD5' => $this->getRequest()->getRequestParameter('sDeliveryAddressMD5'),
         ];
 
         $urlData = array_merge($urlData, $params);
@@ -367,7 +357,7 @@ class ExpressWidget
     private function getConfig()
     {
         if (!$this->config) {
-            $this->config = oxRegistry::getConfig();
+            $this->config = \OxidEsales\Eshop\Core\Registry::getConfig();
         }
 
         return $this->config;

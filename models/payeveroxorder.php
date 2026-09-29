@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -69,10 +69,10 @@ class payeverOxOrder extends payeverOxOrder_parent
         }
 
         // check if this order is already stored
-        $sGetChallenge = oxRegistry::getSession()->getVariable('sess_challenge');
-        if ($this->_checkOrderExist($sGetChallenge)) {
+        $sGetChallenge = \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('sess_challenge');
+        if ($this->checkOrderExist($sGetChallenge)) {
             $this->getLogger()->info('Order is already exists');
-            oxRegistry::getUtils()->logger('BLOCKER');
+            \OxidEsales\Eshop\Core\Registry::getUtils()->logger('BLOCKER');
             // we might use this later, this means that somebody klicked like mad on order button
             return self::ORDER_STATE_ORDEREXISTS;
         }
@@ -91,22 +91,22 @@ class payeverOxOrder extends payeverOxOrder_parent
         }
 
         // copies user info
-        $this->_setUser($oUser);
+        $this->assignUserInformation($oUser);
 
         // copies basket info
-        $this->_loadFromBasket($oBasket);
+        $this->loadFromBasket($oBasket);
 
         // payment information
-        $oUserPayment = $this->_setPayment($oBasket->getPaymentId());
+        $oUserPayment = $this->setPayment($oBasket->getPaymentId());
 
         // set folder information, if order is new
         // #M575 in recalculating order case folder must be the same as it was
         if (!$blRecalculatingOrder) {
-            $this->_setFolder();
+            $this->setFolder();
         }
 
         // marking as not finished
-        $this->_setOrderStatus('NOT_FINISHED');
+        $this->setOrderStatus('NOT_FINISHED');
 
         //saving all order data to DB
         $this->save();
@@ -114,7 +114,7 @@ class payeverOxOrder extends payeverOxOrder_parent
         // executing payment (on failure deletes order and returns error code)
         // in case when recalculating order, payment execution is skipped
         if (!$blRecalculatingOrder) {
-            $blRet = $this->_executePayment($oBasket, $oUserPayment);
+            $blRet = $this->executePayment($oBasket, $oUserPayment);
             if ($blRet !== true) {
                 $this->getLogger()->warning('Execute payment failed');
                 return $blRet;
@@ -154,9 +154,9 @@ class payeverOxOrder extends payeverOxOrder_parent
         $oxidOrderStatus
     ) {
         if (!$this->oxorder__oxordernr->value) {
-            $this->_setNumber();
+            $this->setNumber();
         } else {
-            oxNew('oxCounter')->update($this->_getCounterIdent(), $this->oxorder__oxordernr->value);
+            oxNew('oxCounter')->update($this->getCounterIdent(), $this->oxorder__oxordernr->value);
         }
 
         $useTsProtection = method_exists($oBasket, 'getTsProductId')
@@ -175,20 +175,20 @@ class payeverOxOrder extends payeverOxOrder_parent
         if ($fetchMode !== 'iframe') {
             $this->getLogger()->debug('Cleanup session');
             // deleting remark info only when order is finished
-            oxRegistry::getSession()->deleteVariable('ordrem');
-            oxRegistry::getSession()->deleteVariable('stsprotection');
+            \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('ordrem');
+            \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('stsprotection');
         }
 
-        $sPid = $this->getSession()->getVariable('oxidpayever_payment_id');
-        $this->getSession()->deleteVariable('oxidpayever_payment_id');
+        $sPid = \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('oxidpayever_payment_id');
+        \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('oxidpayever_payment_id');
 
         //#4005: Order creation time is not updated when order processing is complete
         if (!$blRecalculatingOrder) {
-            $this->_updateOrderDate();
+            $this->updateOrderDate();
         }
 
         // updating order trans status (success status)
-        $this->_setOrderStatus($oxidOrderStatus);
+        $this->setOrderStatus($oxidOrderStatus);
         $userPayment = oxNew('oxUserPayment');
         $userPayment->load((string)$this->oxorder__oxpaymentid);
         $aParams = [
@@ -201,21 +201,61 @@ class payeverOxOrder extends payeverOxOrder_parent
         $oBasket->setOrderId($this->getId());
 
         // updating wish lists
-        $this->_updateWishlist($oBasket->getContents(), $oUser);
+        $this->updateWishlist($oBasket->getContents(), $oUser);
 
         // updating users notice list
-        $this->_updateNoticeList($oBasket->getContents(), $oUser);
+        $this->updateNoticeList($oBasket->getContents(), $oUser);
 
         // marking vouchers as used and sets them to $this->_aVoucherList (will be used in order email)
         // skipping this action in case of order recalculation
         if (!$blRecalculatingOrder) {
-            $this->_markVouchers($oBasket, $oUser);
+            $this->markVouchers($oBasket, $oUser);
 
             // send order by email to shop owner and current user
             // skipping this action in case of order recalculation
-            $this->_sendOrderByEmail($oUser, $oBasket, $oUserPayment);
+            $this->sendOrderByEmail($oUser, $oBasket, $oUserPayment);
         }
 
         return self::ORDER_STATE_OK;
+    }
+
+    /**
+     * OXID < 6 only has _checkOrderExist(). Provide the non-underscore version so our
+     * finalizeOrder() call resolves, and delegate _checkOrderExist() back to it.
+     */
+    public function checkOrderExist($sGetChallenge)
+    {
+        return parent::_checkOrderExist($sGetChallenge);
+    }
+
+    protected function _checkOrderExist($sGetChallenge)
+    {
+        return $this->checkOrderExist($sGetChallenge);
+    }
+
+    /**
+     * OXID < 6 only has _validateOrder().
+     */
+    public function validateOrder($oBasket, $oUser)
+    {
+        return parent::_validateOrder($oBasket, $oUser);
+    }
+
+    protected function _validateOrder($oBasket, $oUser)
+    {
+        return $this->validateOrder($oBasket, $oUser);
+    }
+
+    /**
+     * OXID < 6 only has _setOrderStatus().
+     */
+    public function setOrderStatus($status)
+    {
+        parent::_setOrderStatus($status);
+    }
+
+    protected function _setOrderStatus($status)
+    {
+        $this->setOrderStatus($status);
     }
 }

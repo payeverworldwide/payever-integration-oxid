@@ -1,0 +1,10 @@
+{% extends "page/checkout/basket.html.twig" %}
+
+{% block checkout_basket_next_step_top %}
+    {{ parent() }}
+    {% if oxcmp_basket.getProductsCount() %}
+        {% if shouldShowExpressWidgetOnCart() %}
+            {{ renderShowExpressWidget()|raw }}
+        {% endif %}
+    {% endif %}
+{% endblock %}

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -9,6 +9,7 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
+use OxidEsales\Eshop\Core\DatabaseProvider;
 use Payever\Sdk\Payments\Enum\Status;
 use Payever\Sdk\Payments\Http\MessageEntity\RetrievePaymentResultEntity;
 use Payever\Sdk\Payments\Http\ResponseEntity\RetrievePaymentResponse;
@@ -22,6 +23,7 @@ use Payever\Sdk\Payments\Notification\MessageEntity\NotificationResultEntity;
  */
 class PayeverGatewayManager
 {
+    use PayeverOxRequestTrait;
     use DryRunTrait;
     use PayeverConfigTrait;
     use PayeverConfigHelperTrait;
@@ -78,10 +80,10 @@ class PayeverGatewayManager
     public function processGatewayReturn()
     {
         $config = $this->getConfig();
-        $paymentId = $config->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         if (!$paymentId) {
-            $baskedOxid = $config->getRequestParameter('basketoxid');
-            $token = $config->getRequestParameter('token');
+            $baskedOxid = $this->getRequest()->getRequestParameter('basketoxid');
+            $token = $this->getRequest()->getRequestParameter('token');
             $message = 'Token is invalid';
             if ($this->getConfigHelper()->getHash($baskedOxid) === $token) {
                 $message = 'Tokens are matched';
@@ -92,19 +94,19 @@ class PayeverGatewayManager
             }
             $this->getLogger()->debug($message);
         }
-        $sts = $config->getRequestParameter(PayeverPaymentUrlBuilder::STATUS_PARAM);
+        $sts = $this->getRequest()->getRequestParameter(PayeverPaymentUrlBuilder::STATUS_PARAM);
 
         $this->getLogger()->info(sprintf('Handling callback type: %s, paymentId: %s', $sts, $paymentId), $_GET);
         $fetchDest = $this->getRequestHelper()->getHeader('sec-fetch-dest');
         $this->getLogger()->debug(sprintf('Hit with fetch dest: %s', $fetchDest));
 
         if ($sts == 'cancel') {
-            $lang = $config->getRequestParameter(PayeverPaymentUrlBuilder::LANG_PARAM)
-                ?: oxRegistry::getLang()->getTplLanguage();
+            $lang = $this->getRequest()->getRequestParameter(PayeverPaymentUrlBuilder::LANG_PARAM)
+                ?: \OxidEsales\Eshop\Core\Registry::getLang()->getTplLanguage();
             if (!$lang) {
                 $lang = self::DEFAULT_LANG;
             }
-            $message = oxRegistry::getLang()->translateString(
+            $message = \OxidEsales\Eshop\Core\Registry::getLang()->translateString(
                 'payeverPaymentCancel',
                 $lang,
                 false
@@ -120,27 +122,27 @@ class PayeverGatewayManager
             $urlData = [
                 'cl' => 'payeverpaymentpending',
                 'payment_id' => $paymentId,
-                'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+                'sDeliveryAddressMD5' => $this->getRequest()->getRequestParameter('sDeliveryAddressMD5'),
             ];
 
             $sUrl = $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlData);
             $this->getUtils()->redirect($sUrl, false);
         }
 
-        $_POST['sDeliveryAddressMD5'] = $config->getRequestParameter('sDeliveryAddressMD5');
-        if (!$config->getRequestParameter('ord_agb') && $config->getConfigParam('blConfirmAGB')) {
+        $_POST['sDeliveryAddressMD5'] = $this->getRequest()->getRequestParameter('sDeliveryAddressMD5');
+        if (!$this->getRequest()->getRequestParameter('ord_agb') && $config->getConfigParam('blConfirmAGB')) {
             $_POST['ord_agb'] = 1;
         }
         if ($config->getConfigParam('blEnableIntangibleProdAgreement')) {
-            if (!$config->getRequestParameter('oxdownloadableproductsagreement')) {
+            if (!$this->getRequest()->getRequestParameter('oxdownloadableproductsagreement')) {
                 $_POST['oxdownloadableproductsagreement'] = 1;
             }
-            if (!$config->getRequestParameter('oxserviceproductsagreement')) {
+            if (!$this->getRequest()->getRequestParameter('oxserviceproductsagreement')) {
                 $_POST['oxserviceproductsagreement'] = 1;
             }
         }
 
-        $payment = ['paymentId' => $paymentId, 'paymentSts' => $config->getRequestParameter('sts')];
+        $payment = ['paymentId' => $paymentId, 'paymentSts' => $this->getRequest()->getRequestParameter('sts')];
 
         $this->getLogger()->info('Waiting for lock', $payment);
 
@@ -162,12 +164,12 @@ class PayeverGatewayManager
                 if ($payeverStatus == Status::STATUS_DECLINED) {
                     $messageType = 'payeverPaymentDeclined';
                 }
-                $lang = $config->getRequestParameter(PayeverPaymentUrlBuilder::LANG_PARAM) ?:
-                    oxRegistry::getLang()->getTplLanguage();
+                $lang = $this->getRequest()->getRequestParameter(PayeverPaymentUrlBuilder::LANG_PARAM) ?:
+                    \OxidEsales\Eshop\Core\Registry::getLang()->getTplLanguage();
                 if (!$lang) {
                     $lang = self::DEFAULT_LANG;
                 }
-                $message = oxRegistry::getLang()->translateString(
+                $message = \OxidEsales\Eshop\Core\Registry::getLang()->translateString(
                     $messageType,
                     $lang,
                     false
@@ -371,7 +373,7 @@ class PayeverGatewayManager
                         $this->ensureUserAndBasketLoaded($payment);
                         $this->webRedirect(
                             $this->getConfig()->getSslShopUrl()
-                            . '?cl=payeverStandardDispatcher&fnc=redirectToThankYou',
+                            . '?cl=payeverstandarddispatcher&fnc=redirectToThankYou',
                             $fetchDest
                         ); // exit
                     }
@@ -402,6 +404,10 @@ class PayeverGatewayManager
                             !$invoiceManager->hasInvoice($oOrder)
                         ) {
                             $invoiceManager->addInvoice($oOrder);
+                            $this->getLogger()->info(
+                                sprintf('Invoice has been created for order #%s', $oOrder->getId()),
+                                $payment
+                            );
                         }
                     }
                 }
@@ -421,13 +427,13 @@ class PayeverGatewayManager
                         echo json_encode(['result' => 'success', 'message' => 'Order is ' . $orderAction]);
                     } else {
                         $sUrl = $this->getConfig()->getSslShopUrl();
-                        $sUrl .= '?cl=payeverStandardDispatcher&fnc=redirectToThankYou';
+                        $sUrl .= '?cl=payeverstandarddispatcher&fnc=redirectToThankYou';
 
                         if ($sts == 'pending') {
                             $urlData = [
                                 'cl' => 'payeverpaymentpending',
                                 'payment_id' => $paymentId,
-                                'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
+                                'sDeliveryAddressMD5' => $this->getRequest()->getRequestParameter('sDeliveryAddressMD5'),
                             ];
 
                             $sUrl = $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlData);
@@ -456,10 +462,7 @@ class PayeverGatewayManager
         } catch (Exception $exception) {
             $this->getLogger()->error(
                 sprintf('Payment unlocked by exception: %s', $exception->getMessage()),
-                [
-                    'trace' => $exception->getTraceAsString(),
-                    'payment' => $payment,
-                ]
+                $payment
             );
 
             $payment['errorMessage'] = $exception->getMessage();
@@ -705,6 +708,18 @@ class PayeverGatewayManager
      */
     private function getUserByBasketId($basketId)
     {
+        if (PayeverConfig::getOxidMajorVersion() >= 7) {
+            $aWhere = ['oxuserbaskets.oxid' => $basketId, 'oxuserbaskets.oxtitle' => 'savedbasket'];
+            $oUserBasket = oxNew(\OxidEsales\Eshop\Application\Model\UserBasket::class);
+            $query = $oUserBasket->buildSelectString($aWhere);
+            $record = DatabaseProvider::getDb(DatabaseProvider::FETCH_MODE_ASSOC)->select($query);
+            if ($record && $record->count() > 0) {
+                $oUserBasket->assign($record->fields);
+            }
+
+            return $oUserBasket->oxuserbaskets__oxuserid;
+        }
+
         /** @var oxuserbasket $oUserBasket */
         $oUserBasket = oxNew('oxuserbasket');
         $aWhere = ['oxuserbaskets.oxid' => $basketId, 'oxuserbaskets.oxtitle' => 'savedbasket'];
@@ -793,7 +808,7 @@ class PayeverGatewayManager
         $oOrder = $this->getOxOrder();
         //finalizing ordering process (validating, storing order into DB, executing payment, setting status ...)
         if ($oOrder instanceof payeverOxOrderCompatible) {
-            $orderStateId = $oOrder->setOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, false);
+            $orderStateId = $oOrder->setPayeverOrderStatus($oxidOrderStatus)->finalizeOrder($oBasket, $oUser, false);
         } else {
             $orderStateId = $oOrder->finalizeOrder($oBasket, $oUser, false, $oxidOrderStatus);
         }

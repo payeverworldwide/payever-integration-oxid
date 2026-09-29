@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -18,14 +18,14 @@ class payeverPayment extends payeverPayment_parent
 {
     public function render()
     {
-        $clearSession = oxRegistry::getConfig()->getRequestParameter('clearIframeSession');
+        $clearSession = \OxidEsales\Eshop\Core\Registry::getRequest()->getRequestParameter('clearIframeSession');
 
         if ($clearSession) {
-            $this->getSession()->deleteVariable('oxidpayever_payment_view_type');
+            \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('oxidpayever_payment_view_type');
         }
 
-        $this->getSession()->deleteVariable('oxidpayever_payment_view_iframe_url');
-        $this->getSession()->deleteVariable('oxidpayever_payment_view_type');
+        \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('oxidpayever_payment_view_iframe_url');
+        \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('oxidpayever_payment_view_type');
 
         return parent::render();
     }

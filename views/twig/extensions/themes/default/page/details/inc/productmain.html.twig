@@ -1,0 +1,10 @@
+{# OXID6: src/payever/views/blocks/page/details/inc/productmain.tpl #}
+{% extends "page/details/inc/productmain.html.twig" %}
+
+{% block details_productmain_tobasket %}
+    {{ parent() }}
+    {% if shouldShowExpressWidgetOnProduct() and oDetailsProduct.getStockStatus() != -1 %}
+        {% set articleNum = oDetailsProduct.oxarticles__oxartnum.value %}
+        {{ renderShowExpressWidget(articleNum)|raw }}
+    {% endif %}
+{% endblock %}

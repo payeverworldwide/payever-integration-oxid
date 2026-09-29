@@ -6,6 +6,8 @@
  */
 class payeverproductsexport extends oxAdminView
 {
+    use PayeverOxRequestTrait;
+    use PayeverOxConfigTrait;
     use PayeverConfigHelperTrait;
 
     /** @var PayeverExportManager */
@@ -27,7 +29,7 @@ class payeverproductsexport extends oxAdminView
     {
         $externalId = $this->getConfigHelper()->getProductsSyncExternalId();
 
-        return $externalId && $this->getConfig()->getRequestParameter('externalId');
+        return $externalId && $this->getRequest()->getRequestParameter('externalId');
     }
 
     /**
@@ -37,8 +39,8 @@ class payeverproductsexport extends oxAdminView
     public function export()
     {
         $this->exportManager->export(
-            (int) $this->getConfig()->getRequestParameter('page'),
-            (int) $this->getConfig()->getRequestParameter('aggregate')
+            (int) $this->getRequest()->getRequestParameter('page'),
+            (int) $this->getRequest()->getRequestParameter('aggregate')
         );
         $result = \json_encode([
             'next_page' => $this->exportManager->getNextPage(),

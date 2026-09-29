@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -17,6 +17,7 @@ use Payever\Sdk\Payments\Enum\Status;
  */
 class PayeverPaymentUrlBuilder
 {
+    use PayeverOxRequestTrait;
     use PayeverConfigTrait;
 
     const STATUS_PARAM = 'sts';
@@ -39,12 +40,12 @@ class PayeverPaymentUrlBuilder
     public function generateCallbackUrl($status, $params = [])
     {
         $urlData = array_merge([
-            'cl' => 'payeverStandardDispatcher',
+            'cl' => 'payeverstandarddispatcher',
             'fnc' => 'payeverGatewayReturn',
             self::STATUS_PARAM => $status,
             'payment_id' => '--PAYMENT-ID--',
-            'sDeliveryAddressMD5' => $this->getConfig()->getRequestParameter('sDeliveryAddressMD5'),
-            self::LANG_PARAM => oxRegistry::getLang()->getTplLanguage(),
+            'sDeliveryAddressMD5' => $this->getRequest()->getRequestParameter('sDeliveryAddressMD5'),
+            self::LANG_PARAM => \OxidEsales\Eshop\Core\Registry::getLang()->getTplLanguage(),
         ], $params);
 
         return $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlData, "", "&");

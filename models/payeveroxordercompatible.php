@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -77,9 +77,9 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         }
 
         // check if this order is already stored
-        $sGetChallenge = oxRegistry::getSession()->getVariable('sess_challenge');
-        if ($this->_checkOrderExist($sGetChallenge)) {
-            oxRegistry::getUtils()->logger('BLOCKER');
+        $sGetChallenge = \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('sess_challenge');
+        if ($this->checkOrderExist($sGetChallenge)) {
+            \OxidEsales\Eshop\Core\Registry::getUtils()->logger('BLOCKER');
             // we might use this later, this means that somebody klicked like mad on order button
             return self::ORDER_STATE_ORDEREXISTS;
         }
@@ -96,22 +96,22 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         }
 
         // copies user info
-        $this->_setUser($oUser);
+        $this->callOxidOrderMethod('_setUser', 'assignUserInformation', $oUser);
 
         // copies basket info
-        $this->_loadFromBasket($oBasket);
+        $this->callOxidOrderMethod('_loadFromBasket', 'loadFromBasket', $oBasket);
 
         // payment information
-        $oUserPayment = $this->_setPayment($oBasket->getPaymentId());
+        $oUserPayment = $this->callOxidOrderMethod('_setPayment', 'setPayment', $oBasket->getPaymentId());
 
         // set folder information, if order is new
         // #M575 in recalculating order case folder must be the same as it was
         if (!$blRecalculatingOrder) {
-            $this->_setFolder();
+            $this->callOxidOrderMethod('_setFolder', 'setFolder');
         }
 
         // marking as not finished
-        $this->_setOrderStatus('NOT_FINISHED');
+        $this->callParentSetOrderStatus('NOT_FINISHED');
 
         //saving all order data to DB
         $this->save();
@@ -119,7 +119,7 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         // executing payment (on failure deletes order and returns error code)
         // in case when recalculating order, payment execution is skipped
         if (!$blRecalculatingOrder) {
-            $blRet = $this->_executePayment($oBasket, $oUserPayment);
+            $blRet = $this->callOxidOrderMethod('_executePayment', 'executePayment', $oBasket, $oUserPayment);
             if ($blRet !== true) {
                 return $blRet;
             }
@@ -146,9 +146,9 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
     private function finalizeOrderPostProcessing($oBasket, $blRecalculatingOrder, $oUser, $oUserPayment)
     {
         if (!$this->oxorder__oxordernr->value) {
-            $this->_setNumber();
+            $this->callOxidOrderMethod('_setNumber', 'setNumber');
         } else {
-            oxNew('oxCounter')->update($this->_getCounterIdent(), $this->oxorder__oxordernr->value);
+            oxNew('oxCounter')->update($this->getCounterIdent(), $this->oxorder__oxordernr->value);
         }
 
         $useTsProtection = method_exists($oBasket, 'getTsProductId')
@@ -166,21 +166,20 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         if ($fetchMode !== 'iframe') {
             $this->getLogger()->debug('Cleanup session');
             // deleting remark info only when order is finished
-            oxRegistry::getSession()->deleteVariable('ordrem');
-            oxRegistry::getSession()->deleteVariable('stsprotection');
+            \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('ordrem');
+            \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('stsprotection');
         }
 
-        $sPid = $this->getSession()->getVariable('oxidpayever_payment_id');
-        $this->getSession()->deleteVariable('oxidpayever_payment_id');
+        $sPid = \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('oxidpayever_payment_id');
+        \OxidEsales\Eshop\Core\Registry::getSession()->deleteVariable('oxidpayever_payment_id');
 
         //#4005: Order creation time is not updated when order processing is complete
         if (!$blRecalculatingOrder) {
-            $this->_updateOrderDate();
+            $this->callOxidOrderMethod('_updateOrderDate', 'updateOrderDate');
         }
 
         // updating order trans status (success status)
-        $oxidOrderStatus = $this->getOrderStatus();
-        $this->_setOrderStatus($oxidOrderStatus);
+        $this->callParentSetOrderStatus($this->getPayeverOrderStatus());
         $userPayment = oxNew('oxUserPayment');
         $userPayment->load((string)$this->oxorder__oxpaymentid);
         $aParams = [
@@ -193,20 +192,20 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
         $oBasket->setOrderId($this->getId());
 
         // updating wish lists
-        $this->_updateWishlist($oBasket->getContents(), $oUser);
+        $this->callOxidOrderMethod('_updateWishlist', 'updateWishlist', $oBasket->getContents(), $oUser);
 
         // updating users notice list
-        $this->_updateNoticeList($oBasket->getContents(), $oUser);
+        $this->callOxidOrderMethod('_updateNoticeList', 'updateNoticeList', $oBasket->getContents(), $oUser);
 
         // marking vouchers as used and sets them to $this->_aVoucherList (will be used in order email)
         // skipping this action in case of order recalculation
         if (!$blRecalculatingOrder) {
-            $this->_markVouchers($oBasket, $oUser);
+            $this->callOxidOrderMethod('_markVouchers', 'markVouchers', $oBasket, $oUser);
 
             if (!isset($_GET['skipEmail'])) {
                 // send order by email to shop owner and current user
                 // skipping this action in case of order recalculation
-                $this->_sendOrderByEmail($oUser, $oBasket, $oUserPayment);
+                $this->callOxidOrderMethod('_sendOrderByEmail', 'sendOrderByEmail', $oUser, $oBasket, $oUserPayment);
             }
         }
 
@@ -217,7 +216,7 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
      * @param string $oxidOrderStatus
      * @return $this
      */
-    public function setOrderStatus($oxidOrderStatus)
+    public function setPayeverOrderStatus($oxidOrderStatus)
     {
         $this->oxidOrderStatus = $oxidOrderStatus;
 
@@ -227,8 +226,49 @@ class payeverOxOrderCompatible extends payeverOxOrderCompatible_parent
     /**
      * @return string
      */
-    private function getOrderStatus()
+    private function getPayeverOrderStatus()
     {
         return $this->oxidOrderStatus;
+    }
+
+    /**
+     * OXID 6.8 has _checkOrderExist() (protected); OXID 7 renamed it to checkOrderExist() (public).
+     * Provide the public non-underscore version so finalizeOrder() works on both.
+     * No _checkOrderExist() override here — adding one removes the parent's default parameter value
+     * which triggers a PHP 8.0 deprecation warning at class-definition time, disrupting page rendering.
+     */
+    public function checkOrderExist($sGetChallenge = null)
+    {
+        return PayeverConfig::getOxidMajorVersion() >= 7
+            ? parent::checkOrderExist($sGetChallenge)
+            : parent::_checkOrderExist($sGetChallenge);
+    }
+
+    /**
+     * OXID 6.8 has _setOrderStatus() (protected); OXID 7 renamed it to setOrderStatus() (public).
+     */
+    private function callParentSetOrderStatus($status)
+    {
+        if (PayeverConfig::getOxidMajorVersion() >= 7) {
+            parent::setOrderStatus($status);
+        } else {
+            parent::_setOrderStatus($status);
+        }
+    }
+
+    /**
+     * OXID 7 renamed many Order methods, removing the underscore prefix.
+     * This helper resolves the correct name and calls it on $this so all
+     * visibility levels (protected in OXID 6, public in OXID 7) are accessible.
+     *
+     * @param string $method6 method name on OXID 6.8 (underscore-prefixed)
+     * @param string $method7 method name on OXID 7+ (no underscore)
+     * @param mixed  ...$args arguments forwarded to the method
+     * @return mixed
+     */
+    private function callOxidOrderMethod($method6, $method7, ...$args)
+    {
+        $method = PayeverConfig::getOxidMajorVersion() >= 7 ? $method7 : $method6;
+        return $this->$method(...$args);
     }
 }

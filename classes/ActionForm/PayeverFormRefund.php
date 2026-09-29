@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -49,7 +49,7 @@ class PayeverFormRefund extends PayeverFormBase
         $amount = $this->getSentAmount(
             $order,
             payeverorderaction::ACTION_SHIPPING_GOODS,
-            payeverOxArticle::FIELD_SHIPPED
+            PayeverActionTypeInterface::FIELD_SHIPPED
         );
 
         $method = $order->getFieldData('oxpaymenttype');
@@ -75,7 +75,7 @@ class PayeverFormRefund extends PayeverFormBase
             //Or shipping by items in progress
             if (
                 $article->getFieldData($this->getActionField()) ||
-                $article->getFieldData(payeverOxArticle::FIELD_SHIPPED) && $shippingAllow['enabled']
+                $article->getFieldData(PayeverActionTypeInterface::FIELD_SHIPPED) && $shippingAllow['enabled']
             ) {
                 $allow = false;
                 break;
@@ -114,7 +114,7 @@ class PayeverFormRefund extends PayeverFormBase
      */
     public function getArticleAvailableQnt($article)
     {
-        $qnt = $article->getFieldData(payeverOxArticle::FIELD_SHIPPED);
+        $qnt = $article->getFieldData(PayeverActionTypeInterface::FIELD_SHIPPED);
 
         $method = $article->getOrder()->getFieldData('oxpaymenttype');
         if ($method === 'oxpe_santander_factoring_de') {
@@ -137,6 +137,6 @@ class PayeverFormRefund extends PayeverFormBase
      */
     public function getActionField()
     {
-        return payeverOxArticle::FIELD_REFUNDED;
+        return PayeverActionTypeInterface::FIELD_REFUNDED;
     }
 }

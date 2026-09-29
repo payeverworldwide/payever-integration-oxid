@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -32,7 +32,7 @@ trait PayeverOxConfigTrait
     public function getConfig()
     {
         return null === $this->config
-            ? $this->config = oxRegistry::getConfig()
+            ? $this->config = \OxidEsales\Eshop\Core\Registry::getConfig()
             : $this->config;
     }
 }

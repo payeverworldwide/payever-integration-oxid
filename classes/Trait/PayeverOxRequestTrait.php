@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -31,14 +31,8 @@ trait PayeverOxRequestTrait
      */
     public function getRequest()
     {
-        if (method_exists('oxRegistry', 'getRequest')) {
-            return null === $this->request
-                ? $this->request = oxRegistry::getRequest()
-                : $this->request;
-        }
-
         return null === $this->request
-            ? $this->request = oxRegistry::getConfig()
+            ? $this->request = \OxidEsales\Eshop\Core\Registry::getRequest()
             : $this->request;
     }
 }

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -23,7 +23,7 @@ class PayeverPluginCommandExecutor implements PluginCommandExecutorInterface
         switch ($command->getName()) {
             case PluginCommandNameEnum::SET_SANDBOX_HOST:
                 $this->assertApiHostValid($command->getValue());
-                oxRegistry::getConfig()->saveShopConfVar(
+                \OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar(
                     'arr',
                     PayeverConfig::VAR_SANDBOX,
                     [PayeverConfig::KEY_SANDBOX_URL => $command->getValue()]
@@ -31,14 +31,14 @@ class PayeverPluginCommandExecutor implements PluginCommandExecutorInterface
                 break;
             case PluginCommandNameEnum::SET_LIVE_HOST:
                 $this->assertApiHostValid($command->getValue());
-                oxRegistry::getConfig()->saveShopConfVar(
+                \OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar(
                     'arr',
                     PayeverConfig::VAR_LIVE,
                     [PayeverConfig::KEY_LIVE_URL => $command->getValue()]
                 );
                 break;
             case PluginCommandNameEnum::SET_API_VERSION:
-                oxRegistry::getConfig()->saveShopConfVar(
+                \OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar(
                     'arr',
                     PayeverConfig::VAR_PLUGIN_API_VERSION,
                     [PayeverConfig::KEY_PLUGIN_API_VERSION => $command->getValue()]

@@ -1,0 +1,130 @@
+{% set articleQntField = form.getActionField() %}
+<form class="partial-items-form" id="{{ action }}-items-form" action="{{ oViewConf.getSelfLink()|raw }}" method="post">
+    {{ oViewConf.getHiddenSid()|raw }}
+    <input type="hidden" name="cl" value="payeverordertab">
+    <input type="hidden" name="fnc" value="processAction">
+    <input type="hidden" name="oxid" value="{{ oxid }}">
+    <input type="hidden" name="type" value="item">
+    <input type="hidden" name="action" value="{{ action }}">
+    <input type="hidden" name="editval[oxorder__oxid]" value="{{ oxid }}">
+    <table cellspacing="0" cellpadding="0" border="0" style="width: 100%;">
+        {% for listitem in orderArticles %}
+
+            {% set availableQnt = form.getArticleAvailableQnt(listitem) %}
+            {% set completed = listitem.getFieldData(articleQntField) >= availableQnt %}
+
+            {% if availableQnt > 0 %}
+                <tr>
+                    <td style="padding: 2px 7px" width="20px">
+                        <input type="checkbox"
+                               name="itemActive[{{ listitem.getId() }}]"
+                               class="edittext order-item-checkbox"
+                               {% if completed %}disabled{% endif %}
+                               checked="checked"
+                               value="1"
+                        >
+                    </td>
+                    <td style="padding: 2px 7px">
+                        {{ listitem.getFieldData(articleQntField) }}/{{ availableQnt }}
+                    </td>
+                    <td style="padding: 2px 7px">
+                        {{ listitem.oxorderarticles__oxartnum.value }}
+                    </td>
+                    <td style="padding: 2px 7px">
+                        {{ listitem.oxorderarticles__oxtitle.getRawValue()|truncate(20, '')|striptags }}
+                        {% if listitem.oxwrapping__oxname.value is defined %}
+                            &nbsp;({{ listitem.oxwrapping__oxname.value }})&nbsp;
+                        {% endif %}
+                    </td>
+                    <td style="padding: 2px 7px; text-align: center">
+                        {% if listitem.getFieldData(articleQntField) >= availableQnt %}
+                            <span style="color: green">&#10004;</span>
+                        {% else %}
+                            <input type="number"
+                                   id="{{ action }}-items-qnt-{{ listitem.oxorderarticles__oxartnum.value }}"
+                                   name="itemQnt[{{ listitem.getId() }}]"
+                                   class="editinput order-item-qnt"
+                                   size="3"
+                                   style="padding: 3px;"
+                                   {% if completed %}disabled{% endif %}
+                                   step="1"
+                                   min="1"
+                                   required
+                                   max="{{ availableQnt - listitem.getFieldData(articleQntField) }}"
+                                   value="{{ availableQnt - listitem.getFieldData(articleQntField) }}"
+                            >
+                        {% endif %}
+                    </td>
+                    <td style="padding: 2px 7px">
+                        <input type="hidden" class="order-item-price" value="{{ listitem.oxorderarticles__oxbprice.value }}">
+                        {{ listitem.oxorderarticles__oxbprice.value }}
+                    </td>
+                    <td style="padding: 2px 7px;text-align: right">
+                        <span class="order-item-subtotal">{{ availableQnt * listitem.oxorderarticles__oxbprice.value }}</span>
+                    </td>
+                    <td style="padding: 2px 7px;text-align: right">
+                        {{ edit.oxorder__oxcurrency.value }}
+                    </td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+        {% if edit.oxorder__oxwrapcost.value %}
+            <tr>
+                <td colspan="3" style="padding: 2px 7px" width="20px">
+                    <input type="checkbox"
+                           name="itemActive[wrapcost]"
+                           class="edittext order-item-checkbox"
+                           checked="checked"
+                           {% if form.isWrapCostSent(edit) %}disabled{% endif %}
+                           value="1"
+                    >
+                </td>
+                <td colspan="3" style="padding: 2px 7px">
+                    {{ "GENERAL_WRAPPING"|translate }}
+                </td>
+                <td style="padding: 2px 7px; text-align: right">
+                    <input type="hidden" name="itemQnt[wrapcost]" class="order-item-qnt" value="1">
+                    <input type="hidden" name="itemAmount[wrapcost]" class="order-item-price" value="{{ edit.oxorder__oxwrapcost.value }}">
+                    <span class="order-item-subtotal">{{ edit.oxorder__oxwrapcost.value }}</span>
+                </td>
+                <td style="padding: 2px 7px; text-align: right">
+                    {{ edit.oxorder__oxcurrency.value }}
+                </td>
+            </tr>
+        {% endif %}
+        {% if edit.oxorder__oxgiftcardcost.value %}
+            <tr>
+                <td colspan="3" style="padding: 2px 7px" width="20px">
+                    <input type="checkbox"
+                           name="itemActive[giftcardcost]"
+                           class="edittext order-item-checkbox"
+                           checked="checked"
+                           {% if form.isGiftCardCostSent(edit) %}disabled{% endif %}
+                           value="1"
+                    >
+                </td>
+                <td colspan="3" style="padding: 2px 7px">
+                    {{ "GENERAL_CARD"|translate }}
+                </td>
+                <td style="padding: 2px 7px; text-align: right">
+                    <input type="hidden" name="itemQnt[giftcardcost]" class="order-item-qnt" value="1">
+                    <input type="hidden" name="itemAmount[giftcardcost]" class="order-item-price" value="{{ edit.oxorder__oxgiftcardcost.value }}">
+                    <span class="order-item-subtotal">{{ edit.oxorder__oxgiftcardcost.value }}</span>
+                </td>
+                <td style="padding: 2px 7px; text-align: right">
+                    {{ edit.oxorder__oxcurrency.value }}
+                </td>
+            </tr>
+        {% endif %}
+        <tr>
+            <td colspan="6" style="text-align: right;padding: 2px 7px;">{{ ("PAYEVER_" ~ actionLang ~ "_SUM")|translate }}:</td>
+            <td style="padding: 2px 7px;line-height: 25px;text-align: right">
+                <span class="partial-total-sum">{{ edit.getFormattedTotalOrderSum() }}</span>
+            </td>
+            <td style="padding: 2px 7px;line-height: 25px;text-align: right">
+                {{ edit.oxorder__oxcurrency.value }}
+            </td>
+        </tr>
+    </table>
+</form>
+<hr/>

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -14,7 +14,7 @@
  * @codeCoverageIgnore
  * @extend oxviewconfig
  */
-class payeverOxViewConfig extends payeverOxViewConfig_parent
+class payeveroxviewconfig extends payeveroxviewconfig_parent
 {
     /**
      * Display Payment description, logo in Payment page
@@ -71,7 +71,7 @@ class payeverOxViewConfig extends payeverOxViewConfig_parent
      */
     public function displayPayment()
     {
-        return $this->getSession()->getBasket()->getPaymentId();
+        return \OxidEsales\Eshop\Core\Registry::getSession()->getBasket()->getPaymentId();
     }
 
     /**

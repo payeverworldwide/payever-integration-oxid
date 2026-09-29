@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -11,8 +11,6 @@
 
 class PayeverInvoiceManager
 {
-    use PayeverLoggerTrait;
-
     /**
      * @var PayeverInvoiceFactory
      */
@@ -47,54 +45,37 @@ class PayeverInvoiceManager
     /**
      * @param oxOrder $order
      *
-     * @return object|payeverinvoices|null
+     * @return object|payeverinvoices
      * @throws oxSystemComponentException
      */
     public function addInvoice(oxOrder $order)
     {
         $date = new DateTime();
 
-        try {
-            $contents = $this->invoiceGenerator->generate(
-                $order,
-                $order->getFieldData('OXORDERNR'),
-                $date,
-                ''
-            );
-            if (empty($contents)) {
-                throw new Exception('Invoice could not be generated');
-            }
-
-            $invoice = $this->invoiceFactory->create();
-            $invoice->assign(
-                [
-                    'OXINVOICEKEY' => $this->getRandomString(),
-                    'OXORDERID' => $order->getId(),
-                    'OXPAYMENTID' => $order->getFieldData('oxtransid'),
-                    'OXEXTERNALID' => $order->getUser()->getFieldData('oxexternalid'),
-                    'OXCONTENTS' => $contents,
-                    'OXTIMESTAMP' => $date->getTimestamp(),
-                ]
-            );
-
-            $invoice->save();
-
-            $this->getLogger()->info(
-                sprintf('Invoice has been created for order #%s', $order->getId())
-            );
-
-            return $invoice;
-        } catch (\Exception $exception) {
-            $this->getLogger()->error(
-                'Invoice could not be generated: ' . $exception->getMessage(),
-                [
-                    'message' => $exception->getMessage(),
-                    'trace' => $exception->getTraceAsString()
-                ]
-            );
+        $contents = $this->invoiceGenerator->generate(
+            $order,
+            $order->getFieldData('OXORDERNR'),
+            $date,
+            ''
+        );
+        if (empty($contents)) {
+            throw new Exception('Invoice could not be generated');
         }
 
-        return null;
+        $invoice = $this->invoiceFactory->create();
+        $invoice->assign(
+            [
+                'OXINVOICEKEY' => $this->getRandomString(),
+                'OXORDERID' => $order->getId(),
+                'OXPAYMENTID' => $order->getFieldData('oxtransid'),
+                'OXEXTERNALID' => $order->getUser()->getFieldData('oxexternalid'),
+                'OXCONTENTS' => $contents,
+                'OXTIMESTAMP' => $date->getTimestamp(),
+            ]
+        );
+
+        $invoice->save();
+        return $invoice;
     }
 
     /**
@@ -106,27 +87,15 @@ class PayeverInvoiceManager
      */
     public function hasInvoice(oxOrder $order)
     {
-        try {
-            $collection = $this->invoiceListFactory->create();
-            $collection->clear();
+        $collection = $this->invoiceListFactory->create();
+        $collection->clear();
 
-            $invoiceObject = $this->invoiceFactory->create();
-            method_exists($collection, 'setBaseObject') && $collection->setBaseObject($invoiceObject);
-            $query = $invoiceObject->buildSelectString(['OXORDERID' => $order->getId()]);
-            $collection->selectString($query);
+        $invoiceObject = $this->invoiceFactory->create();
+        method_exists($collection, 'setBaseObject') && $collection->setBaseObject($invoiceObject);
+        $query = $invoiceObject->buildSelectString(['OXORDERID' => $order->getId()]);
+        $collection->selectString($query);
 
-            return count($collection->getArray()) > 0;
-        } catch (\Exception $exception) {
-            $this->getLogger()->error(
-                'hasInvoice exception: ' . $exception->getMessage(),
-                [
-                    'message' => $exception->getMessage(),
-                    'trace' => $exception->getTraceAsString()
-                ]
-            );
-        }
-
-        return false;
+        return count($collection->getArray()) > 0;
     }
 
     /**

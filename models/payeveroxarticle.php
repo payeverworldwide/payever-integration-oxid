@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -9,6 +9,9 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
+if (!class_exists('payeverOxArticle_parent', false)) {
+    return;
+}
 class payeverOxArticle extends payeverOxArticle_parent
 {
     use PayeverSynchronizationManagerTrait;
@@ -18,12 +21,6 @@ class payeverOxArticle extends payeverOxArticle_parent
 
     /** @var bool */
     private $skipSyncHandling = false;
-
-    const FIELD_REFUNDED = 'oxpayeverrefunded';
-    const FIELD_CANCELLED = 'oxpayevercancelled';
-    const FIELD_SHIPPED = 'oxpayevershipped';
-    const FIELD_INVOICED = 'oxpayeverinvoiced';
-    const FIELD_SETTLED = 'oxpayeversettled';
 
     /**
      * @param bool $skipSyncHandling
@@ -65,7 +62,7 @@ class payeverOxArticle extends payeverOxArticle_parent
         }
         $controller = !empty($_GET['cl']) ? $_GET['cl'] : null;
         $controllerAction = !empty($_GET['fnc']) ? $_GET['fnc'] : null;
-        if ('payeverProductsImport' === $controller && 'import' === $controllerAction) {
+        if ('payeverproductsimport' === strtolower((string) $controller) && 'import' === $controllerAction) {
             PayeverConfigHelper::getLogger()->debug('Skip triggering of outward action during import');
             return;
         }

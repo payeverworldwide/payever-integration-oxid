@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -25,12 +25,12 @@ class PayeverModuleActivateCommand extends PayeverAbstractModuleCommand
     /**
      * {@inheritDoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if ($this->getModule()->isActive()) {
             $output->writeln('The payever module is being activated');
             // @codeCoverageIgnoreStart
-            return;
+            return 0;
         }
         $oModuleInstaller = null;
         if (class_exists('oxModuleInstaller')) {
@@ -40,13 +40,13 @@ class PayeverModuleActivateCommand extends PayeverAbstractModuleCommand
         if ($oModuleInstaller) {
             if ($oModuleInstaller->activate($this->getModule())) {
                 $output->writeln('The payever module is activated');
-                return;
+                return 0;
             }
             throw new \BadMethodCallException('Couldn\'t activate payever module');
         } elseif (method_exists($this->getModule(), 'activate')) {
             // old oxid versions
             $this->getModule()->activate();
-            return;
+            return 0;
         }
         throw new \BadMethodCallException('Unable to activate payever module');
         // @codeCoverageIgnoreEnd

@@ -1,0 +1,495 @@
+{# OXID6: src/payever/views/admin/tpl/payever_config.tpl #}
+{% include "headitem.html.twig" with {title: "payever Configuration"} %}
+{% set sOxidBasePath = oViewConf.getSslSelfLink() %}
+{% set sPayeverCssPath = oViewConf.getModuleUrl('payever', 'admin/src/css/payever_admin.css') %}
+<link rel="stylesheet" href="{{ sPayeverCssPath|raw }}" type="text/css" />
+<div class="payever-config-header">
+    <div class="payever-config-logo">
+        <a href="https://payever.de/" title="payever.de" target="_new">
+            <img src="{{ oViewConf.getModuleUrl('payever')|raw }}{{ "PAYEVER_LOGO"|translate }}" alt="payever" border="0" >
+        </a>
+    </div>
+    <div class="payever-config-versions">
+        {% if payever_version_info %}
+            <b>OXID:</b> v{{ payever_version_info.oxid }} <br>
+            <b>payever:</b> v{{ payever_version_info.payever }}
+            {% if payever_new_version %}
+                <span style="color:red;"> - {{ "PAYEVER_VERSION_MESSAGE"|translate }}
+                    {% if payever_new_version.filename %}
+                        {{ "PAYEVER_VERSION_DOWNLOAD"|translate }} <a href="{{ payever_new_version.filename|raw }}">v.{{ payever_new_version.version }}</a> {{ "PAYEVER_VERSION_AND_UPDATE"|translate }}
+                    {% endif %}
+                </span>
+            {% endif %}<br>
+            <b>PHP:</b> v{{ payever_version_info.php }} <br>
+        {% endif %}
+    </div>
+    <div class="payever-embedded-support">
+        <b><a href="javascript:void(0);" onclick="return pe_chat_btn(event);">{{ "PAYEVER_CHAT_TITLE"|translate }}</a></b>
+        <p>{{ "PAYEVER_CHAT_DESCRIPTION"|translate }}</p>
+    </div>
+</div>
+<div class="payever-message-container">
+    {% if payever_error_message %}
+        <p style="color:red;">{{ payever_error_message }}</p>
+    {% endif %}
+    {% if payever_flash_messages %}
+        {% for flashMessage in payever_flash_messages %}
+            <p style="color:green;">{{ flashMessage }}</p><br/>
+        {% endfor %}
+    {% endif %}
+    {% if payever_error == 4 %}
+        <p style="color:red;">{{ "PAYEVER_ADMIN_ERROR_SYNC"|translate }}</p>
+    {% elseif payever_error == 2 %}
+        <p style="color:green;">{{ "PAYEVER_ADMIN_SUCCESS"|translate }}</p>
+    {% elseif payever_error == 3 %}
+        <p style="color:green;">{{ "PAYEVER_ADMIN_SUCCESS_SYNC"|translate }}</p>
+    {% elseif payever_error == 5 %}
+        <p style="color:green;">{{ "PAYEVER_ADMIN_SUCCESS_SET_LIVE"|translate }}</p>
+    {% elseif payever_error == 6 %}
+        <p style="color:green;">{{ "PAYEVER_ADMIN_SUCCESS_SET_SANDBOX"|translate }}</p>
+    {% endif %}
+</div>
+<hr/>
+<div id="payever_admin" style="display:none">
+<label class="pe_map_header">{{ "PAYEVER_ADMIN"|translate }}</label>
+<div id="payever_admin_iframe"></div>
+</div>
+<div style="padding:20px;" id="payever_config">
+    <form name="myedit" id="myedit" action="{{ oViewConf.getSelfLink()|raw }}" method="post">
+        <input type="hidden" name="cl" value="{{ oViewConf.getActiveClassName() }}">
+        {{ oViewConf.getHiddenSid()|raw }}
+
+        <div class="payeverCont" >
+            <div class="cntRow">
+                <div class="pe_payment_title">
+                    <div class="cntRgt" id="config_0">
+                        <div class="payever-config-section">
+                            <div class="payever-config-section-title">{{ "PAYEVER_API_CONFIGURATION"|translate }}</div>
+
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[testMode]" value="0" />
+                                    {{ "PAYEVER_TEST_MODE"|translate }} &nbsp;
+                                    <select class="editinput" name="payever_config[testMode]">
+                                        <option value="0" {% if payever_config.testMode == 0 %}selected="selected"{% endif %}>{{ "PAYEVER_SANDBOX_MODE"|translate }}</option>
+                                        <option value="1" {% if payever_config.testMode == 1 %}selected="selected"{% endif %}>{{ "PAYEVER_LIVE_MODE"|translate }}</option>
+                                    </select>
+                                <dd><span>{{ "PAYEVER_TEST_MODE_DESCRIPTION"|translate }}</span></dd>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd>
+                                    <label>{{ "PAYEVER_CLIENTID"|translate }}</label>
+                                </dd>
+                                <dt>
+                                <input type="text" class="editinput" name="payever_config[clientId]" value="{{ payever_config.clientId }}"/>
+                                <dd><span>{{ "PAYEVER_CLIENTID_DESCRIPTION"|translate }}</span></dd>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd>{{ "PAYEVER_CLIENT_SECRECT"|translate }}</dd>
+                                <dt>
+                                <input type="text" class="editinput" name="payever_config[clientSecrect]" value="{{ payever_config.clientSecrect }}"/>
+                                <dd><span>{{ "PAYEVER_CLIENT_SECRECT_DESCRIPTION"|translate }}</span></dd>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd>{{ "PAYEVER_SLUG"|translate }}</dd>
+                                <dt>
+                                    <input type="text" class="editinput" name="payever_config[slug]" value="{{ payever_config.slug }}"/>
+                                    <dd><span>{{ "PAYEVER_SLUG_DESCRIPTION"|translate }}</span></dd>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                        </div>
+                        <div class="payever-config-section">
+                            <div class="payever-config-section-title">{{ "PAYEVER_B2B_CONFIG"|translate }}</div>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    {{ "PAYEVER_IS_COMPANY_SEARCH_ENABLED"|translate }} &nbsp;
+                                    <select name="payever_b2b_config[payeverCompanySearchEnabled]" style="max-width:300px" class="editinput">
+                                        <option value="0" {% if payever_b2b_config.payeverCompanySearchEnabled == 0 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_NO"|translate }}</option>
+                                        <option value="1" {% if payever_b2b_config.payeverCompanySearchEnabled == 1 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_YES"|translate }}</option>
+                                    </select>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverCompanySearchType]" value="{{ payever_config.payeverCompanySearchType }}" />
+                                    {{ "PAYEVER_COMPANY_SEARCH_TYPE"|translate }} &nbsp;
+                                    <select style="max-width:300px" class="editinput" name="payever_config[payeverCompanySearchType]">
+                                        <option value="dropdown" {% if payever_config.payeverCompanySearchType == 'dropdown' %}selected="selected"{% endif %}>{{ "PAYEVER_COMPANY_SEARCH_DROPDOWN"|translate }}</option>
+                                        <option value="popup" {% if payever_config.payeverCompanySearchType == 'popup' %}selected="selected"{% endif %}>{{ "PAYEVER_COMPANY_SEARCH_POPUP"|translate }}</option>
+                                        <option value="mixed" {% if payever_config.payeverCompanySearchType == 'mixed' %}selected="selected"{% endif %}>{{ "PAYEVER_COMPANY_SEARCH_MIXED"|translate }}</option>
+                                    </select>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                        </div>
+                        {% if payever_widget_active %}
+                            <div class="payever-config-section">
+                                <div class="payever-config-section-title">{{ "PAYEVER_WIDGET"|translate }}</div>
+                                <dl>
+                                    <dd class="cntExLft"></dd>
+                                    <dt>
+                                        <input type="hidden" name="payever_config[fe_widget_id]" value="{{ payever_config.fe_widget_id }}" />
+                                        {{ "PAYEVER_WIDGET_TYPE"|translate }} &nbsp;
+                                        <select style="max-width:300px" multiple class="editinput" name="payever_config[fe_widget_id][]">
+                                            {% if widgets %}
+                                                {% for widgetOption in widgets %}
+                                                    <option value="{{ widgetOption.id }}" {% if payever_config.fe_widget_id is iterable and widgetOption.id in payever_config.fe_widget_id %}selected="selected"{% endif %}>{{ widgetOption.name }}</option>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </select>
+                                    </dt>
+                                    <div class="spacer"></div>
+                                </dl>
+                                <dl>
+                                    <dd class="cntExLft"></dd>
+                                    <dt>
+                                        <input type="hidden" name="payever_config[fe_widget_theme]" value="{{ payever_config.fe_widget_theme }}" />
+                                        {{ "PAYEVER_WIDGET_THEME"|translate }} &nbsp;
+                                        <select style="max-width:300px" class="editinput" name="payever_config[fe_widget_theme]">
+                                            <option value="light" {% if payever_config.fe_widget_theme == 'light' %}selected="selected"{% endif %}>{{ "PAYEVER_WIDGET_THEME_LIGHT"|translate }}</option>
+                                            <option value="dark" {% if payever_config.fe_widget_theme == 'dark' %}selected="selected"{% endif %}>{{ "PAYEVER_WIDGET_THEME_DARK"|translate }}</option>
+                                        </select>
+                                    <dd><span>{{ "PAYEVER_WIDGET_THEME_DESCRIPTION"|translate }}</span></dd>
+                                    </dt>
+                                    <div class="spacer"></div>
+                                </dl>
+                                <dl>
+                                    <dd class="cntExLft"></dd>
+                                    <dt>
+                                        <input type="hidden" name="payever_config[fe_show_widget_cart]" value="0" />
+                                        {{ "PAYEVER_WIDGET_CART"|translate }} &nbsp;
+                                        <select class="editinput" name="payever_config[fe_show_widget_cart]">
+                                            <option value="0" {% if payever_config.fe_show_widget_cart == 0 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_NO"|translate }}</option>
+                                            <option value="1" {% if payever_config.fe_show_widget_cart == 1 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_YES"|translate }}</option>
+                                        </select>
+                                    <dd><span>{{ "PAYEVER_WIDGET_CART_DESCRIPTION"|translate }}</span></dd>
+                                    </dt>
+                                    <div class="spacer"></div>
+                                </dl>
+                                <dl>
+                                    <dd class="cntExLft"></dd>
+                                    <dt>
+                                        <input type="hidden" name="payever_config[fe_show_widget_product]" value="0" />
+                                        {{ "PAYEVER_WIDGET_PRODUCT"|translate }} &nbsp;
+                                        <select class="editinput" name="payever_config[fe_show_widget_product]">
+                                            <option value="0" {% if payever_config.fe_show_widget_product == 0 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_NO"|translate }}</option>
+                                            <option value="1" {% if payever_config.fe_show_widget_product == 1 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_YES"|translate }}</option>
+                                        </select>
+                                    <dd><span>{{ "PAYEVER_WIDGET_PRODUCT_DESCRIPTION"|translate }}</span></dd>
+                                    </dt>
+                                    <div class="spacer"></div>
+                                </dl>
+                            </div>
+                        {% endif %}
+
+                        <div class="payever-config-section">
+                            <div class="payever-config-section-title">{{ "PAYEVER_API_APPEARANCE"|translate }}</div>
+
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[defaultLanguage]" value="" />
+                                    {{ "PAYEVER_DEFAULT_LANGUAGE"|translate }} &nbsp;
+                                    <select class="editinput" name="payever_config[defaultLanguage]">
+                                        <option value="" {% if payever_config.defaultLanguage == '' %}selected="selected"{% endif %}>{{ "PAYEVER_NONE_TEXT"|translate }}</option>
+                                        <option value="store" {% if payever_config.defaultLanguage == 'store' %}selected="selected"{% endif %}>{{ "PAYEVER_STORE_TEXT"|translate }}</option>
+                                        <option value="en" {% if payever_config.defaultLanguage == 'en' %}selected="selected"{% endif %}>{{ "PAYEVER_EN_TEXT"|translate }}</option>
+                                        <option value="de" {% if payever_config.defaultLanguage == 'de' %}selected="selected"{% endif %}>{{ "PAYEVER_DE_TEXT"|translate }}</option>
+                                        <option value="es" {% if payever_config.defaultLanguage == 'es' %}selected="selected"{% endif %}>{{ "PAYEVER_ES_TEXT"|translate }}</option>
+                                        <option value="no" {% if payever_config.defaultLanguage == 'no' %}selected="selected"{% endif %}>{{ "PAYEVER_NO_TEXT"|translate }}</option>
+                                        <option value="da" {% if payever_config.defaultLanguage == 'da' %}selected="selected"{% endif %}>{{ "PAYEVER_DA_TEXT"|translate }}</option>
+                                        <option value="sv" {% if payever_config.defaultLanguage == 'sv' %}selected="selected"{% endif %}>{{ "PAYEVER_SV_TEXT"|translate }}</option>
+                                    </select>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[overwritePaymentLabels]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[overwritePaymentLabels]" value="1"
+                                           {% if payever_config.overwritePaymentLabels %}checked="checked"{% endif %} />&nbsp;
+                                    {{ "PAYEVER_OVERWRITE_PAYMENT_LABELS"|translate }}<br />
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[displayPaymentIcon]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[displayPaymentIcon]" value="1"
+                                        {% if payever_config.displayPaymentIcon %}checked="checked"{% endif %} />&nbsp;
+                                    {{ "PAYEVER_DISPLAY_ICON"|translate }}<br />
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                <input type="hidden" name="payever_config[displayPaymentDescription]" value="0" />
+                                <input type="checkbox" class="editinput" name="payever_config[displayPaymentDescription]" value="1"
+                                 {% if payever_config.displayPaymentDescription %}checked="checked"{% endif %} />&nbsp;
+                                 {{ "PAYEVER_DISPLAY_DESCRIPTION"|translate }}
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            {% if payever_allow_iframe %}
+                                <dl>
+                                    <dd class="cntExLft"></dd>
+                                    <dt>
+                                        <input type="hidden" name="payever_config[redirectToPayever]" value="0" />
+                                        <input type="checkbox" class="editinput" name="payever_config[redirectToPayever]" value="1"
+                                        {% if payever_config.redirectToPayever %}checked="checked"{% endif %} />&nbsp;
+                                        {{ "PAYEVER_IS_REDIRECT"|translate }}
+                                    </dt>
+                                    <div class="spacer"></div>
+                                </dl>
+                            {% endif %}
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[createPendingOrder]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[createPendingOrder]" value="1"
+                                           {% if payever_config.createPendingOrder %}checked="checked"{% endif %} />&nbsp;
+                                    {{ "PAYEVER_CREATE_PENDING_ORDER"|translate }}
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[displayBasketId]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[displayBasketId]" value="1"
+                                    {% if payever_config.displayBasketId %}checked="checked"{% endif %} />&nbsp;
+                                    {{ "PAYEVER_DISPLAY_BASKET_ID"|translate }}
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                        </div>
+
+                        <div class="payever-config-section">
+                            <div class="payever-config-section-title">{{ "PAYEVER_API_PRODUCT_AND_INVENTORY"|translate }}</div>
+
+                            <dl>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverProductsSyncExternalId]"
+                                           value="{{ payever_config.payeverProductsSyncExternalId }}" />
+                                </dt>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverProductsSyncEnabled]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[payeverProductsSyncEnabled]" value="1"
+                                           {% if payever_config.payeverProductsSyncEnabled %}checked="checked"{% endif %} />&nbsp;
+                                    {{ "PAYEVER_PRODUCTS_SYNC_ENABLED"|translate }}<br />
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[payeverProductsOutwardSyncEnabled]" value="0" />
+                                    <input type="checkbox" class="editinput" name="payever_config[payeverProductsOutwardSyncEnabled]" value="1"
+                                           {% if payever_config.payeverProductsOutwardSyncEnabled %}checked="checked"{% endif %} />&nbsp;
+                                    {{ "PAYEVER_PRODUCTS_OUTWARD_SYNC_ENABLED"|translate }} &nbsp;
+                                </dt>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    {{ "PAYEVER_PRODUCTS_SYNC_MODE"|translate }} &nbsp;
+                                    <select name="payever_config[payeverProductsSyncMode]">
+                                        <option value="instant" {% if payever_config.payeverProductsSyncMode == "instant" %}selected{% endif %}>{{ "PAYEVER_PRODUCTS_SYNC_MODE_INSTANT"|translate }}</option>
+                                        <option value="cron" {% if payever_config.payeverProductsSyncMode == "cron" %}selected{% endif %}>{{ "PAYEVER_PRODUCTS_SYNC_MODE_CRON"|translate }}</option>
+                                    </select>
+                                </dt>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    {{ "PRODUCTS_SYNC_CURRENCY_RATE_SOURCE"|translate }} &nbsp;
+                                    <select name="payever_config[payeverProductsCurrencyRateSource]">
+                                        <option value="oxid" {% if payever_config.payeverProductsCurrencyRateSource == "oxid" %}selected{% endif %}>{{ "PRODUCTS_SYNC_CURRENCY_RATE_SOURCE_OXID"|translate }}</option>
+                                        <option value="payever" {% if payever_config.payeverProductsCurrencyRateSource == "payever" %}selected{% endif %}>{{ "PRODUCTS_SYNC_CURRENCY_RATE_SOURCE_PAYEVER"|translate }}</option>
+                                    </select>
+                                </dt>
+                            </dl>
+                        </div>
+
+                        <div class="payever-config-section">
+                            <div class="payever-config-section-title">{{ "PAYEVER_API_LOGGING"|translate }}</div>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    {{ "PAYEVER_LOG_LEVEL"|translate }} &nbsp;
+                                    <select name="payever_config[logLevel]">
+                                        <option value="error" {% if payever_config.logLevel == "error" %}selected{% endif %}>{{ "PAYEVER_LOG_ERRORS"|translate }}</option>
+                                        <option value="info" {% if payever_config.logLevel == "info" %}selected{% endif %}>{{ "PAYEVER_LOG_INFO"|translate }}</option>
+                                        <option value="debug" {% if payever_config.logLevel == "debug" %}selected{% endif %}>{{ "PAYEVER_LOG_DEBUG"|translate }}</option>
+                                    </select>
+                                    {% if log_filename %}
+                                        <br>
+                                        <dd><span>{{ "PAYEVER_LOG_FILEPATH"|translate }}: {{ log_filename }}</span></dd>
+                                    {% endif %}
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                            <dl>
+                                <dd class="cntExLft"></dd>
+                                <dt>
+                                    <input type="hidden" name="payever_config[diagnosticMode]" value="0" />
+                                    {{ "PAYEVER_SEND_DIAGNOSTIC"|translate }} &nbsp;
+                                    <select class="editinput" name="payever_config[diagnosticMode]">
+                                        <option value="0" {% if payever_config.diagnosticMode == 0 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_NO"|translate }}</option>
+                                        <option value="1" {% if payever_config.diagnosticMode == 1 %}selected="selected"{% endif %}>{{ "PAYEVER_PAYMENT_YES"|translate }}</option>
+                                    </select>
+                                <dd><span>{{ "PAYEVER_SEND_DIAGNOSTIC_DESCRIPTION"|translate }}</span></dd>
+                                </dt>
+                                <div class="spacer"></div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" name="fnc" value="synchronize">
+    </form>
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="save" value="{{ "GENERAL_SAVE"|translate }}" onclick="document.myedit.fnc.value='save'; document.myedit.submit();" style="margin:6em 3em 0;"/>
+    </div>
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="synchronize" value="{{ "PAYEVER_SYNCHRONIZE"|translate }}" onclick="document.myedit.fnc.value='synchronize'; synchronize();" />
+    </div>
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="synchronize_widgets" value="{{ "PAYEVER_SYNCHRONIZE_WIDGETS"|translate }}" onclick="document.myedit.fnc.value='synchronizeWidgets'; synchronizeWidgets();" />
+    </div>
+    {% if isset_live == 1 %}
+        <div class="cntExLft">
+            <input type="submit" class="payever-config-btn" name="setApiKeys" value="{{ "PAYEVER_SET_LIVE"|translate }}" onclick="document.myedit.fnc.value='setLive'; setLive();" />
+        </div>
+    {% else %}
+        <div class="cntExLft">
+            <input type="submit" class="payever-config-btn" name="setApiKeys" value="{{ "PAYEVER_SET_SANDBOX"|translate }}" onclick="document.myedit.fnc.value='setSandbox'; setSandbox();" />
+        </div>
+    {% endif %}
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="exportProductsAndInventory"
+               value="{{ "PAYEVER_PRODUCTS_AND_INVENTORY_EXPORT"|translate }}"
+        {% if not payever_config.payeverProductsSyncEnabled or not payever_config.payeverProductsOutwardSyncEnabled %}
+                disabled="disabled"
+        {% endif %}
+        onclick="document.myedit.fnc.value='exportProductsAndInventory'; payeverDoExport('{{ payever_config.payeverProductsSyncExternalId }}', null, this.data_page === undefined ? 0 : this.data_page, this.aggregate === undefined ? 0 : this.aggregate);" />
+    </div>
+    {% if log_file_exists == 1 %}
+        <div class="cntExLft">
+            <input type="submit" class="payever-config-btn" name="downloadLogFile" value="{{ "PAYEVER_DOWNLOAD_LOG"|translate }}" onclick="document.myedit.fnc.value='downloadLogFile'; downloadLogFile();" />
+        </div>
+    {% endif %}
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="downloadAppLogFile" value="Download App Log" onclick="document.myedit.fnc.value='downloadAppLogFile'; downloadAppLogFile();" />
+    </div>
+    <div class="cntExLft">
+        <input type="submit" class="payever-config-btn" name="clearCache" value="Clear Cache" onclick="document.myedit.fnc.value='clearCache'; document.myedit.submit();" />
+    </div>
+</div>
+<script type="text/javascript">
+    function synchronize() {
+        if (confirm({{ "PAYEVER_SYNCHRONIZE_CONFIRM"|translate|json_encode|raw }})) {
+            document.myedit.submit();
+        }
+    }
+    function synchronizeWidgets() {
+        document.myedit.submit();
+    }
+    {% if isset_live == 1 %}
+        function setLive() {
+            if (confirm({{ "PAYEVER_SET_LIVE_CONFIRM"|translate|json_encode|raw }})) {
+                document.myedit.submit();
+            }
+        }
+    {% else %}
+        function setSandbox() {
+            if (confirm({{ "PAYEVER_SET_SANDBOX_CONFIRM"|translate|json_encode|raw }})) {
+                document.myedit.submit();
+            }
+        }
+    {% endif %}
+    function exportProductsAndInventory() {
+        if (confirm({{ "PAYEVER_SET_SANDBOX_CONFIRM"|translate|json_encode|raw }})) {
+            document.myedit.submit();
+        }
+    }
+    function payeverDoExport(externalId, exportUrl, page, aggregate) {
+        if (!exportUrl) {
+            exportUrl = '{{ sOxidBasePath|raw }}' + '/admin/index.php?cl=payeverproductsexport&fnc=export'
+        }
+        let messageContainerSelector = '.payever-message-container';
+        $(messageContainerSelector).empty();
+        $.ajax({
+            type: 'POST',
+            url: exportUrl + (page ? '&page=' + page + (aggregate ? '&aggregate=' + aggregate : '') : ''),
+            data : {
+                exportProductsAndInventories: true,
+                externalId: externalId,
+                cl: 'payeverproductsexport',
+                fnc: 'export',
+                stoken: $('#myedit input[name="stoken"]').val()
+            },
+            success: function (data) {
+                if (data.error && data.error.length > 0) {
+                    $(messageContainerSelector).html('<div class="alert alert-danger">' + data.error + '</div>');
+                } else {
+                    if (data.next_page) {
+                        $(messageContainerSelector).html('<div class="alert alert-success">' + 'Processed items: ' + data.aggregate + '</div>');
+
+                        return payeverDoExport(externalId, exportUrl, data.next_page, data.aggregate);
+                    } else {
+                        $(messageContainerSelector).html('<div class="alert alert-success">' + 'Total processed items: ' + data.aggregate + '</div>');
+                    }
+                }
+            },
+            error: function() {
+                $(messageContainerSelector).html('<div class="alert alert-danger">Unknown error</div>');
+            }
+        });
+    }
+    function downloadLogFile() {
+        document.myedit.submit();
+    }
+    function downloadAppLogFile() {
+        document.myedit.submit();
+    }
+    function clearCache() {
+        document.myedit.submit();
+    }
+    function pe_chat_btn(e) {
+        window.zESettings = { analytics: false };
+
+        var s = document.createElement('script');
+        s.src = 'https://static.zdassets.com/ekr/snippet.js?key=775ae07f-08ee-400e-b421-c190d7836142';
+        s.id = 'ze-snippet';
+        s.onload = function () {
+            window['zE'] && window['zE']('webWidget', 'open');
+            window['zE'] && window['zE']('webWidget:on', 'open', function() { e.target.innerText = '{{ "PAYEVER_CHAT_TITLE"|translate }}'; });
+        };
+        document.head.appendChild(s);
+
+        e.target.innerText = '{{ "PAYEVER_LOADING_CHAT"|translate }}';
+        e.preventDefault();
+
+        return false;
+    }
+</script>
+{% include "bottomitem.html.twig" %}

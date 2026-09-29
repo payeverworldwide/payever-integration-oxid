@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -93,7 +93,7 @@ class PayeverSubscriptionManager
         $baseUrl = rtrim($this->getConfigHelper()->getShopUrl(), '/');
         foreach ($this->getSupportedActions() as $actionName) {
             $actionUrl = sprintf(
-                '%s/index.php?cl=payeverProductsImport&fnc=import&%s=%s&%s=%s',
+                '%s/index.php?cl=payeverproductsimport&fnc=import&%s=%s&%s=%s',
                 $baseUrl,
                 'sync_action',
                 $actionName,

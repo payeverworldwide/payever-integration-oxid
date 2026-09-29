@@ -5,8 +5,8 @@
  */
 class payeverordertab extends oxAdminDetails
 {
+    use PayeverOxConfigTrait;
     use DryRunTrait;
-    use PayeverConfigTrait;
     use PayeverConfigHelperTrait;
     use PayeverOrderFactoryTrait;
     use PayeverOrderTransactionHelperTrait;
@@ -74,7 +74,8 @@ class payeverordertab extends oxAdminDetails
         $this->_aViewData['afolder'] = $this->getConfig()->getConfigParam('aOrderfolder');
         $this->_aViewData['currency'] = $oCurrency;
 
-        return 'payever/order/tab.tpl';
+        return PayeverConfig::getRenderEngine() === PayeverConfig::ENGINE_TWIG ?
+            '@payever/order/tab' : 'payever/order/tab.tpl';
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -82,7 +82,7 @@ class PayeverPaymentActionHelper
     protected function getPaymentAction()
     {
         if ($this->paymentAction === null) {
-            $this->paymentAction = oxRegistry::get('payeverpaymentaction');
+            $this->paymentAction = \OxidEsales\Eshop\Core\Registry::get('payeverpaymentaction');
         }
 
         return $this->paymentAction;

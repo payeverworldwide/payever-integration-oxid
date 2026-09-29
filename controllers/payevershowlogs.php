@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -15,8 +15,9 @@
  * @extend oxBaseClass
  * @codeCoverageIgnore
  */
-class payeverShowLogs extends oxUBase
+class payevershowlogs extends oxUBase
 {
+    use PayeverOxConfigTrait;
     use PayeverConfigHelperTrait;
     use PayeverPaymentsApiClientTrait;
     use PayeverRequestHelperTrait;

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -152,7 +152,7 @@ class PayeverMethodHider
     private function addFailedPaymentMethod($paymentMethod)
     {
         $this->hiddenMethods[] = $paymentMethod;
-        \oxRegistry::get('oxUtilsServer')->setOxCookie(
+        \OxidEsales\Eshop\Core\Registry::get('oxUtilsServer')->setOxCookie(
             self::FAILED_METHODS_COOKIE_NAME,
             implode('|', array_unique($this->hiddenMethods))
         );
@@ -168,7 +168,7 @@ class PayeverMethodHider
 
         if ($result === null) {
             $result = false;
-            $session = oxRegistry::getSession();
+            $session = \OxidEsales\Eshop\Core\Registry::getSession();
 
             if (!$session->getVariable('deladrid')) {
                 // no different delivery address is chosen
@@ -192,7 +192,7 @@ class PayeverMethodHider
 
     private function loadHiddenMethodsFromCookie()
     {
-        $methods = \oxRegistry::get('oxUtilsServer')->getOxCookie(self::FAILED_METHODS_COOKIE_NAME);
+        $methods = \OxidEsales\Eshop\Core\Registry::get('oxUtilsServer')->getOxCookie(self::FAILED_METHODS_COOKIE_NAME);
 
         if ($methods) {
             $this->hiddenMethods = array_unique(explode('|', $methods));

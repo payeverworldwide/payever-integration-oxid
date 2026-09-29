@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -210,10 +210,10 @@ class PayeverPaymentV3RequestBuilder
             $quantity = (int) $item->getAmount();
             $cartItem
                 ->setName($item->getTitle())
-                ->setUnitPrice(oxRegistry::getUtils()->fRound($item->getUnitPrice()->getPrice()))
+                ->setUnitPrice(\OxidEsales\Eshop\Core\Registry::getUtils()->fRound($item->getUnitPrice()->getPrice()))
                 ->setTaxRate($item->getUnitPrice()->getVat())
                 ->setQuantity($quantity)
-                ->setTotalAmount(oxRegistry::getUtils()->fRound($item->getUnitPrice()->getPrice() * $quantity))
+                ->setTotalAmount(\OxidEsales\Eshop\Core\Registry::getUtils()->fRound($item->getUnitPrice()->getPrice() * $quantity))
                 ->setDescription($item->getArticle()->getFieldData('oxshortdesc'))
                 ->setImageUrl($item->getIconUrl())
                 ->setProductUrl($item->getLink())
@@ -374,7 +374,7 @@ class PayeverPaymentV3RequestBuilder
         $this->paymentRequest
             ->setReference($oUser->getBasket('savedbasket')->getId())
             ->setPaymentMethod($apiMethod)
-            ->setClientIp(oxRegistry::get("oxUtilsServer")->getRemoteAddress())
+            ->setClientIp(\OxidEsales\Eshop\Core\Registry::get('oxUtilsServer')->getRemoteAddress())
             ->setPluginVersion($this->getConfigHelper()->getPluginVersion())
             ->setLocale($language);
 
@@ -424,8 +424,8 @@ class PayeverPaymentV3RequestBuilder
     {
         $purchaseEntity = new PurchaseEntity();
         $purchaseEntity
-            ->setAmount(oxRegistry::getUtils()->fRound($this->getOrderHelper()->getAmountByCart($this->getCart())))
-            ->setDeliveryFee(oxRegistry::getUtils()->fRound($this->getOrderHelper()->getFeeByCart($this->getCart())))
+            ->setAmount(\OxidEsales\Eshop\Core\Registry::getUtils()->fRound($this->getOrderHelper()->getAmountByCart($this->getCart())))
+            ->setDeliveryFee(\OxidEsales\Eshop\Core\Registry::getUtils()->fRound($this->getOrderHelper()->getFeeByCart($this->getCart())))
             ->setCurrency($this->getCart()->getBasketCurrency()->name);
 
         $this->paymentRequest->setPurchase($purchaseEntity);

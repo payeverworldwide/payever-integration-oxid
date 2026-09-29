@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -24,7 +24,7 @@ trait PayeverFileLockTrait
     protected function getLocker()
     {
         return null === $this->locker
-            ? $this->locker = new FileLock(rtrim(oxRegistry::getConfig()->getLogsDir(), '/'))
+            ? $this->locker = new FileLock(rtrim(\OxidEsales\Eshop\Core\Registry::getConfig()->getLogsDir(), '/'))
             : $this->locker;
     }
 

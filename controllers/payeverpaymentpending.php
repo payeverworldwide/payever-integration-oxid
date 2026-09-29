@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -21,6 +21,8 @@ use Payever\Sdk\Payments\Enum\Status;
 // phpcs:disable PSR2.Classes.PropertyDeclaration.Underscore
 class payeverpaymentpending extends oxUBase
 {
+    use PayeverOxRequestTrait;
+    use PayeverOxConfigTrait;
     use DryRunTrait;
     use PayeverPaymentsApiClientTrait;
 
@@ -30,27 +32,20 @@ class payeverpaymentpending extends oxUBase
     const SANTANDER_PREFIX = 'santander';
 
     /**
-     * class template.
-     *
-     * @var string
-     */
-    protected $_sThisTemplate = 'payever_payment_pending.tpl';
-
-    /**
      * Executes parent::init(), loads basket from session
      */
     public function init()
     {
         parent::init();
 
-        $paymentId = $this->getConfig()->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
         if (!$paymentId) {
-            oxRegistry::getUtils()->redirect($this->getConfig()->getShopHomeURL() . '&cl=start');
+            \OxidEsales\Eshop\Core\Registry::getUtils()->redirect($this->getConfig()->getShopHomeURL() . '&cl=start');
         }
 
         // get basket we might need some information from it here
-        $oBasket = $this->getSession()->getBasket();
-        $oBasket->setOrderId(oxRegistry::getSession()->getVariable('sess_challenge'));
+        $oBasket = \OxidEsales\Eshop\Core\Registry::getSession()->getBasket();
+        $oBasket->setOrderId(\OxidEsales\Eshop\Core\Registry::getSession()->getVariable('sess_challenge'));
 
         // copying basket object
         $this->_oBasket = clone $oBasket;
@@ -66,19 +61,20 @@ class payeverpaymentpending extends oxUBase
         $urlParams = $_GET;
         $urlParams['fnc'] = 'checkStatus';
 
-        $oLang = oxRegistry::getLang();
+        $oLang = \OxidEsales\Eshop\Core\Registry::getLang();
 
         $this->_aViewData['oLang'] = $oLang;
         $this->_aViewData['iLang'] = $oLang->getTplLanguage();
         $this->_aViewData['checkStatusLink'] = $this->getConfig()->getSslShopUrl() . '?' . http_build_query($urlParams);
         $this->_aViewData['isLoanTransaction'] = $this->isSantanderMethod();
 
-        return $this->_sThisTemplate;
+        return PayeverConfig::getRenderEngine() === PayeverConfig::ENGINE_TWIG ?
+            '@payever/page/checkout/payever_payment_pending' : 'payever_payment_pending.tpl';
     }
 
     public function checkStatus()
     {
-        $paymentId = $this->getConfig()->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
 
         $data = [];
         try {
@@ -132,8 +128,8 @@ class payeverpaymentpending extends oxUBase
         $aPaths = [];
         $aPath = [];
 
-        $iLang = oxRegistry::getLang()->getBaseLanguage();
-        $aPath['title'] = oxRegistry::getLang()->translateString('ORDER_COMPLETED', $iLang, false);
+        $iLang = \OxidEsales\Eshop\Core\Registry::getLang()->getBaseLanguage();
+        $aPath['title'] = \OxidEsales\Eshop\Core\Registry::getLang()->translateString('ORDER_COMPLETED', $iLang, false);
         $aPath['link'] = $this->getLink();
         $aPaths[] = $aPath;
 
@@ -145,7 +141,7 @@ class payeverpaymentpending extends oxUBase
      */
     private function isSantanderMethod()
     {
-        $paymentId = $this->getConfig()->getRequestParameter('payment_id');
+        $paymentId = $this->getRequest()->getRequestParameter('payment_id');
 
         try {
             $result = $this->getPaymentsApiClient()

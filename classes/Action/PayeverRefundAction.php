@@ -4,7 +4,7 @@ use Payever\Sdk\Payments\Action\ActionDeciderInterface;
 use Payever\Sdk\Payments\Enum\Status;
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -45,7 +45,7 @@ class PayeverRefundAction extends PayeverBaseAction
     protected function getOrderStatus($transaction)
     {
         if ($transaction['status'] !== Status::STATUS_CANCELLED) {
-            return oxRegistry::getLang()->translateString('Partially Refunded');
+            return \OxidEsales\Eshop\Core\Registry::getLang()->translateString('Partially Refunded');
         }
 
         return parent::getOrderStatus($transaction);
@@ -64,6 +64,6 @@ class PayeverRefundAction extends PayeverBaseAction
      */
     public function getActionField()
     {
-        return payeverOxArticle::FIELD_REFUNDED;
+        return PayeverActionTypeInterface::FIELD_REFUNDED;
     }
 }

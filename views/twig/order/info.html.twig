@@ -1,0 +1,189 @@
+{% if edit %}
+    <table width="200" border="0" cellspacing="0" cellpadding="0" nowrap>
+        <tr>
+            <td class="edittext" valign="top">
+                <b>{{ "GENERAL_BILLADDRESS"|translate }}</b><br/><br/>
+                {% if edit.oxorder__oxbillcompany.value %}{{ "GENERAL_COMPANY"|translate }} {{ edit.oxorder__oxbillcompany.value }}<br/>{% endif %}
+                {% if edit.oxorder__oxbilladdinfo.value %}{{ edit.oxorder__oxbilladdinfo.value }}<br/>{% endif %}
+                {{ edit.oxorder__oxbillsal.value|translate_salutation }} {{ edit.oxorder__oxbillfname.value }} {{ edit.oxorder__oxbilllname.value }}<br/>
+                {{ edit.oxorder__oxbillstreet.value }} {{ edit.oxorder__oxbillstreetnr.value }}<br/>
+                {{ edit.oxorder__oxbillstateid.value }}
+                {{ edit.oxorder__oxbillzip.value }} {{ edit.oxorder__oxbillcity.value }}<br/>
+                {{ edit.oxorder__oxbillcountry.value }}<br/>
+                {% if edit.oxorder__oxbillcompany.value and edit.oxorder__oxbillustid.value %}<br/>
+                {{ "ORDER_OVERVIEW_VATID"|translate }}
+                {{ edit.oxorder__oxbillustid.value }}<br/>
+                {% if not edit.oxorder__oxbillustidstatus.value %}
+                <span class="error">{{ "ORDER_OVERVIEW_VATIDCHECKFAIL"|translate }}</span><br/>
+                {% endif %}
+                {% endif %}<br/>
+                {{ "GENERAL_EMAIL"|translate }}:
+                <a href="mailto:{{ edit.oxorder__oxbillemail.value }}?subject={{ actshop }} - {{ "GENERAL_ORDERNUM"|translate }} {{ edit.oxorder__oxordernr.value }}" class="edittext">
+                    <em>{{ edit.oxorder__oxbillemail.value }}</em>
+                </a><br/><br/>
+            </td>
+            {% if edit.oxorder__oxdelstreet.value %}
+            <td class="edittext" valign="top">
+                <b>{{ "GENERAL_DELIVERYADDRESS"|translate }}:</b><br/><br/>
+                {% if edit.oxorder__oxdelcompany.value %}Firma {{ edit.oxorder__oxdelcompany.value }}<br/>{% endif %}
+                {% if edit.oxorder__oxdeladdinfo.value %}{{ edit.oxorder__oxdeladdinfo.value }}<br/>{% endif %}
+                {{ edit.oxorder__oxdelsal.value|translate_salutation }} {{ edit.oxorder__oxdelfname.value }} {{ edit.oxorder__oxdellname.value }}<br/>
+                {{ edit.oxorder__oxdelstreet.value }} {{ edit.oxorder__oxdelstreetnr.value }}<br/>
+                {{ edit.oxorder__oxdelstateid.value }}
+                {{ edit.oxorder__oxdelzip.value }} {{ edit.oxorder__oxdelcity.value }}<br/>
+                {{ edit.oxorder__oxdelcountry.value }}<br/><br/>
+            </td>
+            {% endif %}
+        </tr>
+    </table>
+
+    <b>{{ "GENERAL_ITEM"|translate }}:</b><br/><br/>
+
+    <table cellspacing="0" cellpadding="0" border="0">
+        {% for listitem in orderArticles %}
+        <tr>
+            <td valign="top" class="edittext">{{ listitem.oxorderarticles__oxamount.value }} * </td>
+            <td valign="top" class="edittext">&nbsp;{{ listitem.oxorderarticles__oxartnum.value }}</td>
+            <td valign="top" class="edittext">&nbsp;
+                {{ listitem.oxorderarticles__oxtitle.getRawValue()|truncate(20, '')|striptags }}
+                {% if listitem.oxwrapping__oxname.value %}
+                &nbsp;({{ listitem.oxwrapping__oxname.value }})&nbsp;
+                {% endif %}
+            </td>
+            <td valign="top" class="edittext">&nbsp;{{ listitem.oxorderarticles__oxselvariant.value }}</td>
+            <td valign="top" class="edittext">&nbsp;&nbsp;{{ listitem.getTotalBrutPriceFormated() }} {{ edit.oxorder__oxcurrency.value }}</td>
+            {% if listitem.getPersParams() %}
+            <td valign="top" class="edittext">
+                {% for sVar, aParam in listitem.getPersParams() %}
+                &nbsp;&nbsp;,&nbsp;<em>
+                {% if loop.first and loop.last %}
+                {{ "GENERAL_LABEL"|translate }}
+                {% else %}
+                {{ sVar }} :
+                {% endif %}
+                {{ aParam }}
+            </em>
+                {% endfor %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table><br/>
+
+    {% if edit.oxorder__oxstorno.value %}
+    <span class="orderstorno">{{ "ORDER_OVERVIEW_STORNO"|translate }}</span><br/><br/>
+    {% endif %}
+
+    <b>{{ "GENERAL_ATALL"|translate }}: </b><br/><br/>
+    <table border="0" cellspacing="0" cellpadding="0" id="order.info">
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_IBRUTTO"|translate }}</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedTotalBrutSum() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_DISCOUNT"|translate }}&nbsp;&nbsp;</td>
+            <td class="edittext" align="right"><b>- {{ edit.getFormattedDiscount() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_INETTO"|translate }}</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedTotalNetSum() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% for iVat, dVatPrice in aProductVats %}
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_IVAT"|translate }} ({{ iVat }}%)</td>
+            <td class="edittext" align="right"><b>{{ dVatPrice }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% endfor %}
+        {% if edit.oxorder__oxvoucherdiscount.value %}
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_VOUCHERS"|translate }}</td>
+            <td class="edittext" align="right"><b>- {{ edit.getFormattedTotalVouchers() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_DELIVERYCOST"|translate }}&nbsp;&nbsp;</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedDeliveryCost() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_PAYCOST"|translate }}&nbsp;&nbsp;</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedPayCost() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% if edit.oxorder__oxwrapcost.value %}
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_WRAPPING"|translate }}&nbsp;{% if wrapping %}({{ wrapping.oxwrapping__oxname.value }}){% endif %}&nbsp;</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedWrapCost() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% endif %}
+        {% if edit.oxorder__oxgiftcardcost.value %}
+        <tr>
+            <td class="edittext" height="15">{{ "GENERAL_CARD"|translate }}&nbsp;{% if giftCard %}({{ giftCard.oxwrapping__oxname.value }}){% endif %}&nbsp;</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedGiftCardCost() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% endif %}
+        {% if tsprotectcosts is defined and tsprotectcosts %}
+        <tr>
+            <td class="edittext" height="15">{{ "ORDER_OVERVIEW_PROTECTION"|translate }}&nbsp;</td>
+            <td class="edittext" align="right"><b>{{ tsprotectcosts }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td class="edittext" height="25">{{ "GENERAL_SUMTOTAL"|translate }}&nbsp;&nbsp;</td>
+            <td class="edittext" align="right"><b>{{ edit.getFormattedTotalOrderSum() }}</b></td>
+            <td class="edittext">&nbsp;<b>{% if edit.oxorder__oxcurrency.value %} {{ edit.oxorder__oxcurrency.value }} {% else %} {{ currency.name }} {% endif %}</b></td>
+        </tr>
+    </table><br/>
+
+    <table>
+        {% if paymentType %}
+        <tr>
+            <td class="edittext">{{ "ORDER_OVERVIEW_PAYMENTTYPE"|translate }}: </td>
+            <td class="edittext">
+                {% if paymentType.oxpayments__oxdesc.value %}
+                    <b>{{ paymentType.oxpayments__oxdesc.value }}</b>
+                {% else %}
+                    <b>{{ paymentType.oxuserpayments__oxpaymentsid.value }}</b>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td class="edittext">{{ "ORDER_OVERVIEW_DELTYPE"|translate }}: </td>
+            <td class="edittext"><b>{{ deliveryType.oxdeliveryset__oxtitle.value }}</b><br></td>
+        </tr>
+    </table><br/>
+
+    {% if paymentType and paymentType.getDynValues() %}
+    <table cellspacing="0" cellpadding="0" border="0">
+        {% for value in paymentType.getDynValues() %}
+        {% set ident = ('ORDER_OVERVIEW_' ~ value.name)|upper %}
+        <tr>
+            <td class="edittext">
+                {{ ident|translate }}:&nbsp;
+            </td>
+            <td class="edittext">
+                {{ value.value }}
+            </td>
+        </tr>
+        {% endfor %}
+    </table><br/>
+    {% endif %}
+
+    {% if edit.oxorder__oxremark.value %}
+    <b>{{ "GENERAL_REMARK"|translate }}</b>
+    <table cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td class="edittext wrap">{{ edit.oxorder__oxremark.value }}</td>
+        </tr>
+    </table>
+    {% endif %}
+{% endif %}

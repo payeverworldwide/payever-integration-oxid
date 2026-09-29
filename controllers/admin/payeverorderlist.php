@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -31,6 +31,7 @@ class payeverOrderList extends payeverOrderList_parent
     }
 
     /**
+     * Oxid < 7
      * Cancel payever transaction (if possible) when order is being canceled
      *
      * @throws \Exception
@@ -38,10 +39,32 @@ class payeverOrderList extends payeverOrderList_parent
     public function storno()
     {
         $oOrder = $this->getOrderFactory()->create();
-        // @codeCoverageIgnoreStart
-        if (!$this->dryRun && !$oOrder->load($this->getEditObjectId())) {
-            return parent::storno();
-        }
+        !$this->dryRun && $oOrder->load($this->getEditObjectId());
+
+        $this->cancelPayeverOrder($oOrder);
+        !$this->dryRun && parent::storno();
+    }
+
+    /**
+     * Oxid >= 7
+     * Cancel payever transaction (if possible) when order is being canceled
+     *
+     * @throws \Exception
+     */
+    public function cancelOrder()
+    {
+        $oOrder = $this->getOrderFactory()->create();
+        !$this->dryRun && $oOrder->load($this->getEditObjectId());
+
+        $this->cancelPayeverOrder($oOrder);
+        !$this->dryRun && parent::cancelOrder();
+    }
+
+    /**
+     * Cancel payever transaction (if possible) when order is being canceled
+     */
+    private function cancelPayeverOrder($oOrder)
+    {
         // @codeCoverageIgnoreEnd
         $paymentMethod = $oOrder->getFieldData('oxpaymenttype');
         if ($this->getConfigHelper()->isPayeverPaymentMethod($paymentMethod)) {
@@ -83,7 +106,5 @@ class payeverOrderList extends payeverOrderList_parent
                 );
             }
         }
-
-        !$this->dryRun && parent::storno();
     }
 }

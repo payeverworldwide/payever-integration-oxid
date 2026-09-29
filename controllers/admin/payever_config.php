@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package   Payever\OXID
  * @author payever GmbH <service@payever.de>
@@ -19,6 +19,8 @@ use Psr\Log\LogLevel;
  */
 class payever_config extends Shop_Config
 {
+    use PayeverOxRequestTrait;
+    use PayeverOxConfigTrait;
     use DryRunTrait;
     use PayeverPaymentsApiClientTrait;
     use PayeverWidgetApiClientTrait;
@@ -38,25 +40,9 @@ class payever_config extends Shop_Config
     private $flashMessages = [];
 
     /**
-     * class template.
-     * @var string
-     */
-    protected $_sThisTemplate = 'payever_config.tpl';
-
-    /**
      * @var array
      */
     protected $_parameters = [];
-
-    /**
-     * {@inheritDoc}
-     * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
-     */
-    public function __construct($dryRun = false)
-    {
-        $this->dryRun = $dryRun;
-        !$this->dryRun && parent::__construct();
-    }
 
     /**
      * @param array $parameters
@@ -79,7 +65,7 @@ class payever_config extends Shop_Config
     {
         $this->_aViewData['logsUrl'] = $this->getConfig()->getSslShopUrl() . '?' . http_build_query(
             [
-                'cl' => 'payeverShowLogs',
+                'cl' => 'payevershowlogs',
                 'fnc' => 'render'
             ],
             '',
@@ -106,7 +92,8 @@ class payever_config extends Shop_Config
             );
         }
 
-        return $this->_sThisTemplate;
+        return PayeverConfig::getRenderEngine() === PayeverConfig::ENGINE_TWIG ?
+            '@payever/payever_config' : 'payever_config.tpl';
     }
 
     /**
@@ -121,7 +108,7 @@ class payever_config extends Shop_Config
         /** @var oxConfig $oxConfig */
         $oxConfig = $this->getConfig();
         if (empty($this->_parameters)) {
-            $this->_parameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_CONFIG);
+            $this->_parameters = $this->getRequest()->getRequestParameter(PayeverConfig::VAR_CONFIG);
         }
 
         $wasActive = PayeverConfig::isProductsSyncEnabled();
@@ -137,7 +124,7 @@ class payever_config extends Shop_Config
         $this->_parameters = array_merge($this->_parameters, $parameters);
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_CONFIG, $this->_parameters);
 
-        $b2bParameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_B2B_CONFIG);
+        $b2bParameters = $this->getRequest()->getRequestParameter(PayeverConfig::VAR_B2B_CONFIG);
         if (isset($b2bParameters[PayeverConfig::KEY_COMPANY_SEARCH_ENABLED])) {
             PayeverConfig::set(
                 PayeverConfig::VAR_B2B_CONFIG,
@@ -161,7 +148,7 @@ class payever_config extends Shop_Config
 
         $oxConfig->saveShopConfVar('arr', PayeverConfig::VAR_LIVE_KEYS, $liveApiKeys);
 
-        $this->_parameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_CONFIG);
+        $this->_parameters = $this->getRequest()->getRequestParameter(PayeverConfig::VAR_CONFIG);
         $this->_parameters[PayeverConfig::KEY_API_MODE] = PayeverConfig::API_MODE_LIVE;
         unset($liveApiKeys[PayeverConfig::KEY_IS_LIVE]);
 
@@ -180,7 +167,7 @@ class payever_config extends Shop_Config
     public function setSandbox()
     {
         $oxConfig = $this->getConfig();
-        $this->_parameters = $oxConfig->getRequestParameter(PayeverConfig::VAR_CONFIG);
+        $this->_parameters = $this->getRequest()->getRequestParameter(PayeverConfig::VAR_CONFIG);
 
         $environment = $this->_parameters[PayeverConfig::KEY_API_MODE];
 
@@ -406,7 +393,7 @@ class payever_config extends Shop_Config
     private function getWidgetOptions()
     {
         $options = [];
-        $lang = $this->getConfig()->getRequestParameter(static::LANG_PARAM) ?: oxRegistry::getLang()->getTplLanguage();
+        $lang = $this->getRequest()->getRequestParameter(static::LANG_PARAM) ?: \OxidEsales\Eshop\Core\Registry::getLang()->getTplLanguage();
         if (!$lang) {
             $lang = self::DEFAULT_LANG;
         }
@@ -430,7 +417,7 @@ class payever_config extends Shop_Config
 
                     $comboName = sprintf(
                         "%s %s%s",
-                        oxRegistry::getLang()->translateString($widget['type'], $lang, false),
+                        \OxidEsales\Eshop\Core\Registry::getLang()->translateString($widget['type'], $lang, false),
                         $combination['name'],
                         !empty($widget['name']) ? ' - ' . $widget['name'] : ''
                     );
@@ -473,7 +460,7 @@ class payever_config extends Shop_Config
             return [
                 'methods' => $combo,
                 'name' => implode(', ', array_map(function ($payment) use ($lang) {
-                    return oxRegistry::getLang()->translateString($payment, $lang, false);
+                    return \OxidEsales\Eshop\Core\Registry::getLang()->translateString($payment, $lang, false);
                 }, $combo))
             ];
         }, $results);

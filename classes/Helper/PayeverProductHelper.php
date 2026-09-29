@@ -1,13 +1,15 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
  * @copyright   2017-2021 payever GmbH
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
+
+use OxidEsales\Eshop\Core\DatabaseProvider;
 
 class PayeverProductHelper
 {
@@ -36,6 +38,16 @@ class PayeverProductHelper
     {
         $product = $this->getArticleFactory()->create();
         $query = $product->buildSelectString(['oxartnum' => $sku]);
+
+        if (PayeverConfig::getOxidMajorVersion() >= 7) {
+            $record = DatabaseProvider::getDb(DatabaseProvider::FETCH_MODE_ASSOC)->select($query);
+            if ($record && $record->count() > 0) {
+                $product->assign($record->fields);
+            }
+
+            return $product;
+        }
+
         $product->assignRecord($query);
 
         return $product;

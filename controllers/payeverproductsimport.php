@@ -1,7 +1,7 @@
 <?php
 
 /**
- * PHP version 5.4 and 7
+ * PHP version 7 and 8.4
  *
  * @package     Payever\OXID
  * @author      payever GmbH <service@payever.de>
@@ -9,8 +9,11 @@
  * @license     MIT <https://opensource.org/licenses/MIT>
  */
 
-class payeverProductsImport extends oxUBase
+class payeverproductsimport extends oxUBase
 {
+    use PayeverOxRequestTrait;
+    use PayeverOxConfigTrait;
+
     const PARAM_ACTION = 'sync_action';
     const PARAM_EXTERNAL_ID = 'external_id';
 
@@ -64,7 +67,7 @@ class payeverProductsImport extends oxUBase
      */
     protected function getStringParam($key)
     {
-        $data = $this->getConfig()->getRequestParameter($key);
+        $data = $this->getRequest()->getRequestParameter($key);
 
         return is_string($data) ? $data : null;
     }

@@ -92,6 +92,14 @@ class PayeverInstaller
                 'type' => 'TEXT',
                 'nullable' => false,
             ],
+            'oxismethodtypeapplicable' => [
+                'type' => 'tinyint',
+                'nullable' => true,
+            ],
+            'oxmethodtype' => [
+                'type' => 'tinyint',
+                'nullable' => true,
+            ],
             'oxisredirectmethod' => [
                 'type' => 'tinyint',
                 'nullable' => true,

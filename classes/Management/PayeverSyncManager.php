@@ -55,6 +55,7 @@ class PayeverSyncManager
         $shippingNotAllowedMethods = [];
         $checkAddressEqualityMethods = [];
         foreach ($methods as $methodCode => $method) {
+            /** @var ListPaymentOptionsResultEntity $method */
             if ($wlMethods && !in_array(PayeverConfigHelper::removeMethodPrefix($methodCode), $wlMethods)) {
                 continue;
             }
@@ -203,10 +204,10 @@ class PayeverSyncManager
     }
 
     /**
-     * @param $methodCode
-     * @param $method
-     * @param $currentMethods
-     * @param $locales
+     * @param string $methodCode
+     * @param ListPaymentOptionsResultEntity $method
+     * @param array $currentMethods
+     * @param array $locales
      *
      * @return object
      *
@@ -255,6 +256,10 @@ class PayeverSyncManager
         $oPayment->oxpayments__oxfixedfee = new oxField($method->getFixedFee(), oxField::T_RAW);
         $oPayment->oxpayments__oxisb2bmethod = new oxField($method->isB2BMethod(), oxField::T_RAW);
         $oPayment->oxpayments__oxpaymentissuer = new oxField($method->getPaymentIssuer(), oxField::T_RAW);
+
+        if ($method->isRedirectMethod() && $method->isSubmitMethod()) {
+            $oPayment->oxpayments__oxismethodtypeapplicable = new oxField(1, oxField::T_RAW);
+        }
 
         if ($method->isSubmitMethod()) {
             $oPayment->oxpayments__oxissubmitmethod = new oxField($method->isSubmitMethod(), oxField::T_RAW);

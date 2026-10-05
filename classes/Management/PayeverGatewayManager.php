@@ -404,10 +404,6 @@ class PayeverGatewayManager
                             !$invoiceManager->hasInvoice($oOrder)
                         ) {
                             $invoiceManager->addInvoice($oOrder);
-                            $this->getLogger()->info(
-                                sprintf('Invoice has been created for order #%s', $oOrder->getId()),
-                                $payment
-                            );
                         }
                     }
                 }
@@ -462,7 +458,10 @@ class PayeverGatewayManager
         } catch (Exception $exception) {
             $this->getLogger()->error(
                 sprintf('Payment unlocked by exception: %s', $exception->getMessage()),
-                $payment
+                [
+                    'trace' => $exception->getTraceAsString(),
+                    'payment' => $payment,
+                ]
             );
 
             $payment['errorMessage'] = $exception->getMessage();

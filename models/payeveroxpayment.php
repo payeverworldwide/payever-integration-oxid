@@ -52,6 +52,12 @@ class payeverOxPayment extends payeverOxPayment_parent
      */
     public function isRedirectMethod()
     {
+        if (
+            $this->oxpayments__oxismethodtypeapplicable->value == 1 && null !== $this->oxpayments__oxmethodtype->value
+        ) {
+            return $this->oxpayments__oxmethodtype->value == 0;
+        }
+
         return null !== $this->oxpayments__oxisredirectmethod->value;
     }
 
@@ -60,6 +66,12 @@ class payeverOxPayment extends payeverOxPayment_parent
      */
     public function isSubmitMethod()
     {
+        if (
+            $this->oxpayments__oxismethodtypeapplicable->value == 1 && null !== $this->oxpayments__oxmethodtype->value
+        ) {
+            return $this->oxpayments__oxmethodtype->value == 1;
+        }
+
         return null !== $this->oxpayments__oxissubmitmethod->value;
     }
 

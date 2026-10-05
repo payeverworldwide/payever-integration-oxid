@@ -11,6 +11,8 @@
 
 class PayeverInvoiceManager
 {
+    use PayeverLoggerTrait;
+
     /**
      * @var PayeverInvoiceFactory
      */
@@ -45,37 +47,54 @@ class PayeverInvoiceManager
     /**
      * @param oxOrder $order
      *
-     * @return object|payeverinvoices
+     * @return object|payeverinvoices|null
      * @throws oxSystemComponentException
      */
     public function addInvoice(oxOrder $order)
     {
         $date = new DateTime();
 
-        $contents = $this->invoiceGenerator->generate(
-            $order,
-            $order->getFieldData('OXORDERNR'),
-            $date,
-            ''
-        );
-        if (empty($contents)) {
-            throw new Exception('Invoice could not be generated');
+        try {
+            $contents = $this->invoiceGenerator->generate(
+                $order,
+                $order->getFieldData('OXORDERNR'),
+                $date,
+                ''
+            );
+            if (empty($contents)) {
+                throw new Exception('Invoice could not be generated');
+            }
+
+            $invoice = $this->invoiceFactory->create();
+            $invoice->assign(
+                [
+                    'OXINVOICEKEY' => $this->getRandomString(),
+                    'OXORDERID' => $order->getId(),
+                    'OXPAYMENTID' => $order->getFieldData('oxtransid'),
+                    'OXEXTERNALID' => $order->getUser()->getFieldData('oxexternalid'),
+                    'OXCONTENTS' => $contents,
+                    'OXTIMESTAMP' => $date->getTimestamp(),
+                ]
+            );
+
+            $invoice->save();
+
+            $this->getLogger()->info(
+                sprintf('Invoice has been created for order #%s', $order->getId())
+            );
+
+            return $invoice;
+        } catch (\Exception $exception) {
+            $this->getLogger()->error(
+                'Invoice could not be generated: ' . $exception->getMessage(),
+                [
+                    'message' => $exception->getMessage(),
+                    'trace' => $exception->getTraceAsString()
+                ]
+            );
         }
 
-        $invoice = $this->invoiceFactory->create();
-        $invoice->assign(
-            [
-                'OXINVOICEKEY' => $this->getRandomString(),
-                'OXORDERID' => $order->getId(),
-                'OXPAYMENTID' => $order->getFieldData('oxtransid'),
-                'OXEXTERNALID' => $order->getUser()->getFieldData('oxexternalid'),
-                'OXCONTENTS' => $contents,
-                'OXTIMESTAMP' => $date->getTimestamp(),
-            ]
-        );
-
-        $invoice->save();
-        return $invoice;
+        return null;
     }
 
     /**
@@ -87,15 +106,27 @@ class PayeverInvoiceManager
      */
     public function hasInvoice(oxOrder $order)
     {
-        $collection = $this->invoiceListFactory->create();
-        $collection->clear();
+        try {
+            $collection = $this->invoiceListFactory->create();
+            $collection->clear();
 
-        $invoiceObject = $this->invoiceFactory->create();
-        method_exists($collection, 'setBaseObject') && $collection->setBaseObject($invoiceObject);
-        $query = $invoiceObject->buildSelectString(['OXORDERID' => $order->getId()]);
-        $collection->selectString($query);
+            $invoiceObject = $this->invoiceFactory->create();
+            method_exists($collection, 'setBaseObject') && $collection->setBaseObject($invoiceObject);
+            $query = $invoiceObject->buildSelectString(['OXORDERID' => $order->getId()]);
+            $collection->selectString($query);
 
-        return count($collection->getArray()) > 0;
+            return count($collection->getArray()) > 0;
+        } catch (\Exception $exception) {
+            $this->getLogger()->error(
+                'hasInvoice exception: ' . $exception->getMessage(),
+                [
+                    'message' => $exception->getMessage(),
+                    'trace' => $exception->getTraceAsString()
+                ]
+            );
+        }
+
+        return false;
     }
 
     /**

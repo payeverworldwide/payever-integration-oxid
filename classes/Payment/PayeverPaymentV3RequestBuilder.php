@@ -85,7 +85,7 @@ class PayeverPaymentV3RequestBuilder
      */
     public function generatePaymentUrl()
     {
-        return $this->getPaymentMethod()->getFieldData('oxissubmitmethod')
+        return $this->isSubmitMethod()
             ? $this->submitPaymentRequestUrl()
             : $this->createPaymentRequestUrl();
     }
@@ -153,7 +153,7 @@ class PayeverPaymentV3RequestBuilder
 
         $this->getLogger()->info('Collecting order data for create payment call...');
 
-        $this->paymentRequest = $this->getPaymentMethod()->getFieldData('oxissubmitmethod')
+        $this->paymentRequest = $this->isSubmitMethod()
             ? new SubmitPaymentRequestV3()
             : new CreatePaymentV3Request();
 
@@ -313,7 +313,7 @@ class PayeverPaymentV3RequestBuilder
         }
 
         if (!empty($article->getFieldData('oxean'))) {
-            $attributes->setGtin((float)$article->getFieldData('oxean'));
+            $attributes->setGtin((string)$article->getFieldData('oxean'));
         }
 
         if (count($attributes->toArray())) {
@@ -444,8 +444,8 @@ class PayeverPaymentV3RequestBuilder
     {
         $paymentData = new PaymentDataEntity();
         $isRedirectMethod = true;
-        if ($this->getPaymentMethod()->getFieldData('oxisredirectmethod')) {
-            $isRedirectMethod = (bool) $this->getPaymentMethod()->getFieldData('oxisredirectmethod');
+        if ($this->hasMethodTypeSwitch() || $this->getPaymentMethod()->getFieldData('oxisredirectmethod')) {
+            $isRedirectMethod = (bool) $this->isRedirectMethod();
             $paymentData->setForceRedirect($isRedirectMethod);
         }
 
@@ -624,5 +624,47 @@ class PayeverPaymentV3RequestBuilder
         }
 
         return $this->session;
+    }
+
+    /**
+     * Determine whether the unified redirect/submit method type switcher applies
+     * (i.e. the payment method supports both types and an explicit choice was made).
+     *
+     * @return bool
+     */
+    private function hasMethodTypeSwitch()
+    {
+        $paymentMethod = $this->getPaymentMethod();
+
+        return $paymentMethod->getFieldData('oxismethodtypeapplicable')
+            && $paymentMethod->getFieldData('oxmethodtype') !== null;
+    }
+
+    /**
+     * Determine if the payment method is configured as a submit method
+     *
+     * @return bool
+     */
+    private function isSubmitMethod()
+    {
+        if ($this->hasMethodTypeSwitch()) {
+            return $this->getPaymentMethod()->getFieldData('oxmethodtype') == 1;
+        }
+
+        return $this->getPaymentMethod()->getFieldData('oxissubmitmethod');
+    }
+
+    /**
+     * Determine if the payment method is configured as a redirect method
+     *
+     * @return bool
+     */
+    private function isRedirectMethod()
+    {
+        if ($this->hasMethodTypeSwitch()) {
+            return $this->getPaymentMethod()->getFieldData('oxmethodtype') == 0;
+        }
+
+        return $this->getPaymentMethod()->getFieldData('oxisredirectmethod');
     }
 }

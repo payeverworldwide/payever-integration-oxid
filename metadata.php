@@ -39,7 +39,7 @@ $aModule = [
     'url' => 'https://www.payever.de',
     'email' => 'service@payever.de',
     'thumbnail' => 'payever_logo.png',
-    'version' => '4.0.0',
+    'version' => '4.0.1',
     'author' => 'payever GmbH',
     // Old-style module-relative file-path extends for OXID 4/5/6.
     // OXID 7+: replaced with FQCN extends at the bottom of this file.
